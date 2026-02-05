@@ -1,0 +1,67 @@
+/* ============================================================================
+   Main Stylesheet - Imports All Component Styles
+   ============================================================================
+   
+   This file aggregates all modular component stylesheets.
+   Each component/app has its own dedicated CSS file for easy maintenance.
+   
+   Import Order:
+   1. Variables - Theme colors and design tokens
+   2. Global - Reset and base styles
+   3. Boot - Boot screen
+   4. Auth - Login and lock screens
+   5. Desktop - Desktop environment and app launcher
+   6. Taskbar - Taskbar and start menu
+   7. Windows - Window management
+   8. File Explorer - Complete file manager styles
+   9. Apps - Notes, Settings, Monitor, Terminal apps
+   
+   ============================================================================ */
+
+/* Theme Variables - Design Tokens */
+@import './variables.css';
+
+/* Global Styles - Reset & Base */
+@import './global.css';
+
+/* Boot Screen */
+@import './boot.css';
+
+/* Authentication Screens */
+@import './auth.css';
+
+/* Desktop Environment */
+@import './desktop.css';
+
+/* Taskbar & Start Menu */
+@import './taskbar.css';
+
+/* Window Management */
+@import './windows.css';
+
+/* File Explorer Application */
+@import './file-explorer.css';
+
+/* Built-in Applications */
+@import './apps.css';
+
+/* App Store */
+@import './app-store.css';
+
+/* Notifications & Toast */
+@import './notifications.css';
+
+/* Action Center */
+@import './action-center.css';
+
+/* Calendar Widget */
+@import './calendar.css';
+
+/* Phase 25 Apps - Individual Modules */
+@import './calculator.css';
+@import './camera.css';
+@import './clock.css';
+@import './calendar-app.css';
+@import './tips.css';
+
+@import './notifications.css';

@@ -1,0 +1,411 @@
+/* ============================================================================
+   Action Center Styles
+   ============================================================================ */
+
+.action-center {
+  position: fixed;
+  bottom: 68px;
+  right: 10px;
+  width: 380px;
+  max-height: 600px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  z-index: 5000;
+  overflow-y: auto;
+  animation: slideInLeft 0.25s ease-out;
+  backdrop-filter: blur(40px);
+}
+
+.action-center.closing {
+  animation: slideOutRight 0.2s ease-in forwards;
+}
+
+.action-center-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  flex-shrink: 0;
+}
+
+.action-center-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.action-center-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-center-close:hover {
+  opacity: 0.7;
+}
+
+.action-center-close-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.action-center-content {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* Quick Toggles Grid */
+.action-quick-toggles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.quick-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(51, 65, 85, 0.4);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.quick-toggle:hover:not(:disabled) {
+  background: rgba(71, 85, 105, 0.5);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.quick-toggle.active {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.quick-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-toggle-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.quick-toggle-label {
+  font-weight: 500;
+}
+
+/* Sliders */
+.action-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-slider-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.action-slider-icon {
+  width: 16px;
+  height: 16px;
+  color: #60a5fa;
+}
+
+.action-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.action-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--win-accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.action-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--win-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.action-slider-value {
+  font-size: 11px;
+  color: var(--win-muted);
+  text-align: right;
+}
+
+/* Status Section */
+.action-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.action-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-status-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--win-text);
+}
+
+.action-status-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--win-accent);
+}
+
+.action-status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.battery-bar {
+  width: 80px;
+  height: 12px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.battery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  transition: width 0.3s;
+}
+
+.battery-text {
+  min-width: 70px;
+  text-align: right;
+  color: var(--win-muted);
+}
+
+.power-mode-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--win-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.power-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.power-mode-btn.active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+/* Scrollbar styling */
+.action-center::-webkit-scrollbar {
+  width: 6px;
+}
+
+.action-center::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.action-center::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+
+.action-center::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+/* Connection Selector Styles */
+.action-connection-selector {
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+}
+
+.connection-selector-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+  padding: 0 4px;
+}
+
+.connection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.connection-item:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.connection-item.connected {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.connection-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.connection-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--win-text);
+}
+
+.connection-strength {
+  font-size: 11px;
+  color: var(--win-text-secondary);
+}
+
+.connection-address {
+  font-size: 11px;
+  color: var(--win-text-secondary);
+  font-family: monospace;
+}
+
+.connection-check {
+  color: #22c55e;
+  font-weight: bold;
+  font-size: 14px;
+  margin-left: 8px;
+}
+/* ============================================================================
+   High Contrast Mode for Action Center
+   ============================================================================ */
+
+:root[data-contrast='high'] .action-center {
+  background: rgba(0, 0, 0, 0.92);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+:root[data-contrast='high'] .action-center-header {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-contrast='high'] .quick-action-grid {
+  gap: 12px;
+}
+
+:root[data-contrast='high'] .quick-action-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .quick-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-contrast='high'] .quick-action-btn.active {
+  background: var(--win-accent);
+  border-color: var(--win-accent);
+  color: #000000;
+}
+
+:root[data-contrast='high'] .notification-item {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-contrast='high'] .notification-action-button {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .notification-action-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-contrast='high'] .notification-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

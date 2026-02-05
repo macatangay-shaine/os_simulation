@@ -1,0 +1,146 @@
+/* ============================================================================
+   Tips App Styles
+   ============================================================================ */
+
+.tips-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+  overflow: auto;
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--win-accent);
+  color: white;
+}
+
+.tips-icon {
+  flex-shrink: 0;
+}
+
+.tips-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.tips-content {
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.tip-card {
+  max-width: 600px;
+  width: 100%;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.tip-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.tip-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  color: var(--win-text);
+}
+
+.tip-card p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--win-text-muted);
+}
+
+.tips-navigation {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: space-between;
+}
+
+.tip-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tip-nav-btn:hover:not(:disabled) {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.tip-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tip-indicators {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.tip-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--win-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tip-indicator.active {
+  background: var(--win-accent);
+  width: 16px;
+  height: 16px;
+}
+
+.tip-indicator.completed {
+  background: #10b981;
+}
+
+.tip-counter {
+  font-size: 14px;
+  color: var(--win-text-muted);
+}
+
+.tips-footer {
+  padding: 20px;
+  text-align: center;
+  background: var(--win-surface);
+  border-top: 1px solid var(--win-border);
+}
+
+.tips-footer p {
+  margin: 0;
+  color: var(--win-text-muted);
+  font-size: 14px;
+}

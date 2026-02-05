@@ -1,0 +1,613 @@
+/* ============================================================================
+   Phase 25 Apps Styles - Calculator, Camera, Clock, Calendar, Tips
+   ============================================================================ */
+
+/* Calculator App */
+.calculator-app {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+  height: 100%;
+  background: var(--win-bg);
+}
+
+.calculator-display {
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  padding: 20px;
+  font-size: 32px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--win-text);
+  min-height: 60px;
+  word-wrap: break-word;
+}
+
+.calculator-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+
+.calc-btn {
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+  padding: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.calc-btn:hover {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.calc-btn:active {
+  transform: scale(0.95);
+}
+
+.calc-btn.calc-operation {
+  background: var(--win-accent);
+  color: white;
+}
+
+.calc-btn.calc-equals {
+  background: var(--win-accent);
+  color: white;
+}
+
+.calc-btn.calc-special {
+  background: var(--win-surface-strong);
+}
+
+/* Camera App */
+.camera-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #000;
+}
+
+.camera-controls {
+  background: var(--win-surface);
+  padding: 12px;
+  border-bottom: 1px solid var(--win-border);
+}
+
+.mode-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn.active {
+  background: var(--win-accent);
+  color: white;
+  border-color: var(--win-accent);
+}
+
+.camera-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: relative;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.camera-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #999;
+}
+
+.camera-actions {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  background: var(--win-surface);
+}
+
+.capture-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: var(--win-accent);
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.capture-btn:hover {
+  transform: scale(1.1);
+}
+
+.capture-btn.recording {
+  background: #dc2626;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.camera-gallery {
+  padding: 16px;
+  background: var(--win-surface);
+  border-top: 1px solid var(--win-border);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.camera-gallery h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--win-text);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.gallery-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--win-border);
+}
+
+.gallery-item img,
+.gallery-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.download-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 4px;
+  padding: 6px;
+  color: white;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.gallery-item:hover .download-btn {
+  opacity: 1;
+}
+
+/* Clock App */
+.clock-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+}
+
+.clock-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--win-border);
+  background: var(--win-surface);
+}
+
+.clock-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--win-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-tab.active {
+  color: var(--win-accent);
+  border-bottom-color: var(--win-accent);
+}
+
+.timer-view,
+.stopwatch-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 32px;
+}
+
+.timer-inputs {
+  display: flex;
+  gap: 16px;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.time-input-group label {
+  font-size: 12px;
+  color: var(--win-text-muted);
+}
+
+.time-input-group input {
+  width: 100px;
+  padding: 12px;
+  font-size: 24px;
+  text-align: center;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  color: var(--win-text);
+}
+
+.timer-display,
+.stopwatch-display {
+  font-size: 64px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  color: var(--win-text);
+}
+
+.clock-controls {
+  display: flex;
+  gap: 16px;
+}
+
+.clock-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--win-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clock-btn.start {
+  background: var(--win-accent);
+  color: white;
+  border-color: var(--win-accent);
+}
+
+.clock-btn.pause {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+.clock-btn.reset {
+  background: var(--win-surface);
+  color: var(--win-text);
+}
+
+.clock-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Calendar App */
+.calendar-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+  padding: 20px;
+  gap: 16px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--win-surface);
+  border-radius: 8px;
+}
+
+.calendar-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--win-text);
+}
+
+.calendar-nav-btn {
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.calendar-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.today-btn {
+  padding: 8px 16px;
+  background: var(--win-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.today-btn:hover {
+  opacity: 0.9;
+}
+
+.calendar-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--win-surface);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text-muted);
+  padding: 8px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  color: var(--win-text);
+}
+
+.calendar-day:not(.empty):hover {
+  background: var(--win-accent-soft);
+}
+
+.calendar-day.today {
+  background: var(--win-accent);
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day.selected {
+  border: 2px solid var(--win-accent);
+}
+
+.calendar-day.empty {
+  cursor: default;
+}
+
+.calendar-footer {
+  padding: 12px 16px;
+  background: var(--win-surface);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--win-text);
+  font-size: 14px;
+}
+
+/* Tips App */
+.tips-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+  overflow: auto;
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--win-accent);
+  color: white;
+}
+
+.tips-icon {
+  flex-shrink: 0;
+}
+
+.tips-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.tips-content {
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.tip-card {
+  max-width: 600px;
+  width: 100%;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.tip-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.tip-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  color: var(--win-text);
+}
+
+.tip-card p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--win-text-muted);
+}
+
+.tips-navigation {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: space-between;
+}
+
+.tip-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tip-nav-btn:hover:not(:disabled) {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.tip-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tip-indicators {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.tip-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--win-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tip-indicator.active {
+  background: var(--win-accent);
+  width: 16px;
+  height: 16px;
+}
+
+.tip-indicator.completed {
+  background: #10b981;
+}
+
+.tip-counter {
+  font-size: 14px;
+  color: var(--win-text-muted);
+}
+
+.tips-footer {
+  padding: 20px;
+  text-align: center;
+  background: var(--win-surface);
+  border-top: 1px solid var(--win-border);
+}
+
+.tips-footer p {
+  margin: 0;
+  color: var(--win-text-muted);
+  font-size: 14px;
+}
