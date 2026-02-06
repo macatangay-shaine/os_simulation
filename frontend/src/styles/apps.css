@@ -1610,7 +1610,7 @@
 
 .monitor-process-header {
   display: grid;
-  grid-template-columns: 55px 1.5fr 70px 85px 90px 70px 120px;
+  grid-template-columns: 55px 1.3fr 70px 85px 70px 70px 80px 90px 70px 120px;
   gap: 8px;
   padding: 10px 12px;
   font-size: 11px;
@@ -1637,7 +1637,7 @@
 
 .monitor-process-row {
   display: grid;
-  grid-template-columns: 55px 1.5fr 70px 85px 90px 70px 120px;
+  grid-template-columns: 55px 1.3fr 70px 85px 70px 70px 80px 90px 70px 120px;
   gap: 8px;
   padding: 10px 12px;
   font-size: 12px;
@@ -1666,7 +1666,10 @@
 }
 
 .monitor-col-cpu,
-.monitor-col-mem {
+.monitor-col-mem,
+.monitor-col-arrival,
+.monitor-col-burst,
+.monitor-col-partition {
   color: var(--win-muted);
   font-family: monospace;
   text-align: right;
@@ -1743,6 +1746,489 @@
   color: var(--win-muted);
   padding: 24px;
   text-align: center;
+}
+
+/* Scheduling Panel */
+.monitor-scheduling-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.monitor-scheduling-toggle {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+}
+
+.monitor-scheduling-btn {
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--win-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.monitor-scheduling-btn:hover {
+  color: var(--win-text);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.monitor-scheduling-btn.active {
+  color: var(--win-accent);
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.monitor-quantum {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--win-muted);
+}
+
+.monitor-quantum input {
+  width: 64px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--win-border);
+  background: var(--win-surface);
+  color: var(--win-text);
+  font-size: 12px;
+}
+
+.monitor-scheduling-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  margin-bottom: 12px;
+}
+
+.monitor-scheduling-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monitor-scheduling-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--win-muted);
+  font-weight: 600;
+}
+
+.monitor-scheduling-value {
+  font-size: 13px;
+  color: var(--win-text);
+  font-weight: 600;
+}
+
+.monitor-gantt {
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  background: var(--win-surface-strong);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.monitor-gantt-label {
+  font-size: 11px;
+  color: var(--win-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.monitor-gantt-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--win-text);
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: pre-wrap;
+}
+
+.monitor-scheduling-table {
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--win-surface);
+}
+
+.monitor-scheduling-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.monitor-scheduling-header,
+.monitor-scheduling-row {
+  display: grid;
+  grid-template-columns: 60px 1.4fr 90px 80px 90px 110px;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+}
+
+.monitor-scheduling-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--win-muted);
+  background: var(--win-surface-strong);
+  border-bottom: 1px solid var(--win-border);
+}
+
+.monitor-scheduling-row {
+  font-size: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.monitor-scheduling-row:last-child {
+  border-bottom: none;
+}
+
+.monitor-sched-col {
+  color: var(--win-text);
+  font-family: monospace;
+}
+
+/* Memory Management */
+.monitor-memory-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  margin-bottom: 12px;
+}
+
+.monitor-memory-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monitor-memory-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--win-muted);
+  font-weight: 600;
+}
+
+.monitor-memory-value {
+  font-size: 13px;
+  color: var(--win-text);
+  font-weight: 600;
+}
+
+.monitor-memory-table {
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--win-surface);
+  margin-bottom: 12px;
+}
+
+.monitor-memory-header,
+.monitor-memory-row {
+  display: grid;
+  grid-template-columns: 90px 120px 90px 100px 1.5fr 110px;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+}
+
+.monitor-memory-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--win-muted);
+  background: var(--win-surface-strong);
+  border-bottom: 1px solid var(--win-border);
+}
+
+.monitor-memory-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.monitor-memory-row {
+  font-size: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.monitor-memory-row:last-child {
+  border-bottom: none;
+}
+
+.monitor-memory-row.allocated {
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.monitor-memory-row.free {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.monitor-memory-col {
+  color: var(--win-text);
+  font-family: monospace;
+}
+
+.monitor-memory-map {
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  background: var(--win-surface-strong);
+  padding: 12px;
+}
+
+.monitor-memory-map-label {
+  font-size: 11px;
+  color: var(--win-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.monitor-memory-map-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--win-text);
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: pre-wrap;
+}
+
+/* I/O Devices & Spooling */
+.monitor-io-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  margin-bottom: 12px;
+}
+
+.monitor-io-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monitor-io-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--win-muted);
+  font-weight: 600;
+}
+
+.monitor-io-value {
+  font-size: 13px;
+  color: var(--win-text);
+  font-weight: 600;
+}
+
+.monitor-io-devices {
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.monitor-io-devices-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--win-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.monitor-io-device {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.monitor-io-device:last-child {
+  margin-bottom: 0;
+}
+
+.monitor-io-device.ready {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.monitor-io-device.busy {
+  border-color: rgba(255, 152, 0, 0.3);
+  background: rgba(255, 152, 0, 0.04);
+}
+
+.monitor-io-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.monitor-io-device-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text);
+}
+
+.monitor-io-device-type {
+  font-size: 10px;
+  color: var(--win-muted);
+}
+
+.monitor-io-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.monitor-io-status-badge.ready {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.monitor-io-status-badge.busy {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+}
+
+.monitor-io-queue {
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.monitor-io-queue-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--win-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.monitor-io-empty {
+  font-size: 12px;
+  color: var(--win-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+.monitor-io-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monitor-io-job {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+}
+
+.monitor-io-job.spooled {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.monitor-io-job.printing {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.04);
+}
+
+.monitor-io-job.done {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.04);
+  opacity: 0.7;
+}
+
+.monitor-io-job-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--win-muted);
+  min-width: 30px;
+}
+
+.monitor-io-job-info {
+  flex: 1;
+}
+
+.monitor-io-job-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text);
+}
+
+.monitor-io-job-meta {
+  font-size: 10px;
+  color: var(--win-muted);
+}
+
+.monitor-io-job-status {
+  flex-shrink: 0;
+}
+
+.monitor-io-job-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.monitor-io-job-badge.spooled {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.monitor-io-job-badge.printing {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.monitor-io-job-badge.done {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
 }
 
 /* Performance Tab */

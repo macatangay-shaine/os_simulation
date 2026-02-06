@@ -267,8 +267,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
                     )}
                   </button>
                   {/* Show window previews on hover */}
-                  <div className="taskbar-window-previews" style={{background: 'red', color: 'white', padding: '20px'}}>
-                    TEST CONTENT - {appWindows.length} windows
+                  <div className="taskbar-window-previews">
                     {appWindows.map((win, index) => (
                       <button
                         key={win.id}

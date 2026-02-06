@@ -26,7 +26,8 @@ import {
   Activity,
   Package,
   AlertCircle,
-  Stethoscope
+  Stethoscope,
+  Printer
 } from 'lucide-react'
 
 // Icon mapping for app shortcuts
@@ -548,6 +549,25 @@ export default function FileExplorer() {
     setDeleteTarget(null)
   }
 
+  const handlePrint = (e) => {
+    e.stopPropagation()
+    if (contextMenu.targetPath) {
+      const fileName = contextMenu.targetPath.split('/').pop()
+      const pages = Math.ceil(Math.random() * 10) + 1
+      
+      window.dispatchEvent(new CustomEvent('submit-print-job', {
+        detail: {
+          jobName: fileName,
+          pages,
+          pid: 1
+        }
+      }))
+      
+      setError(`Print job submitted: ${fileName} (${pages} pages)`)
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, targetPath: null })
+  }
+
   const handleShowProperties = async (e) => {
     e.stopPropagation()
     if (contextMenu.targetPath) {
@@ -921,6 +941,10 @@ export default function FileExplorer() {
           <button type="button" className="files-context-item" onClick={handleDelete}>
             <Trash2 className="files-context-icon" />
             Delete
+          </button>
+          <button type="button" className="files-context-item" onClick={handlePrint}>
+            <Printer className="files-context-icon" />
+            Print
           </button>
           <button type="button" className="files-context-item" onClick={handleShowProperties}>
             <Info className="files-context-icon" />

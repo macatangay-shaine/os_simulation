@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FileText, Plus, Trash2, Save, FolderOpen } from 'lucide-react'
+import { FileText, Plus, Trash2, Save, FolderOpen, Printer } from 'lucide-react'
 
 export default function NotesApp() {
   const [content, setContent] = useState('')
@@ -187,6 +187,23 @@ export default function NotesApp() {
     }
   }
 
+  const handlePrint = () => {
+    if (!currentNote) return
+    
+    const fileName = currentNote.path.split('/').pop()
+    const pages = Math.max(1, Math.ceil(content.length / 500))
+    
+    window.dispatchEvent(new CustomEvent('submit-print-job', {
+      detail: {
+        jobName: fileName,
+        pages,
+        pid: 1
+      }
+    }))
+    
+    setStatus(`Print job submitted: ${fileName} (${pages} pages)`)
+  }
+
   const handleNewNote = () => {
     if (isModified) {
       const confirm = window.confirm('You have unsaved changes. Do you want to continue?')
@@ -362,6 +379,16 @@ export default function NotesApp() {
               >
                 <Save size={16} />
                 Save
+              </button>
+              <button 
+                type="button" 
+                className="notes-toolbar-btn"
+                onClick={handlePrint}
+                disabled={!currentNote}
+                title="Print"
+              >
+                <Printer size={16} />
+                Print
               </button>
             </div>
           </div>
