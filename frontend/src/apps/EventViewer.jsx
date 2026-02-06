@@ -113,7 +113,7 @@ const EventViewerApp = () => {
   };
 
   const handleClearOld = async () => {
-    if (!window.confirm('This will delete old events to maintain database size. Continue?')) {
+    if (!window.confirm('This will delete events older than 30 days. Continue?')) {
       return;
     }
 
@@ -127,6 +127,24 @@ const EventViewerApp = () => {
     } catch (error) {
       console.error('Failed to clear events:', error);
       alert('Failed to clear old events');
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm('This will DELETE ALL EVENTS. This cannot be undone. Continue?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/events/clear-all', {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      alert(`Successfully deleted all ${data.deleted} events`);
+      handleRefresh();
+    } catch (error) {
+      console.error('Failed to clear all events:', error);
+      alert('Failed to clear all events');
     }
   };
 
@@ -202,6 +220,9 @@ const EventViewerApp = () => {
           </button>
           <button onClick={handleClearOld} className="toolbar-btn">
             🗑 Clear Old
+          </button>
+          <button onClick={handleClearAll} className="toolbar-btn toolbar-btn-danger">
+            🗑 Clear All
           </button>
         </div>
       </div>

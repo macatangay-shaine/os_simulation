@@ -23,6 +23,8 @@ export default function SystemMonitor() {
     { id: 'disk-1', name: 'SSD /dev/sda', type: 'storage', speed: 500, status: 'ready' }
   ])
   const canvasRef = useRef(null)
+  const timeBaselineRef = useRef(null)
+  const sessionStartRef = useRef(Date.now())
 
   useEffect(() => {
     loadSystemData()
@@ -296,13 +298,29 @@ export default function SystemMonitor() {
   const safeQuantum = Math.max(1, Math.min(20, Number(timeQuantum) || 1))
 
   const getTimeBaseline = (procs) => {
+    // Stable baseline persists across renders
+    if (timeBaselineRef.current !== null) {
+      return timeBaselineRef.current
+    }
+
     const running = procs.filter((proc) => proc.state === 'running')
-    if (running.length === 0) return null
+    if (running.length === 0) {
+      // Use session start as fallback
+      timeBaselineRef.current = sessionStartRef.current
+      return timeBaselineRef.current
+    }
+
     const times = running
       .map((proc) => Date.parse(proc.start_time))
       .filter((time) => Number.isFinite(time))
-    if (times.length === 0) return null
-    return Math.min(...times)
+
+    if (times.length === 0) {
+      timeBaselineRef.current = sessionStartRef.current
+      return timeBaselineRef.current
+    }
+
+    timeBaselineRef.current = Math.min(...times)
+    return timeBaselineRef.current
   }
 
   const buildSchedulingInput = (procs) => {
@@ -317,14 +335,24 @@ export default function SystemMonitor() {
       ? Math.min(...parsedTimes.map((entry) => entry.time))
       : null
 
+    // Build a realistic scheduling input
+    // When few processes: reduce burst times to show idle periods
+    // When many processes: use actual metrics
+    const scaleFactor = Math.max(0.3, Math.min(1, running.length / 8))
+
     return running.map((proc) => {
       const rawTime = Date.parse(proc.start_time)
       const arrival = Number.isFinite(rawTime) && minTime !== null
         ? Math.max(0, Math.round((rawTime - minTime) / 1000))
         : 0
-      const memoryBurst = Math.max(0.5, Math.round((proc.memory / 32) * 2) / 2)
-      const cpuBurst = proc.cpu_usage ? Math.max(0.5, Math.round((proc.cpu_usage / 10) * 2) / 2) : 0.5
-      const burst = Math.min(5, Math.max(memoryBurst, cpuBurst))
+      
+      // Scale burst times down based on number of processes
+      // This creates realistic idle periods when few apps are running
+      const memoryBurst = Math.max(0.3, Math.round((proc.memory / 64) * 2) / 2) * scaleFactor
+      const cpuBurst = proc.cpu_usage 
+        ? Math.max(0.3, Math.round((proc.cpu_usage / 20) * 2) / 2) * scaleFactor
+        : 0.3 * scaleFactor
+      const burst = Math.min(3, Math.max(memoryBurst, cpuBurst))
 
       return {
         pid: proc.pid,
@@ -444,13 +472,15 @@ export default function SystemMonitor() {
   const timeBaseline = getTimeBaseline(processes)
   const nowSim = timeBaseline ? Math.max(0, Math.round((Date.now() - timeBaseline) / 1000)) : 0
 
-  const computeCpuUsage = (segments, nowSeconds, windowSeconds = 60) => {
-    if (!segments || segments.length === 0) return 0
+  const computeCpuUsage = (segments, nowSeconds, runningCount = 1, windowSeconds = 60) => {
+    if (!segments || segments.length === 0 || runningCount === 0) return 0
     const cycleLength = segments.reduce((maxEnd, segment) => Math.max(maxEnd, segment.end), 0)
     if (cycleLength <= 0) return 0
 
-    const windowStart = Math.max(0, nowSeconds - windowSeconds)
-    const windowEnd = nowSeconds
+    // Prevent extreme values
+    const safeNow = Math.max(0, Math.min(nowSeconds, cycleLength * 100))
+    const windowStart = Math.max(0, safeNow - windowSeconds)
+    const windowEnd = safeNow
     const minCycle = Math.floor(windowStart / cycleLength) - 1
     const maxCycle = Math.floor(windowEnd / cycleLength) + 1
     let busy = 0
@@ -468,7 +498,10 @@ export default function SystemMonitor() {
       })
     }
 
-    return Math.min(100, Math.max(0, (busy / windowSeconds) * 100))
+    // Cap usage based on number of running processes (can't exceed 100%)
+    const baseUsage = Math.min(100, Math.max(0, (busy / windowSeconds) * 100))
+    const maxByProcess = Math.min(100, (runningCount / Math.max(1, runningCount)) * 100)
+    return Math.min(baseUsage, maxByProcess)
   }
 
   const buildFixedPartitions = (totalMemory) => {
@@ -555,10 +588,15 @@ export default function SystemMonitor() {
   const allocatedMemoryUsed = partitionState.partitions.reduce((sum, part) => {
     return sum + (part.allocation ? part.size : 0)
   }, 0)
-  const simulatedCpuUsage = scheduleResult
-    ? computeCpuUsage(scheduleResult.segments, nowSim)
-    : 0
   const runningProcessCount = processes.filter((proc) => proc.state === 'running').length
+  const simulatedCpuUsage = scheduleResult && runningProcessCount > 0
+    ? (() => {
+        const rawUsage = computeCpuUsage(scheduleResult.segments, nowSim, runningProcessCount)
+        // Add additional dampening: fewer processes = lower baseline usage
+        const processDampening = Math.min(1, runningProcessCount / 4)
+        return Math.max(3, rawUsage * processDampening)
+      })()
+    : 0
   const schedulingLookup = schedulingInput.reduce((acc, proc) => {
     acc[proc.pid] = proc
     return acc

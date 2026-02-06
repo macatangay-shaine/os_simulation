@@ -225,27 +225,46 @@ def get_event_count(
 
 def clear_old_events(days_to_keep: int = 30):
     """Delete events older than the specified number of days."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cutoff_date = datetime.utcnow()
-    # Simple approach: just delete records beyond a count limit
-    cursor.execute(
-        """
-        DELETE FROM system_events 
-        WHERE id NOT IN (
-            SELECT id FROM system_events 
-            ORDER BY timestamp DESC 
-            LIMIT 10000
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        from datetime import timedelta
+        cutoff_date = (datetime.utcnow() - timedelta(days=days_to_keep)).isoformat()
+        
+        cursor.execute(
+            "DELETE FROM system_events WHERE timestamp < ?",
+            (cutoff_date,)
         )
-        """
-    )
-    
-    deleted = cursor.rowcount
-    conn.commit()
-    conn.close()
-    
-    return deleted
+        
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        print(f"Cleared {deleted} old events from database (older than {days_to_keep} days)")
+        return deleted
+    except Exception as e:
+        print(f"Error clearing old events: {str(e)}")
+        return 0
+
+
+def clear_all_events():
+    """Delete all events from the database."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM system_events")
+        
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        print(f"Cleared all {deleted} events from database")
+        return deleted
+    except Exception as e:
+        print(f"Error clearing all events: {str(e)}")
+        return 0
 
 
 def export_events_csv(

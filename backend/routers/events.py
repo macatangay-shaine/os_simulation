@@ -9,6 +9,7 @@ from event_logger import (
     get_event_count,
     log_event,
     clear_old_events,
+    clear_all_events,
     export_events_csv,
     LEVEL_CRITICAL,
     LEVEL_ERROR,
@@ -110,6 +111,16 @@ def clear_events():
         return {"deleted": deleted, "status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear events: {str(e)}")
+
+
+@router.delete("/clear-all")
+def clear_all():
+    """Delete all events from the database."""
+    try:
+        deleted = clear_all_events()
+        return {"deleted": deleted, "status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear all events: {str(e)}")
 
 
 @router.get("/export", response_class=PlainTextResponse)

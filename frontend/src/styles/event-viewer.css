@@ -79,6 +79,18 @@
   background: #0d5a8f;
 }
 
+.toolbar-btn-danger {
+  background: #d13438;
+}
+
+.toolbar-btn-danger:hover {
+  background: #e81123;
+}
+
+.toolbar-btn-danger:active {
+  background: #c50f1f;
+}
+
 /* Content Area */
 .event-viewer-content {
   display: flex;
