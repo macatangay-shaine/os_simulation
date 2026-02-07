@@ -24,6 +24,7 @@ import CameraApp from '../apps/CameraApp.jsx'
 import ClockApp from '../apps/ClockApp.jsx'
 import CalendarViewerApp from '../apps/CalendarViewerApp.jsx'
 import TipsApp from '../apps/TipsApp.jsx'
+import WebBrowserApp from '../apps/WebBrowserApp.jsx'
 
 // Component mapping for built-in apps
 const APP_COMPONENTS = {
@@ -40,7 +41,8 @@ const APP_COMPONENTS = {
   'camera': CameraApp,
   'clock': ClockApp,
   'calendar': CalendarViewerApp,
-  'tips': TipsApp
+  'tips': TipsApp,
+  'webbrowser': WebBrowserApp
 }
 
 // Icon mapping for all apps
@@ -58,7 +60,8 @@ const APP_ICONS = {
   'camera': Camera,
   'clock': Clock,
   'calendar': CalendarIcon,
-  'tips': Lightbulb
+  'tips': Lightbulb,
+  'webbrowser': Package // You can replace with a browser icon if available
 }
 
 const WINDOW_DEFAULTS = {
@@ -102,6 +105,11 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const saved = localStorage.getItem('jez_os_icon_positions')
       if (!saved) return {}
       const parsed = JSON.parse(saved)
+      // If webbrowser icon is missing, force reset
+      if (!Object.keys(parsed).includes('webbrowser')) {
+        localStorage.removeItem('jez_os_icon_positions');
+        return {};
+      }
       // Validate positions - ensure row and col are valid numbers
       const validated = {}
       Object.entries(parsed).forEach(([id, pos]) => {
@@ -143,6 +151,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         { id: 'notes', title: 'Notes', icon: FileText, component: NotesApp },
         { id: 'settings', title: 'Settings', icon: Settings, component: SettingsApp },
         { id: 'monitor', title: 'System Monitor', icon: Activity, component: SystemMonitor },
+        { id: 'webbrowser', title: 'Web Browser', icon: Package, component: WebBrowserApp },
         { id: 'appstore', title: 'App Store', icon: Package, component: AppStore },
         { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, component: EventViewer },
         { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics }
