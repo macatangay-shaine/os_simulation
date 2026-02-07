@@ -1,10 +1,22 @@
 """Application installation and management router."""
 
-from fastapi import APIRouter, HTTPException, Query
+
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+import httpx
 from datetime import datetime
 from database import get_db_connection
 
 router = APIRouter(prefix="/app", tags=["apps"])
+
+# Proxy DuckDuckGo search (CORS bypass)
+@router.get("/search/duckduckgo")
+async def duckduckgo_search(q: str):
+    """Proxy DuckDuckGo Instant Answer API to bypass CORS."""
+    url = f"https://api.duckduckgo.com/?q={q}&format=json&no_redirect=1&no_html=0"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        return JSONResponse(content=resp.json())
 
 # Default built-in apps that ship with the OS
 DEFAULT_APPS = [
@@ -161,6 +173,17 @@ DEFAULT_APPS = [
         "builtin": True,
         "permissions": [],
         "storage_size_mb": 5
+    },
+    {
+        "id": "webbrowser",
+        "name": "Web Browser",
+        "version": "1.0.0",
+        "description": "Browse the web and download files",
+        "icon": "Package",
+        "category": "Internet",
+        "builtin": True,
+        "permissions": ["filesystem", "network"],
+        "storage_size_mb": 22
     }
 ]
 
