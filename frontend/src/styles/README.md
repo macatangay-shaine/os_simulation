@@ -345,3 +345,51 @@ The design uses modern CSS features like:
 - Final CSS size: ~23.5 kB (4.5 kB gzipped)
 - All styles are tree-shaken and optimized for production
 
+---
+
+## Troubleshooting
+
+### Build Failure: "Could not resolve" errors on styles
+
+**Problem:** Local build works fine, but Vercel/CI build fails with import errors.
+
+**Cause:** Barrel export files (`index.css` in style domains) weren't committed to git.
+
+**Solution:**
+1. Ensure all `index.css` files are created in each domain folder:
+   - `src/styles/base/index.css`
+   - `src/styles/layout/index.css`
+   - `src/styles/auth/index.css`
+   - `src/styles/ui/index.css`
+   - `src/styles/system/index.css`
+   - `src/styles/apps/index.css`
+
+2. Each barrel export should follow the pattern:
+   ```css
+   /* Example: src/styles/layout/index.css */
+   @import './desktop.css';
+   @import './taskbar.css';
+   @import './windows.css';
+   @import './boot.css';
+   ```
+
+3. Commit all files to git:
+   ```bash
+   git add frontend/src/styles/
+   git commit -m "fix: Include barrel exports for all style domains"
+   git push
+   ```
+
+**Note:** If styles work locally but fail in deployment, verify that barrel export files are staged and committed in git. The build tool has access to the filesystem cache but remote deployments only see committed files.
+
+---
+
+## Recent Updates (March 27, 2026)
+
+### Style Organization Refactoring
+- Reorganized 23 CSS files into 6 domain-based folders (base, layout, auth, ui, system, apps)
+- Created barrel export `index.css` files for cleaner imports
+- Updated main `src/styles/index.css` to import from domain indices
+- Resolved Vercel build failures by ensuring all barrel export files are committed to git
+- Verified production build: 1753 modules, 358KB JS, 146KB CSS (with gzip compression)
+
