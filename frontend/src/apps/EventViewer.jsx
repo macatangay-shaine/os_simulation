@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import '../styles/event-viewer.css';
+import '../styles/apps/event-viewer.css';
 
 const EventViewerApp = () => {
   const [events, setEvents] = useState([]);

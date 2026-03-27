@@ -1,7 +1,7 @@
 
 
 import React, { useRef, useState } from "react";
-import '../styles/web-browser.css';
+import '../styles/apps/web-browser.css';
 
 const DEFAULT_URL = "duckduckgo.com";
 

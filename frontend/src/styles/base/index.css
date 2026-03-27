@@ -1,22 +1,5 @@
-/* ============================================================================
-   Main Stylesheet - Imports All Component Styles
-   ============================================================================
-   
-   This file aggregates all modular component stylesheets.
-   Each component/app has its own dedicated CSS file for easy maintenance.
-   
-   Import Order:
-   1. Variables - Theme colors and design tokens
-   2. Global - Reset and base styles
-   3. Boot - Boot screen
-   4. Auth - Login and lock screens
-   5. Desktop - Desktop environment and app launcher
-   6. Taskbar - Taskbar and start menu
-   7. Windows - Window management
-   8. File Explorer - Complete file manager styles
-   9. Apps - Notes, Settings, Monitor, Terminal apps
-   
-   ============================================================================ */
+@import './global.css';
+@import './variables.css';
 
 /* Theme Variables - Design Tokens */
 @import './variables.css';

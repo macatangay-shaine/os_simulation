@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import BootScreen from '../components/BootScreen.jsx'
-import PowerScreen from '../components/PowerScreen.jsx'
-import ShutdownScreen from '../components/ShutdownScreen.jsx'
-import LoginScreen from '../components/LoginScreen.jsx'
-import LockScreen from '../components/LockScreen.jsx'
-import Desktop from '../components/Desktop.jsx'
-import SleepScreen from '../components/SleepScreen.jsx'
-import ErrorDialog from '../components/ErrorDialog.jsx'
+import {
+  BootScreen,
+  PowerScreen,
+  ShutdownScreen,
+  LoginScreen,
+  LockScreen,
+  Desktop,
+  SleepScreen,
+  ErrorDialog
+} from '../components/index.jsx'
 
 export default function App() {
   // Initialize bootComplete from localStorage to skip boot on browser refresh
