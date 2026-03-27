@@ -37,7 +37,7 @@ A fully-featured virtual operating system built with React and FastAPI, simulati
 - **Notifications** - System-wide notification system with toast messages
 - **Power Management** - Sleep, restart, and shutdown functionality
 - **UAC Prompts** - User Access Control for elevated operations
-- **App Switcher** - Alt+Tab style app switching
+- **App Switcher** - Quick app switching with the built-in switcher
 - **Context Menus** - Right-click context menus throughout the UI
 - **Accessibility** - High contrast mode and accessibility settings
 - **Themes** - Customizable accent colors and wallpapers
@@ -65,7 +65,7 @@ A fully-featured virtual operating system built with React and FastAPI, simulati
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/yourusername/jez_os.git
+git clone https://github.com/somarjez/os_simulation.git
 cd jez_OS
 ```
 
@@ -111,12 +111,14 @@ The frontend will start on `http://localhost:5173`
 3. **Open Browser**: Visit `http://localhost:5173`
 4. **Login**: Use default credentials:
    - Username: `admin` / Password: `admin`
-   - Username: `guest` / Password: `guest`
+    - Username: `user` / Password: `password`
 
 ### Default Keyboard Shortcuts
-- **Ctrl+Alt+Delete** - Lock screen
-- **Windows Key** - Open Start Menu
-- **Alt+F4** - Close active window
+- **Hold `0` + `+` (or `=`)** - Open/cycle the app switcher
+- **Release `0`** - Focus selected app from switcher
+- **Hold `0` + `Left Arrow`** - Snap active window left
+- **Hold `0` + `Right Arrow`** - Snap active window right
+- **Hold `0` + `Up Arrow`** - Maximize active window
 - Right-click - Context menu
 
 ## 📁 Project Structure
@@ -174,7 +176,7 @@ jez_OS/
 
 ### Backend Configuration (`backend/config.py`)
 - `MAX_MEMORY`: Maximum simulated memory
-- `MAX_PROCESSES`: Maximum process count
+- `MEMORY_WARNING_THRESHOLD`: Warning threshold for memory pressure
 - `DB_PATH`: Database file location
 
 ### Frontend Configuration
