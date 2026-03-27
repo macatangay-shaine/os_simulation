@@ -10,10 +10,16 @@ export default function NotesApp() {
   const [isModified, setIsModified] = useState(false)
   const [newNoteName, setNewNoteName] = useState('')
   const [showNewNoteDialog, setShowNewNoteDialog] = useState(false)
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false)
+  const [historyEntries, setHistoryEntries] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [viewMode, setViewMode] = useState('notes')
+  const [trashNotes, setTrashNotes] = useState([])
 
   useEffect(() => {
     // Load notes directory on mount
     loadNotesList()
+    loadTrashNotes()
     
     // Check if a file should be opened from File Explorer
     checkForFileToOpen().catch(err => {
@@ -56,6 +62,7 @@ export default function NotesApp() {
             type: 'file',
             originalContent: data.content
           })
+          loadNoteHistory(fileToOpen)
           setStatus('File opened')
           setIsModified(false)
           
@@ -117,6 +124,46 @@ export default function NotesApp() {
     }
   }
 
+  const loadTrashNotes = async () => {
+    try {
+      const response = await fetchApi('/fs/recycle/list')
+      if (!response.ok) {
+        setTrashNotes([])
+        return
+      }
+
+      const data = await response.json()
+      const notesTrash = (data.nodes || []).filter((node) => {
+        const originalPath = node.original_path || ''
+        return originalPath.startsWith(`${notesDir}/`) && originalPath.endsWith('.txt')
+      })
+      setTrashNotes(notesTrash)
+    } catch {
+      setTrashNotes([])
+    }
+  }
+
+  const loadNoteHistory = async (notePath) => {
+    if (!notePath) {
+      setHistoryEntries([])
+      return
+    }
+    setHistoryLoading(true)
+    try {
+      const response = await fetchApi(`/fs/history?path=${encodeURIComponent(notePath)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setHistoryEntries(data.versions || [])
+      } else {
+        setHistoryEntries([])
+      }
+    } catch {
+      setHistoryEntries([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   const handleSelectNote = async (note) => {
     if (isModified) {
       const confirm = window.confirm('You have unsaved changes. Do you want to continue?')
@@ -136,6 +183,7 @@ export default function NotesApp() {
           ...note,
           originalContent: data.content
         })
+        loadNoteHistory(note.path)
         setStatus('Note loaded')
         setIsModified(false)
       } else {
@@ -163,6 +211,7 @@ export default function NotesApp() {
         setStatus('Saved successfully')
         setCurrentNote({ ...currentNote, originalContent: content })
         setIsModified(false)
+        loadNoteHistory(currentNote.path)
         
         // Send notification
         try {
@@ -236,6 +285,8 @@ export default function NotesApp() {
           type: 'file',
           originalContent: ''
         })
+        setHistoryEntries([])
+        setShowHistoryPanel(false)
         setIsModified(false)
         setStatus('New note created')
         setShowNewNoteDialog(false)
@@ -260,13 +311,16 @@ export default function NotesApp() {
       })
       
       if (response.ok) {
-        setStatus('Note deleted')
+        setStatus('Note moved to Trash')
         if (currentNote?.path === note.path) {
           setContent('')
           setCurrentNote(null)
+          setHistoryEntries([])
+          setShowHistoryPanel(false)
           setIsModified(false)
         }
         loadNotesList()
+        loadTrashNotes()
         
         // Send notification
         try {
@@ -291,25 +345,114 @@ export default function NotesApp() {
     }
   }
 
+  const restoreDeletedNote = async (trashNote, e) => {
+    e.stopPropagation()
+    try {
+      const response = await fetchApi(
+        `/fs/recycle/restore?recycle_path=${encodeURIComponent(trashNote.path)}`,
+        { method: 'POST' }
+      )
+      if (response.ok) {
+        setStatus('Note restored from Trash')
+        loadNotesList()
+        loadTrashNotes()
+      } else {
+        setStatus('Failed to restore note')
+      }
+    } catch {
+      setStatus('Failed to restore note')
+    }
+  }
+
+  const permanentlyDeleteNote = async (trashNote, e) => {
+    e.stopPropagation()
+    const confirm = window.confirm('Permanently delete this note from Trash?')
+    if (!confirm) return
+
+    try {
+      const response = await fetchApi(
+        `/fs/delete?path=${encodeURIComponent(trashNote.path)}&permanent=true`,
+        { method: 'DELETE' }
+      )
+      if (response.ok) {
+        setStatus('Note permanently deleted')
+        loadTrashNotes()
+      } else {
+        setStatus('Failed to permanently delete note')
+      }
+    } catch {
+      setStatus('Failed to permanently delete note')
+    }
+  }
+
+  const restoreHistoryVersion = async (versionId) => {
+    if (!currentNote) return
+    try {
+      const response = await fetchApi(
+        `/fs/history/restore?path=${encodeURIComponent(currentNote.path)}&version_id=${versionId}`,
+        { method: 'POST' }
+      )
+      if (!response.ok) {
+        setStatus('Failed to restore version')
+        return
+      }
+
+      const readResponse = await fetchApi('/fs/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentNote.path })
+      })
+      if (readResponse.ok) {
+        const data = await readResponse.json()
+        setContent(data.content)
+        setCurrentNote({ ...currentNote, originalContent: data.content })
+        setIsModified(false)
+        setStatus('Version restored')
+        loadNoteHistory(currentNote.path)
+      }
+    } catch {
+      setStatus('Failed to restore version')
+    }
+  }
+
   return (
     <div className="app-notes">
       <div className="notes-container">
         {/* Notes List Sidebar */}
         <div className="notes-sidebar">
           <div className="notes-sidebar-header">
-            <h3 className="notes-sidebar-title">My Notes</h3>
+            <div className="notes-sidebar-modes">
+              <button
+                type="button"
+                className={`notes-mode-btn ${viewMode === 'notes' ? 'active' : ''}`}
+                onClick={() => setViewMode('notes')}
+              >
+                My Notes
+              </button>
+              <button
+                type="button"
+                className={`notes-mode-btn ${viewMode === 'trash' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('trash')
+                  loadTrashNotes()
+                }}
+              >
+                Trash ({trashNotes.length})
+              </button>
+            </div>
             <button 
               type="button" 
               className="notes-sidebar-btn"
               onClick={handleNewNote}
               title="New Note"
+              disabled={viewMode !== 'notes'}
             >
               <Plus size={18} />
             </button>
           </div>
           
           <div className="notes-list">
-            {notesList.length === 0 ? (
+            {viewMode === 'notes' && notesList.length === 0 ? (
               <div className="notes-empty">
                 <FileText size={32} className="notes-empty-icon" />
                 <p>No notes yet</p>
@@ -321,7 +464,7 @@ export default function NotesApp() {
                   Create your first note
                 </button>
               </div>
-            ) : (
+            ) : viewMode === 'notes' ? (
               notesList.map((note) => {
                 const isExternal = !note.path.startsWith(notesDir)
                 return (
@@ -348,6 +491,40 @@ export default function NotesApp() {
                   </div>
                 )
               })
+            ) : trashNotes.length === 0 ? (
+              <div className="notes-empty">
+                <Trash2 size={32} className="notes-empty-icon" />
+                <p>Trash is empty</p>
+              </div>
+            ) : (
+              trashNotes.map((note) => {
+                const noteName = (note.original_path || note.path).split('/').pop().replace('.txt', '')
+                return (
+                  <div key={note.path} className="notes-list-item trash-item">
+                    <FileText size={16} className="notes-list-icon" />
+                    <div className="notes-trash-info">
+                      <span className="notes-list-name">{noteName}</span>
+                      <span className="notes-trash-date">Deleted: {new Date(note.deleted_at).toLocaleString()}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="notes-list-action"
+                      onClick={(e) => restoreDeletedNote(note, e)}
+                      title="Restore note"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      className="notes-list-delete"
+                      onClick={(e) => permanentlyDeleteNote(note, e)}
+                      title="Delete permanently"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
@@ -370,6 +547,21 @@ export default function NotesApp() {
             </div>
             
             <div className="notes-toolbar-actions">
+              <button
+                type="button"
+                className="notes-toolbar-btn"
+                onClick={() => {
+                  const next = !showHistoryPanel
+                  setShowHistoryPanel(next)
+                  if (next && currentNote) {
+                    loadNoteHistory(currentNote.path)
+                  }
+                }}
+                disabled={!currentNote}
+                title="Version History"
+              >
+                History
+              </button>
               <button 
                 type="button" 
                 className="notes-toolbar-btn"
@@ -394,6 +586,35 @@ export default function NotesApp() {
           </div>
 
           {status && <div className="notes-status">{status}</div>}
+
+          {showHistoryPanel && currentNote && (
+            <div className="notes-history-panel">
+              <div className="notes-history-title">Version History</div>
+              {historyLoading ? (
+                <div className="notes-history-empty">Loading history...</div>
+              ) : historyEntries.length === 0 ? (
+                <div className="notes-history-empty">No saved versions yet</div>
+              ) : (
+                <div className="notes-history-list">
+                  {historyEntries.map((version) => (
+                    <div key={version.id} className="notes-history-item">
+                      <div className="notes-history-meta">
+                        <div className="notes-history-date">{new Date(version.created_at).toLocaleString()}</div>
+                        <div className="notes-history-preview">{version.preview}</div>
+                      </div>
+                      <button
+                        type="button"
+                        className="notes-history-restore"
+                        onClick={() => restoreHistoryVersion(version.id)}
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <textarea
             className="notes-editor"

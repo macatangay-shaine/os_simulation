@@ -26,6 +26,13 @@ import CalendarViewerApp from '../apps/CalendarViewerApp.jsx'
 import TipsApp from '../apps/TipsApp.jsx'
 import WebBrowserApp from '../apps/WebBrowserApp.jsx'
 
+const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
+const RECYCLE_BIN_DESKTOP_ITEM = {
+  path: RECYCLE_BIN_PATH,
+  type: 'dir',
+  synthetic: true
+}
+
 // Component mapping for built-in apps
 const APP_COMPONENTS = {
   'terminal': TerminalApp,
@@ -70,6 +77,19 @@ const WINDOW_DEFAULTS = {
   x: 120,
   y: 120
 }
+
+// Apps that should open maximized by default, similar to common desktop UX.
+const MAXIMIZED_BY_DEFAULT_APP_IDS = new Set([
+  'files',
+  'localfiles',
+  'notes',
+  'settings',
+  'monitor',
+  'webbrowser',
+  'appstore',
+  'eventviewer',
+  'diagnostics'
+])
 
 export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown, onSleep, isSleeping = false }) {
   const [appRegistry, setAppRegistry] = useState([])
@@ -291,7 +311,9 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         if (response.ok) {
           const data = await response.json()
           console.log('Desktop files:', data.nodes)
-          setDesktopFiles(data.nodes || [])
+          const nodes = Array.isArray(data.nodes) ? data.nodes : []
+          const hasRecycleBin = nodes.some((node) => node.path === RECYCLE_BIN_PATH)
+          setDesktopFiles(hasRecycleBin ? nodes : [RECYCLE_BIN_DESKTOP_ITEM, ...nodes])
         } else {
           console.error('Failed to load desktop files')
         }
@@ -542,7 +564,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (filesApp) {
         // Store the path to open
         localStorage.setItem('files_open_path', file.path)
-        launchApp(filesApp)
+        const windowTitle = file.path === RECYCLE_BIN_PATH ? 'Recycle Bin' : filesApp.title
+        launchApp(filesApp, { windowTitle })
       }
     } else if (file.path.endsWith('.txt')) {
       // Open text file in Notes
@@ -585,7 +608,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   }
 
-  const launchApp = async (app) => {
+  const launchApp = async (app, options = {}) => {
     const memory = Math.floor(Math.random() * 20) + 8
     let pid = Date.now()
     
@@ -626,26 +649,44 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       pid = Date.now()
     }
 
-    setWindows((prev) => [
-      ...prev,
-      {
+    setWindows((prev) => {
+      const defaultX = WINDOW_DEFAULTS.x + prev.length * 24
+      const defaultY = WINDOW_DEFAULTS.y + prev.length * 24
+      const screenWidth = window.innerWidth
+      const screenHeight = window.innerHeight - 50
+      const shouldStartMaximized =
+        options.startMaximized ?? MAXIMIZED_BY_DEFAULT_APP_IDS.has(app.id)
+
+      const defaultWidth = app.id === 'calculator' ? 428 : WINDOW_DEFAULTS.width
+      const defaultHeight = app.id === 'calculator' ? 520 : WINDOW_DEFAULTS.height
+
+      const windowEntry = {
         id: pid,
         appId: app.id,
-        title: app.title,
+        title: options.windowTitle || app.title,
         icon: app.icon,
         memory,
         minimized: false,
-        isMaximized: false,
+        isMaximized: shouldStartMaximized,
         zIndex: zCounter,
-        x: WINDOW_DEFAULTS.x + prev.length * 24,
-        y: WINDOW_DEFAULTS.y + prev.length * 24,
-        width: app.id === 'calculator' ? 428 : WINDOW_DEFAULTS.width,
-        height: app.id === 'calculator' ? 520 : WINDOW_DEFAULTS.height,
+        x: shouldStartMaximized ? 0 : defaultX,
+        y: shouldStartMaximized ? 0 : defaultY,
+        width: shouldStartMaximized ? screenWidth : defaultWidth,
+        height: shouldStartMaximized ? screenHeight : defaultHeight,
+        prevX: defaultX,
+        prevY: defaultY,
+        prevWidth: defaultWidth,
+        prevHeight: defaultHeight,
         noMaximize: app.id === 'calculator', // Disable maximize for calculator
         minWidth: app.id === 'calculator' ? 428 : undefined,
         minHeight: app.id === 'calculator' ? 520 : undefined
       }
-    ])
+
+      return [
+      ...prev,
+      windowEntry
+    ]
+    })
     setZCounter((prev) => prev + 1)
 
     // Track recent apps (keep last 5)
@@ -784,6 +825,13 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     )
   }
 
+  const updateWindowTitle = (pid, title) => {
+    if (!title) return
+    setWindows((prev) =>
+      prev.map((win) => (win.id === pid ? { ...win, title } : win))
+    )
+  }
+
   const desktopContextItems = useMemo(
     () =>
       appRegistry.map((app) => ({
@@ -883,7 +931,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             onResize={resizeWindow}
             onSnap={snapWindow}
           >
-            {AppComponent ? <AppComponent /> : (
+            {AppComponent ? <AppComponent onWindowTitleChange={(title) => updateWindowTitle(win.id, title)} /> : (
               <div className="window-placeholder">
                 <div className="window-placeholder-title">{win.title}</div>
                 <div className="window-placeholder-body">

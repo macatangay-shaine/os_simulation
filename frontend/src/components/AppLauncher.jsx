@@ -1,4 +1,6 @@
-import { FileText, Folder } from 'lucide-react'
+import { FileText, Folder, Trash2 } from 'lucide-react'
+
+const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
 
 export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPositions = {}, onIconMove, onAppContextMenu }) {
   const GRID_COLS = 5
@@ -95,7 +97,7 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
     onIconMove?.(appId, finalPos)
   }
 
-  const getGridStyle = (appId, gridPos) => {
+  const getGridStyle = (appId, gridPos, fallbackIndex = 0) => {
     let col = 0
     let row = 0
     
@@ -103,12 +105,12 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
       col = gridPos.col || 0
       row = gridPos.row || 0
     } else {
-      // Auto-assign position based on app index if not set
+      // Auto-assign position based on app index if not set.
+      // Desktop files pass an explicit fallback index so they do not stack at 0,0.
       const index = apps.findIndex(app => app.id === appId)
-      if (index >= 0) {
-        col = index % GRID_COLS
-        row = Math.floor(index / GRID_COLS)
-      }
+      const effectiveIndex = index >= 0 ? index : fallbackIndex
+      col = effectiveIndex % GRID_COLS
+      row = Math.floor(effectiveIndex / GRID_COLS)
     }
     
     return {
@@ -160,11 +162,12 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
 
       {desktopFiles
         .filter(file => !file.path.endsWith('.lnk'))
-        .map((file) => {
-        const fileName = file.path.split('/').pop()
+        .map((file, fileIndex) => {
+        const isRecycleBin = file.path === RECYCLE_BIN_PATH
+        const fileName = isRecycleBin ? 'Recycle Bin' : file.path.split('/').pop()
         const fileId = `file-${file.path}`
         const pos = iconPositions[fileId]
-        const gridStyle = getGridStyle(fileId, pos)
+        const gridStyle = getGridStyle(fileId, pos, apps.length + fileIndex)
         const isFolder = file.type === 'dir'
 
         return (
@@ -184,7 +187,13 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
             title={fileName}
           >
             <div className="app-icon-badge">
-              {isFolder ? <Folder className="app-icon-svg" /> : <FileText className="app-icon-svg" />}
+              {isRecycleBin ? (
+                <Trash2 className="app-icon-svg" />
+              ) : isFolder ? (
+                <Folder className="app-icon-svg" />
+              ) : (
+                <FileText className="app-icon-svg" />
+              )}
             </div>
             <div className="app-icon-label">{fileName}</div>
           </button>
