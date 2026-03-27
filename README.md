@@ -200,6 +200,56 @@ jez_OS/
 - File system is virtual and isolated from the host OS
 - Some features require backend connection
 
+## 📚 Documentation
+
+Comprehensive documentation for the project structure and recent changes:
+
+- **[Refactoring Guide](/docs/REFACTORING.md)** - Complete overview of the file structure reorganization, migration guide, and rollback instructions
+- **[Backend Structure](/docs/BACKEND_STRUCTURE.md)** - Backend organization, startup methods, API reference, and troubleshooting
+- **[Frontend Structure](/docs/FRONTEND_STRUCTURE.md)** - Component domains, style organization, and guides for adding new features
+- **[Style Architecture](/frontend/src/styles/README.md)** - CSS modular architecture, design system, and customization guide
+
+## 🚢 Deployment
+
+### Vercel Deployment
+
+The project is configured for automatic deployment to Vercel on push to the `main` branch.
+
+**Recent Update (March 27, 2026):**
+- File structure refactored: 57+ files reorganized into domain-based folders
+- Backend: Created `app/` package structure with compatibility wrapper
+- Frontend: Organized 20 components and 23 styles into 5 component domains and 6 style domains
+- Build verified: 1753 modules, 358KB JS (101KB gzipped), 146KB CSS (22KB gzipped)
+
+### Build Troubleshooting
+
+**Issue: Local build passes but Vercel deployment fails**
+
+**Cause:** Barrel export files (`index.jsx` and `index.css`) weren't committed to git.
+
+**Solution:**
+1. Ensure all barrel export files are created:
+   ```
+   frontend/src/components/*/index.jsx (one per domain)
+   frontend/src/styles/*/index.css (one per domain)
+   ```
+
+2. Commit and push to GitHub:
+   ```bash
+   git add -A
+   git commit -m "fix: Include barrel exports"
+   git push
+   ```
+
+3. Vercel will automatically rebuild. Check deployment status at: https://vercel.com/somarjez/os_simulation
+
+**Local Build Verification:**
+```bash
+cd frontend
+npm run build
+# Expected: ✓ built in ~5-6s with 1753 modules transformed
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
