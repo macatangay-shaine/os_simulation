@@ -202,7 +202,7 @@
   gap: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--win-text);
+  color: #ffffff;
 }
 
 .action-status-icon {
@@ -216,6 +216,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  color: #ffffff;
 }
 
 .battery-bar {
@@ -236,7 +237,7 @@
 .battery-text {
   min-width: 70px;
   text-align: right;
-  color: var(--win-muted);
+  color: #ffffff;
 }
 
 .power-mode-btn {
@@ -244,7 +245,7 @@
   border-radius: 6px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(255, 255, 255, 0.5);
-  color: var(--win-text);
+  color: #ffffff;
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;

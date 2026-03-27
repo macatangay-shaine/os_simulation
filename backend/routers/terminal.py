@@ -10,6 +10,13 @@ import config
 router = APIRouter(prefix="/terminal", tags=["terminal"])
 
 
+def get_terminal_history() -> list:
+    """Get in-memory terminal history storage."""
+    if not hasattr(config, "terminal_history"):
+        config.terminal_history = []
+    return config.terminal_history
+
+
 @router.post("/execute", response_model=TerminalCommandResponse)
 def execute_terminal_command(payload: TerminalCommandRequest):
     """Execute a terminal command."""
@@ -23,6 +30,17 @@ def execute_terminal_command(payload: TerminalCommandRequest):
     command = parts[0]
     args = parts[1:]
     output = ""
+    history_store = get_terminal_history()
+
+    history_store.append(
+        {
+            "command": cmd_line,
+            "cwd": current_dir,
+            "executed_at": datetime.utcnow().isoformat() + "Z",
+        }
+    )
+    if len(history_store) > 200:
+        del history_store[:-200]
     
     try:
         if command == "help":
@@ -45,6 +63,15 @@ def execute_terminal_command(payload: TerminalCommandRequest):
         
         elif command == "pwd":
             output = current_dir
+
+        elif command == "history":
+            if not history_store:
+                output = "No command history"
+            else:
+                lines = []
+                for index, item in enumerate(history_store, start=1):
+                    lines.append(f"{index:>4}  {item['command']}")
+                output = "\n".join(lines)
         
         elif command == "ls":
             target = args[0] if args else current_dir
@@ -242,3 +269,19 @@ def execute_terminal_command(payload: TerminalCommandRequest):
         output = f"Error: {str(e)}"
     
     return TerminalCommandResponse(output=output, cwd=current_dir)
+
+
+@router.get("/history")
+def list_terminal_history(limit: int = 50):
+    """List recent terminal command history."""
+    history_store = get_terminal_history()
+    safe_limit = max(1, min(int(limit), 200))
+    return {"history": history_store[-safe_limit:]}
+
+
+@router.delete("/history")
+def clear_terminal_history():
+    """Clear in-memory terminal command history."""
+    history_store = get_terminal_history()
+    history_store.clear()
+    return {"status": "cleared"}

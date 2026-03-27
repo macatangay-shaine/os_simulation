@@ -8,12 +8,30 @@ export default function TerminalApp() {
   ])
   const [input, setInput] = useState('')
   const [cwd, setCwd] = useState('/home/user')
+  const [commandHistory, setCommandHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jez_os_terminal_history')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+  const [historyIndex, setHistoryIndex] = useState(-1)
+
+  const persistHistory = (nextHistory) => {
+    setCommandHistory(nextHistory)
+    localStorage.setItem('jez_os_terminal_history', JSON.stringify(nextHistory.slice(-200)))
+  }
 
   const handleCommand = async (cmd) => {
     const trimmed = cmd.trim()
     setHistory((prev) => [...prev, { type: 'input', text: `${cwd}$ ${trimmed}` }])
 
     if (!trimmed) return
+
+    const nextHistory = [...commandHistory, trimmed]
+    persistHistory(nextHistory)
+    setHistoryIndex(-1)
 
     // Handle clear locally
     if (trimmed === 'clear') {
@@ -69,8 +87,49 @@ export default function TerminalApp() {
     setInput('')
   }
 
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!commandHistory.length) return
+      const nextIndex = historyIndex === -1 ? commandHistory.length - 1 : Math.max(0, historyIndex - 1)
+      setHistoryIndex(nextIndex)
+      setInput(commandHistory[nextIndex])
+      return
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!commandHistory.length) return
+      if (historyIndex === -1) return
+      if (historyIndex >= commandHistory.length - 1) {
+        setHistoryIndex(-1)
+        setInput('')
+        return
+      }
+      const nextIndex = historyIndex + 1
+      setHistoryIndex(nextIndex)
+      setInput(commandHistory[nextIndex])
+    }
+  }
+
+  const clearStoredHistory = async () => {
+    persistHistory([])
+    setHistoryIndex(-1)
+    try {
+      await fetch('http://localhost:8000/terminal/history', { method: 'DELETE' })
+    } catch {
+      // Ignore backend clear failures; local clear is still valid.
+    }
+    setHistory((prev) => [...prev, { type: 'output', text: 'Terminal history cleared' }])
+  }
+
   return (
     <div className="app-terminal">
+      <div className="terminal-toolbar">
+        <button type="button" className="terminal-toolbar-btn" onClick={clearStoredHistory}>
+          Clear History
+        </button>
+      </div>
       <div className="terminal-output">
         {history.map((line, index) => (
           <div key={index} className={`terminal-line ${line.type}`}>
@@ -85,6 +144,7 @@ export default function TerminalApp() {
           className="terminal-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleInputKeyDown}
           autoFocus
         />
       </form>

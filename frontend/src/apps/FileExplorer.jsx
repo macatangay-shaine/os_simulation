@@ -27,7 +27,8 @@ import {
   Package,
   AlertCircle,
   Stethoscope,
-  Printer
+  Printer,
+  RotateCcw
 } from 'lucide-react'
 
 // Icon mapping for app shortcuts
@@ -43,16 +44,10 @@ const APP_SHORTCUT_ICONS = {
   'diagnostics': Stethoscope
 }
 
-export default function FileExplorer() {
-  const [currentPath, setCurrentPath] = useState(() => {
-    // Check if there's a path to open from desktop
-    const pathToOpen = localStorage.getItem('files_open_path')
-    if (pathToOpen) {
-      localStorage.removeItem('files_open_path')
-      return pathToOpen
-    }
-    return '/home/user'
-  })
+const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
+
+export default function FileExplorer({ onWindowTitleChange }) {
+  const [currentPath, setCurrentPath] = useState('/home/user')
   const [entries, setEntries] = useState([])
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState('')
@@ -83,6 +78,7 @@ export default function FileExplorer() {
     { name: 'Pictures', path: '/home/user/Pictures', icon: FileImage },
     { name: 'Music', path: '/home/user/Music', icon: Music },
     { name: 'Videos', path: '/home/user/Videos', icon: Video },
+    { name: 'Recycle Bin', path: RECYCLE_BIN_PATH, icon: Trash2 },
     { name: 'This PC', path: '/', icon: HardDrive },
     { name: 'Network', path: '/network', icon: Network }
   ]
@@ -96,6 +92,19 @@ export default function FileExplorer() {
   useEffect(() => {
     setAddressBarValue(currentPath)
   }, [currentPath])
+
+  useEffect(() => {
+    // Apply desktop/start-menu requested path after mount so it is stable in React dev/strict mode.
+    const pathToOpen = localStorage.getItem('files_open_path')
+    if (pathToOpen) {
+      setCurrentPath(pathToOpen)
+      localStorage.removeItem('files_open_path')
+    }
+  }, [])
+
+  useEffect(() => {
+    onWindowTitleChange?.(getWindowTitleFromPath(currentPath))
+  }, [currentPath, onWindowTitleChange])
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -157,7 +166,10 @@ export default function FileExplorer() {
     setIsSearching(false)
     setFileContent(null)
     try {
-      const response = await fetchApi(`/fs/list?path=${encodeURIComponent(path)}`)
+      const endpoint = path === RECYCLE_BIN_PATH
+        ? '/fs/recycle/list'
+        : `/fs/list?path=${encodeURIComponent(path)}`
+      const response = await fetchApi(endpoint)
       if (response.ok) {
         const data = await response.json()
         setEntries(data.nodes || [])
@@ -391,6 +403,16 @@ export default function FileExplorer() {
     return breadcrumbs
   }
 
+  const getWindowTitleFromPath = (path) => {
+    if (path === RECYCLE_BIN_PATH) return 'Recycle Bin'
+    if (path === '/') return 'This PC'
+    if (path === '/home/user') return 'Home'
+
+    const parts = path.split('/').filter(Boolean)
+    if (parts.length === 0) return 'File Explorer'
+    return parts[parts.length - 1]
+  }
+
   const handleContextMenu = (event, entry) => {
     event.preventDefault()
     event.stopPropagation()
@@ -536,7 +558,11 @@ export default function FileExplorer() {
 
   const confirmDelete = async () => {
     try {
-      const response = await fetchApi(`/fs/delete?path=${encodeURIComponent(deleteTarget)}`, { method: 'DELETE' })
+      const permanentDelete = currentPath === RECYCLE_BIN_PATH
+      const response = await fetchApi(
+        `/fs/delete?path=${encodeURIComponent(deleteTarget)}${permanentDelete ? '&permanent=true' : ''}`,
+        { method: 'DELETE' }
+      )
       if (response.ok) {
         loadDirectory(currentPath)
       } else {
@@ -648,6 +674,42 @@ export default function FileExplorer() {
     handleNavigate(item.path)
   }
 
+  const restoreRecycleItem = async (pathToRestore) => {
+    if (!pathToRestore) return
+    try {
+      const response = await fetchApi(
+        `/fs/recycle/restore?recycle_path=${encodeURIComponent(pathToRestore)}`,
+        { method: 'POST' }
+      )
+      if (response.ok) {
+        setError('Item restored')
+        setSelectedFile(null)
+        loadDirectory(currentPath)
+      } else {
+        setError('Restore failed')
+      }
+    } catch {
+      setError('Restore failed')
+    }
+  }
+
+  const emptyRecycleBin = async () => {
+    const confirm = window.confirm('Permanently delete all items in Recycle Bin?')
+    if (!confirm) return
+    try {
+      const response = await fetchApi('/fs/recycle/empty', { method: 'DELETE' })
+      if (response.ok) {
+        setSelectedFile(null)
+        setError('Recycle Bin emptied')
+        loadDirectory(currentPath)
+      } else {
+        setError('Failed to empty Recycle Bin')
+      }
+    } catch {
+      setError('Failed to empty Recycle Bin')
+    }
+  }
+
   const isDesktopFolder = () => {
     return currentPath === '/home/user/Desktop'
   }
@@ -734,6 +796,27 @@ export default function FileExplorer() {
               <button type="button" className="files-nav-btn" onClick={handleNewFile} title="New File">
                 <FilePlus className="files-toolbar-icon" />
               </button>
+              {currentPath === RECYCLE_BIN_PATH && (
+                <>
+                  <button
+                    type="button"
+                    className="files-nav-btn"
+                    onClick={() => restoreRecycleItem(selectedFile?.path)}
+                    disabled={!selectedFile}
+                    title="Restore Selected"
+                  >
+                    <RotateCcw className="files-toolbar-icon" />
+                  </button>
+                  <button
+                    type="button"
+                    className="files-nav-btn"
+                    onClick={emptyRecycleBin}
+                    title="Empty Recycle Bin"
+                  >
+                    <Trash2 className="files-toolbar-icon" />
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="files-address-bar">
@@ -942,6 +1025,19 @@ export default function FileExplorer() {
             <Trash2 className="files-context-icon" />
             Delete
           </button>
+          {currentPath === RECYCLE_BIN_PATH && (
+            <button
+              type="button"
+              className="files-context-item"
+              onClick={() => {
+                restoreRecycleItem(contextMenu.targetPath)
+                setContextMenu({ visible: false, x: 0, y: 0, targetPath: null })
+              }}
+            >
+              <RotateCcw className="files-context-icon" />
+              Restore
+            </button>
+          )}
           <button type="button" className="files-context-item" onClick={handlePrint}>
             <Printer className="files-context-icon" />
             Print
@@ -984,11 +1080,15 @@ export default function FileExplorer() {
       {showDeleteConfirm && (
         <div className="files-dialog-overlay" onClick={() => setShowDeleteConfirm(false)}>
           <div className="files-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete File</h3>
-            <p>Are you sure you want to delete "{deleteTarget.split('/').pop()}"?</p>
+            <h3>{currentPath === RECYCLE_BIN_PATH ? 'Permanently Delete' : 'Move to Recycle Bin'}</h3>
+            <p>
+              {currentPath === RECYCLE_BIN_PATH
+                ? `Permanently delete "${deleteTarget.split('/').pop()}"? This cannot be undone.`
+                : `Move "${deleteTarget.split('/').pop()}" to Recycle Bin?`}
+            </p>
             <div className="files-dialog-buttons">
               <button type="button" className="files-dialog-btn danger" onClick={confirmDelete}>
-                Delete
+                {currentPath === RECYCLE_BIN_PATH ? 'Delete Permanently' : 'Move to Recycle Bin'}
               </button>
               <button type="button" className="files-dialog-btn" onClick={() => setShowDeleteConfirm(false)}>
                 Cancel

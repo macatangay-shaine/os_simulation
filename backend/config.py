@@ -25,3 +25,6 @@ startup_processes = ["System", "Kernel Services"]  # Apps that auto-start
 
 # Session storage (in-memory for simplicity)
 active_sessions = {}
+
+# Terminal command history (in-memory)
+terminal_history: List[Dict] = []
