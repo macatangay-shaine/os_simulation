@@ -17,6 +17,19 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
   })
   const [showVolumeControl, setShowVolumeControl] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [batterySupported, setBatterySupported] = useState(true)
+
+  const normalizeBatteryState = (value, fallbackLevel = 80) => {
+    const levelNumber = Number(value?.level)
+    const safeLevel = Number.isFinite(levelNumber)
+      ? Math.min(100, Math.max(0, Math.round(levelNumber)))
+      : fallbackLevel
+
+    return {
+      level: safeLevel,
+      charging: Boolean(value?.charging)
+    }
+  }
 
   useEffect(() => {
     if (isSleeping) return undefined
@@ -41,7 +54,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
       try {
         const saved = localStorage.getItem('jez_os_battery')
         if (saved) {
-          setBattery(JSON.parse(saved))
+          setBattery(normalizeBatteryState(JSON.parse(saved)))
         }
       } catch (error) {
         console.warn('Failed to load battery state:', error)
@@ -53,7 +66,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
     // Listen for custom battery update events from ActionCenter (same tab)
     const handleBatteryUpdate = (event) => {
       if (event.detail) {
-        setBattery(event.detail)
+        setBattery(normalizeBatteryState(event.detail))
       }
     }
     
@@ -69,6 +82,48 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
+
+  // Keep taskbar battery aligned with real device battery when available.
+  useEffect(() => {
+    let batteryObj = null
+    let updateBattery = null
+
+    const initBattery = async () => {
+      try {
+        if ('getBattery' in navigator) {
+          setBatterySupported(true)
+          batteryObj = await navigator.getBattery()
+          updateBattery = () => {
+            const normalized = normalizeBatteryState({
+              level: Math.round(batteryObj.level * 100),
+              charging: batteryObj.charging
+            })
+            setBattery(normalized)
+            localStorage.setItem('jez_os_battery', JSON.stringify(normalized))
+          }
+          updateBattery()
+          batteryObj.addEventListener('levelchange', updateBattery)
+          batteryObj.addEventListener('chargingchange', updateBattery)
+        } else {
+          setBatterySupported(false)
+        }
+      } catch (error) {
+        setBatterySupported(false)
+        console.warn('Battery API not available in taskbar:', error)
+      }
+    }
+
+    initBattery()
+
+    return () => {
+      if (batteryObj && updateBattery) {
+        batteryObj.removeEventListener('levelchange', updateBattery)
+        batteryObj.removeEventListener('chargingchange', updateBattery)
+      }
+    }
+  }, [])
+
+  const displayBattery = normalizeBatteryState(battery, 80)
 
   // Save volume to localStorage when changed
   useEffect(() => {
@@ -329,14 +384,14 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
           <button 
             type="button" 
             className="taskbar-systray-item"
-            title={`Battery: ${battery.level}%${battery.charging ? ' (Charging)' : ''}`}
+            title={batterySupported ? `Battery: ${displayBattery.level}%${displayBattery.charging ? ' (Charging)' : ''}` : 'Battery: Not available on this browser/device'}
           >
             <div style={{ position: 'relative', display: 'inline-flex' }}>
               <Battery 
-                className={`taskbar-systray-icon battery-icon ${battery.charging ? 'charging' : ''} ${battery.level <= 20 ? 'low' : ''}`} 
-                style={{ color: battery.charging ? '#fbbf24' : battery.level <= 20 ? '#ef4444' : '#10b981' }}
+                className={`taskbar-systray-icon battery-icon ${displayBattery.charging ? 'charging' : ''} ${displayBattery.level <= 20 ? 'low' : ''}`} 
+                style={{ color: batterySupported ? (displayBattery.charging ? '#fbbf24' : displayBattery.level <= 20 ? '#ef4444' : '#10b981') : '#94a3b8' }}
               />
-              {battery.charging && (
+              {displayBattery.charging && (
                 <Zap 
                   size={12} 
                   style={{ 

@@ -3,6 +3,7 @@ import { X, Wifi, Volume2, Battery, Sun, Bluetooth, Smartphone, Zap, Cast, Chevr
 
 export default function ActionCenter({ onClose }) {
   const [battery, setBattery] = useState({ level: 80, charging: false })
+  const [batterySupported, setBatterySupported] = useState(true)
   const [brightness, setBrightness] = useState(70)
   const [airplaneMode, setAirplaneMode] = useState(false)
   const [energySaver, setEnergySaver] = useState(false)
@@ -28,6 +29,18 @@ export default function ActionCenter({ onClose }) {
     { name: 'Bluetooth Speaker', address: '00:1A:7D:DA:71:15', connected: false }
   ])
   const [selectedBluetooth, setSelectedBluetooth] = useState('Wireless Headphones')
+
+  const normalizeBatteryState = (value, fallbackLevel = 80) => {
+    const levelNumber = Number(value?.level)
+    const safeLevel = Number.isFinite(levelNumber)
+      ? Math.min(100, Math.max(0, Math.round(levelNumber)))
+      : fallbackLevel
+
+    return {
+      level: safeLevel,
+      charging: Boolean(value?.charging)
+    }
+  }
 
   const handleClose = () => {
     setIsClosing(true)
@@ -82,6 +95,7 @@ export default function ActionCenter({ onClose }) {
     const initBattery = async () => {
       try {
         if ('getBattery' in navigator) {
+          setBatterySupported(true)
           batteryObj = await navigator.getBattery()
           updateBattery = () => {
             setBattery({
@@ -92,8 +106,11 @@ export default function ActionCenter({ onClose }) {
           updateBattery()
           batteryObj.addEventListener('levelchange', updateBattery)
           batteryObj.addEventListener('chargingchange', updateBattery)
+        } else {
+          setBatterySupported(false)
         }
       } catch (error) {
+        setBatterySupported(false)
         console.warn('Battery API not available:', error)
       }
     }
@@ -111,13 +128,16 @@ export default function ActionCenter({ onClose }) {
   // Save battery state to localStorage and dispatch custom event for taskbar sync
   useEffect(() => {
     try {
-      localStorage.setItem('jez_os_battery', JSON.stringify(battery))
+      const normalizedBattery = normalizeBatteryState(battery)
+      localStorage.setItem('jez_os_battery', JSON.stringify(normalizedBattery))
       // Dispatch custom event for same-tab listeners (Taskbar)
-      window.dispatchEvent(new CustomEvent('batteryUpdate', { detail: battery }))
+      window.dispatchEvent(new CustomEvent('batteryUpdate', { detail: normalizedBattery }))
     } catch (error) {
       console.warn('Failed to save battery state:', error)
     }
   }, [battery])
+
+  const displayBattery = normalizeBatteryState(battery, 80)
 
   // Get connection info and detect Wi-Fi status
   useEffect(() => {
@@ -424,10 +444,10 @@ export default function ActionCenter({ onClose }) {
           </div>
           <div className="action-status-value">
             <div className="battery-bar">
-              <div className="battery-fill" style={{ width: `${battery.level}%` }} />
+              <div className="battery-fill" style={{ width: `${displayBattery.level}%` }} />
             </div>
             <span className="battery-text">
-              {Math.round(battery.level)}% {battery.charging ? '⚡ Charging' : ''}
+              {batterySupported ? `${displayBattery.level}% ${displayBattery.charging ? '⚡ Charging' : ''}` : 'Not available'}
             </span>
           </div>
         </div>
