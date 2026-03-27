@@ -37,17 +37,23 @@ def update_performance_history():
 @router.get("/resources")
 def get_system_resources():
     """Get current system resource usage."""
-    running_procs = [p for p in config.process_table if p.state == "running"]
-    used_memory = sum(p.memory for p in running_procs)
-    total_cpu = sum(p.cpu_usage for p in running_procs)
-    
     # Update CPU usage for running processes (simulate fluctuation)
     for index, record in enumerate(config.process_table):
         if record.state == "running":
-            # Add small random variation to CPU
+            # Add random variation plus a tiny memory-weighted drift.
+            # This keeps values moving while still correlating with process load.
             variation = random.uniform(-5, 5)
-            new_cpu = max(0.1, min(99.0, record.cpu_usage + variation))
+            memory_drift = (record.memory / config.MAX_MEMORY) * random.uniform(0, 2)
+            new_cpu = max(0.1, min(99.0, record.cpu_usage + variation + memory_drift))
             config.process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
+
+    # Recompute totals after updating process CPU values.
+    running_procs = [p for p in config.process_table if p.state == "running"]
+    used_memory = sum(p.memory for p in running_procs)
+    total_cpu = sum(p.cpu_usage for p in running_procs)
+
+    # Keep history fresh on each resource poll so performance charts evolve over time.
+    update_performance_history()
     
     return {
         "maxMemory": config.MAX_MEMORY,

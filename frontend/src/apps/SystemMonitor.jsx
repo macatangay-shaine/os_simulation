@@ -589,14 +589,17 @@ export default function SystemMonitor() {
     return sum + (part.allocation ? part.size : 0)
   }, 0)
   const runningProcessCount = processes.filter((proc) => proc.state === 'running').length
-  const simulatedCpuUsage = scheduleResult && runningProcessCount > 0
+  const schedulerCpuUsage = scheduleResult && runningProcessCount > 0
     ? (() => {
         const rawUsage = computeCpuUsage(scheduleResult.segments, nowSim, runningProcessCount)
-        // Add additional dampening: fewer processes = lower baseline usage
         const processDampening = Math.min(1, runningProcessCount / 4)
         return Math.max(3, rawUsage * processDampening)
       })()
     : 0
+  const backendCpuUsage = Number.isFinite(systemStats.cpuUsage)
+    ? Math.max(0, Math.min(100, Number(systemStats.cpuUsage)))
+    : 0
+  const simulatedCpuUsage = backendCpuUsage > 0 ? backendCpuUsage : schedulerCpuUsage
   const schedulingLookup = schedulingInput.reduce((acc, proc) => {
     acc[proc.pid] = proc
     return acc
