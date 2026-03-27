@@ -1,0 +1,175 @@
+/* ============================================================================
+   Calendar App Styles
+   ============================================================================ */
+
+.calendar-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+  padding: 20px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--win-surface);
+  border-radius: 8px;
+}
+
+.calendar-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--win-text);
+}
+
+.calendar-nav-btn {
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.calendar-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.today-btn {
+  padding: 8px 16px;
+  background: var(--win-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.today-btn:hover {
+  opacity: 0.9;
+}
+
+.calendar-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--win-surface);
+  border-radius: 8px;
+  padding: 16px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text-muted);
+  padding: 8px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  color: var(--win-text);
+  min-height: 0;
+}
+
+.calendar-day:not(.empty):hover {
+  background: var(--win-accent-soft);
+}
+
+.calendar-day.today {
+  background: var(--win-accent);
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day.selected {
+  border: 2px solid var(--win-accent);
+}
+
+.calendar-day.empty {
+  cursor: default;
+}
+
+.calendar-footer {
+  padding: 12px 16px;
+  background: var(--win-surface);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--win-text);
+  font-size: 14px;
+}
+
+.year-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 8px;
+  padding: 16px;
+  background: var(--win-surface);
+  border-radius: 8px;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.year-picker-btn {
+  padding: 12px;
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.year-picker-btn:hover {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.year-picker-btn.active {
+  background: var(--win-accent);
+  color: white;
+  border-color: var(--win-accent);
+}

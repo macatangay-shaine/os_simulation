@@ -1,0 +1,222 @@
+/* ============================================================================
+   Desktop Environment Styles
+   ============================================================================ */
+
+.desktop {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  padding-bottom: 48px;
+  box-sizing: border-box;
+}
+
+.desktop-wallpaper {
+  position: absolute;
+  inset: 0;
+  background: var(--desktop-wallpaper);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.desktop-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 48px;
+  z-index: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.desktop-title {
+  display: none;
+}
+
+.desktop-subtitle {
+  display: none;
+}
+
+/* ============================================================================
+   App Launcher Grid
+   ============================================================================ */
+
+.app-launcher {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, 100px);
+  grid-auto-rows: 110px;
+  gap: 12px;
+  align-content: start;
+  align-items: start;
+  padding: 24px;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: none;
+  width: 100px;
+  height: 110px;
+  min-width: 100px;
+  min-height: 110px;
+  max-width: 100px;
+  max-height: 110px;
+}
+
+.app-icon:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.app-icon-draggable {
+  cursor: grab;
+}
+
+.app-icon-draggable:active {
+  cursor: grabbing;
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.app-icon-draggable[draggable="true"]:hover {
+  opacity: 1;
+}
+
+.app-icon-badge {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--icon-gradient-files);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon Color Variants */
+.app-icon[data-app="terminal"] .app-icon-badge {
+  background: var(--icon-gradient-terminal);
+}
+
+.app-icon[data-app="files"] .app-icon-badge,
+.app-icon[data-app="localfiles"] .app-icon-badge {
+  background: var(--icon-gradient-folder);
+}
+
+.app-icon[data-app="notes"] .app-icon-badge {
+  background: var(--icon-gradient-notes);
+}
+
+.app-icon[data-app="settings"] .app-icon-badge {
+  background: var(--icon-gradient-settings);
+}
+
+.app-icon[data-app="monitor"] .app-icon-badge {
+  background: var(--icon-gradient-monitor);
+}
+
+.app-icon[data-app="appstore"] .app-icon-badge {
+  background: var(--icon-gradient-appstore);
+}
+
+.app-icon-svg {
+  width: 24px;
+  height: 24px;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.app-icon-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   Context Menus
+   ============================================================================ */
+
+.context-menu {
+  position: absolute;
+  z-index: 1000;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  border-radius: 12px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  box-shadow: var(--win-shadow);
+}
+
+.context-menu-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--win-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--win-accent-soft);
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--win-border);
+  margin: 2px 0;
+}
+
+/* ============================================================================
+   High Contrast Mode for Desktop
+   ============================================================================ */
+
+:root[data-contrast='high'] .app-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .app-icon-label {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+:root[data-contrast='high'] .context-menu {
+  background: rgba(0, 0, 0, 0.92);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+:root[data-contrast='high'] .context-menu-item {
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

@@ -1,0 +1,224 @@
+/* ============================================================================
+   Calendar Widget Styles
+   ============================================================================ */
+
+.calendar-widget {
+  position: fixed;
+  bottom: 68px;
+  right: 20px;
+  width: 340px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  z-index: 5001;
+  animation: slideInLeft 0.25s ease-out;
+  padding: 16px;
+  color: #f8fafc;
+  backdrop-filter: blur(40px);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.calendar-title {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+  text-align: center;
+  color: #f8fafc;
+}
+
+.calendar-nav-btn {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+}
+
+.calendar-nav-btn:active {
+  transform: scale(0.95);
+}
+
+.calendar-widget .calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-direction: initial !important;
+  flex: initial !important;
+  padding: 0 !important;
+}
+
+.calendar-widget .calendar-day-name {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.9);
+  padding: 8px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(51, 65, 85, 0.6);
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.calendar-widget .calendar-day-name:nth-child(7) {
+  border-right: none;
+}
+
+.calendar-widget .calendar-day {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: rgba(30, 41, 59, 0.5);
+  color: #e2e8f0;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  position: relative;
+}
+
+.calendar-widget .calendar-day:nth-child(7n) {
+  border-right: none;
+}
+
+.calendar-widget .calendar-day:hover {
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
+  z-index: 1;
+}
+
+.calendar-widget .calendar-day-today {
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.5);
+}
+
+.calendar-widget .calendar-day-today:hover {
+  background: #3b82f6;
+}
+
+.calendar-widget .calendar-day-empty {
+  height: 38px;
+  background: rgba(15, 23, 42, 0.3);
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.calendar-widget .calendar-day-empty:nth-child(7n) {
+  border-right: none;
+}
+
+.calendar-today-info {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.calendar-today-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-today-btn:hover {
+  background: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.calendar-today-btn:active {
+  transform: scale(0.95);
+}
+
+/* Animation exit state */
+.calendar-widget.closing {
+  animation: slideOutRight 0.2s ease-in forwards;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .calendar-widget {
+    width: 320px;
+    right: 10px;
+  }
+}
+
+/* ============================================================================
+   High Contrast Mode for Calendar
+   ============================================================================ */
+
+:root[data-contrast='high'] .calendar-widget {
+  background: rgba(0, 0, 0, 0.92);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .calendar-nav-btn {
+  color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .calendar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-contrast='high'] .calendar-day {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .calendar-day:hover {
+  background: var(--win-accent);
+  border-color: var(--win-accent);
+  color: #000000;
+}
+
+:root[data-contrast='high'] .calendar-day-today {
+  background: var(--win-accent);
+  border-color: var(--win-accent);
+  color: #000000;
+}
+
+:root[data-contrast='high'] .calendar-today-info {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-contrast='high'] .calendar-today-btn {
+  background: var(--win-accent);
+  color: #000000;
+}
+
+:root[data-contrast='high'] .calendar-today-btn:hover {
+  opacity: 0.8;
+}

@@ -1,0 +1,207 @@
+/* ============================================================================
+   Window Management Styles
+   ============================================================================ */
+
+.os-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 16px;
+  border: 1px solid var(--win-border);
+  background: var(--win-surface);
+  box-shadow: var(--win-shadow);
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.os-window.closing {
+  animation: fadeOut 0.2s ease-in forwards;
+}
+
+.os-window.active {
+  border-color: var(--win-accent);
+  box-shadow: 0 8px 32px var(--win-accent-soft), var(--win-shadow);
+}
+
+.os-window.maximized {
+  border-radius: 0 !important;
+}
+
+.os-window.minimized {
+  display: none;
+}
+
+/* Resize handles */
+.os-window-resize-handle {
+  position: absolute;
+  z-index: 10;
+}
+
+.os-window-resize-handle.n {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.os-window-resize-handle.e {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.os-window-resize-handle.s {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.os-window-resize-handle.w {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.os-window-resize-handle.ne {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}
+
+.os-window-resize-handle.se {
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+
+.os-window-resize-handle.sw {
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nesw-resize;
+}
+
+.os-window-resize-handle.nw {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+
+.os-window-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--win-surface);
+  border-bottom: 1px solid var(--win-border);
+  cursor: grab;
+}
+
+.os-window-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.os-window-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.os-window-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.os-window-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.os-window-btn:active {
+  transform: scale(0.95);
+}
+
+.os-window-btn.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+.os-window-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.os-window-body {
+  padding: 14px;
+  height: calc(100% - 40px);
+  overflow: auto;
+  color: var(--win-text);
+}
+
+.window-placeholder-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.window-placeholder-body {
+  font-size: 13px;
+  color: var(--win-muted);
+}
+/* ============================================================================
+   High Contrast Mode for Windows
+   ============================================================================ */
+
+:root[data-contrast='high'] .os-window {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.92);
+}
+
+:root[data-contrast='high'] .os-window.active {
+  border-color: var(--win-accent);
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.3), 0 0 0 2px var(--win-accent);
+}
+
+:root[data-contrast='high'] .os-window-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-contrast='high'] .os-window-btn.close:hover {
+  background: #ff4444;
+  color: #000000;
+}

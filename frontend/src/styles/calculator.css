@@ -1,0 +1,115 @@
+/* ============================================================================
+   Calculator App Styles
+   ============================================================================ */
+
+.calculator-app {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 12px;
+  height: 100%;
+  background: var(--win-bg);
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 404px;
+  margin: 0 auto;
+}
+
+.calculator-display {
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  padding: 14px 12px;
+  font-size: clamp(22px, 4.2vw, 30px);
+  font-weight: 600;
+  text-align: right;
+  color: var(--win-text);
+  min-height: 64px;
+  max-height: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+  letter-spacing: 0.6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.calculator-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: minmax(46px, 1fr);
+}
+
+.calc-btn {
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--win-text);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  user-select: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.calc-btn:hover {
+  background: var(--win-accent-soft);
+  border-color: var(--win-accent);
+}
+
+.calc-btn:active {
+  transform: scale(0.95);
+}
+
+.calc-btn:focus-visible {
+  outline: 2px solid var(--win-accent);
+  outline-offset: 2px;
+}
+
+.calc-btn.calc-operation {
+  background: var(--win-accent);
+  color: white;
+  font-weight: 700;
+}
+
+.calc-btn.calc-operation:hover {
+  background: var(--win-accent);
+  opacity: 0.9;
+  border-color: var(--win-accent);
+}
+
+.calc-btn.calc-equals {
+  background: var(--win-accent);
+  color: white;
+  font-weight: 700;
+}
+
+.calc-btn.calc-equals:hover {
+  background: var(--win-accent);
+  opacity: 0.9;
+  border-color: var(--win-accent);
+}
+
+.calc-btn.calc-special {
+  background: var(--win-surface-strong);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--win-accent);
+}
+
+.calc-btn.calc-wide {
+  letter-spacing: 0.5px;
+}

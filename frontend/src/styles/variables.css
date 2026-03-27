@@ -1,0 +1,75 @@
+/* ============================================================================
+   Theme Variables & Color Palette
+   ============================================================================ */
+
+:root {
+  /* Windows 11 Typography */
+  font-family: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #101828;
+  background-color: #e9eef6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Light Theme - Windows 11 Inspired */
+  --win-bg: #e9eef6;
+  --win-surface: rgba(255, 255, 255, 0.86);
+  --win-surface-strong: rgba(255, 255, 255, 0.94);
+  --win-surface-dark: rgba(240, 244, 250, 0.95);
+  --win-border: rgba(100, 116, 139, 0.28);
+  --win-text: #1e1e1e;
+  --win-muted: rgba(30, 41, 59, 0.6);
+  --win-accent: #0067c0;
+  --win-accent-soft: rgba(0, 103, 192, 0.16);
+  --win-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+
+  /* Desktop & Accessibility */
+  --desktop-wallpaper: radial-gradient(circle at 20% 20%, #dbeafe, #bfdbfe 35%, #93c5fd 65%, #60a5fa);
+  --font-scale: 1.1;
+
+  /* Typography Sizes - Scale with --font-scale */
+  --font-xs: calc(10px * var(--font-scale));
+  --font-sm: calc(12px * var(--font-scale));
+  --font-base: calc(14px * var(--font-scale));
+  --font-md: calc(16px * var(--font-scale));
+  --font-lg: calc(18px * var(--font-scale));
+  --font-xl: calc(24px * var(--font-scale));
+  --font-2xl: calc(32px * var(--font-scale));
+
+  /* Modern Icon Colors - Windows 11 Style */
+  --icon-folder: #fbbf24;
+  --icon-terminal: #8b5cf6;
+  --icon-files: #3b82f6;
+  --icon-notes: #10b981;
+  --icon-settings: #64748b;
+  --icon-monitor: #ef4444;
+  --icon-appstore: #0ea5e9;
+  --icon-localfiles: #f59e0b;
+
+  /* Icon Gradients */
+  --icon-gradient-folder: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  --icon-gradient-terminal: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  --icon-gradient-files: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  --icon-gradient-notes: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --icon-gradient-settings: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  --icon-gradient-monitor: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  --icon-gradient-appstore: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  --icon-gradient-localfiles: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+/* Dark Theme */
+:root[data-theme='dark'] {
+  /* Dark Theme - Windows 11 Inspired */
+  --win-bg: #1a1a1a;
+  --win-surface: rgba(30, 30, 30, 0.95);
+  --win-surface-strong: rgba(40, 40, 40, 0.98);
+  --win-surface-dark: rgba(20, 20, 20, 0.98);
+  --win-border: rgba(100, 100, 100, 0.35);
+  --win-text: #e0e0e0;
+  --win-muted: rgba(150, 150, 150, 0.7);
+  --win-accent: #0078d4;
+  --win-accent-soft: rgba(0, 120, 212, 0.2);
+  --win-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}

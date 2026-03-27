@@ -1,0 +1,201 @@
+import { useEffect, useRef, useState } from 'react'
+import { Minus, X, Maximize2, Minimize2 } from 'lucide-react'
+
+const SNAP_THRESHOLD = 20
+const SNAP_ZONES = {
+  LEFT: { x: 0, y: 0, width: '50%', height: '100%' },
+  RIGHT: { x: '50%', y: 0, width: '50%', height: '100%' },
+  TOP_LEFT: { x: 0, y: 0, width: '50%', height: '50%' },
+  TOP_RIGHT: { x: '50%', y: 0, width: '50%', height: '50%' },
+  BOTTOM_LEFT: { x: 0, y: '50%', width: '50%', height: '50%' },
+  BOTTOM_RIGHT: { x: '50%', y: '50%', width: '50%', height: '50%' },
+  MAXIMIZE: { x: 0, y: 0, width: '100%', height: '100%' }
+}
+
+export default function Window({
+  windowData,
+  onClose,
+  onMinimize,
+  onMaximize = () => {},
+  onFocus,
+  onMove,
+  onResize = () => {},
+  onSnap,
+  children
+}) {
+  const { id, title, x, y, width, height, zIndex, minimized, isActive, isMaximized, noMaximize, minWidth = 300, minHeight = 200 } = windowData
+  const headerRef = useRef(null)
+  const windowRef = useRef(null)
+  const [dragging, setDragging] = useState(false)
+  const [resizing, setResizing] = useState(null)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [snapZone, setSnapZone] = useState(null)
+  const [isClosing, setIsClosing] = useState(false)
+
+  useEffect(() => {
+    if (!dragging && !resizing) return
+    const handleMove = (event) => {
+      if (resizing) {
+        const rect = windowRef.current.getBoundingClientRect()
+        let newWidth = width
+        let newHeight = height
+        let newX = x
+        let newY = y
+
+        if (resizing.includes('e')) {
+          newWidth = event.clientX - rect.left
+        }
+        if (resizing.includes('s')) {
+          newHeight = event.clientY - rect.top
+        }
+        if (resizing.includes('w')) {
+          const deltaX = event.clientX - rect.left
+          newWidth = width - deltaX
+          newX = x + deltaX
+        }
+        if (resizing.includes('n')) {
+          const deltaY = event.clientY - rect.top
+          newHeight = height - deltaY
+          newY = y + deltaY
+        }
+
+        // Min size constraints
+        if (newWidth < minWidth) newWidth = minWidth
+        if (newHeight < minHeight) newHeight = minHeight
+
+        onResize(id, newX, newY, newWidth, newHeight)
+        return
+      }
+
+      const newX = event.clientX - offset.x
+      const newY = event.clientY - offset.y
+      onMove(id, newX, newY)
+      
+      // Detect snap zones
+      const screenWidth = window.innerWidth
+      const screenHeight = window.innerHeight
+      const mouseX = event.clientX
+      const mouseY = event.clientY
+      
+      if (mouseX <= SNAP_THRESHOLD && mouseY <= SNAP_THRESHOLD) {
+        setSnapZone('TOP_LEFT')
+      } else if (mouseX >= screenWidth - SNAP_THRESHOLD && mouseY <= SNAP_THRESHOLD) {
+        setSnapZone('TOP_RIGHT')
+      } else if (mouseX <= SNAP_THRESHOLD && mouseY >= screenHeight - SNAP_THRESHOLD - 50) {
+        setSnapZone('BOTTOM_LEFT')
+      } else if (mouseX >= screenWidth - SNAP_THRESHOLD && mouseY >= screenHeight - SNAP_THRESHOLD - 50) {
+        setSnapZone('BOTTOM_RIGHT')
+      } else if (mouseX <= SNAP_THRESHOLD) {
+        setSnapZone('LEFT')
+      } else if (mouseX >= screenWidth - SNAP_THRESHOLD) {
+        setSnapZone('RIGHT')
+      } else if (mouseY <= SNAP_THRESHOLD) {
+        setSnapZone('MAXIMIZE')
+      } else {
+        setSnapZone(null)
+      }
+    }
+    const handleUp = () => {
+      if (snapZone && onSnap && !resizing) {
+        onSnap(id, SNAP_ZONES[snapZone])
+      }
+      setDragging(false)
+      setResizing(null)
+      setSnapZone(null)
+    }
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleUp)
+    }
+  }, [dragging, resizing, id, offset.x, offset.y, x, y, width, height, onMove, onResize, snapZone, onSnap])
+
+  const handleMouseDown = (event) => {
+    if (!headerRef.current) return
+    const rect = headerRef.current.getBoundingClientRect()
+    setOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+    setDragging(true)
+    onFocus(id)
+  }
+
+  const handleHeaderDoubleClick = () => {
+    if (onMaximize) {
+      onMaximize(id)
+    }
+  }
+
+  const handleResizeMouseDown = (direction) => (event) => {
+    event.stopPropagation()
+    setResizing(direction)
+    onFocus(id)
+  }
+
+  if (minimized) return null
+
+  return (
+    <>
+      {dragging && snapZone && (
+        <div
+          className="snap-preview"
+          style={{
+            position: 'fixed',
+            left: SNAP_ZONES[snapZone].x,
+            top: SNAP_ZONES[snapZone].y,
+            width: SNAP_ZONES[snapZone].width,
+            height: SNAP_ZONES[snapZone].height,
+            border: '3px solid rgba(59, 130, 246, 0.7)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            pointerEvents: 'none',
+            zIndex: 9999
+          }}
+        />
+      )}
+      <div
+        ref={windowRef}
+        className={`os-window ${isActive ? 'active' : ''} ${isMaximized ? 'maximized' : ''} ${isClosing ? 'closing' : ''}`}
+        style={{
+          width,
+          height,
+          transform: `translate(${x}px, ${y}px)`,
+          zIndex
+        }}
+        onMouseDown={() => onFocus(id)}
+      >
+        <div className="os-window-header" ref={headerRef} onMouseDown={handleMouseDown} onDoubleClick={handleHeaderDoubleClick}>
+          <span className="os-window-title">{title}</span>
+          <div className="os-window-actions">
+            <button type="button" className="os-window-btn" onClick={() => onMinimize(id)}>
+              <Minus className="os-window-icon" />
+            </button>
+            {!noMaximize && (
+              <button type="button" className="os-window-btn" onClick={() => onMaximize(id)}>
+                {isMaximized ? <Minimize2 className="os-window-icon" /> : <Maximize2 className="os-window-icon" />}
+              </button>
+            )}
+            <button type="button" className="os-window-btn close" onClick={() => {
+              setIsClosing(true)
+              setTimeout(() => onClose(id), 200)
+            }}>
+              <X className="os-window-icon" />
+            </button>
+          </div>
+        </div>
+        <div className="os-window-body">{children}</div>
+        
+        {!isMaximized && (
+          <>
+            <div className="os-window-resize-handle n" onMouseDown={handleResizeMouseDown('n')} />
+            <div className="os-window-resize-handle e" onMouseDown={handleResizeMouseDown('e')} />
+            <div className="os-window-resize-handle s" onMouseDown={handleResizeMouseDown('s')} />
+            <div className="os-window-resize-handle w" onMouseDown={handleResizeMouseDown('w')} />
+            <div className="os-window-resize-handle ne" onMouseDown={handleResizeMouseDown('ne')} />
+            <div className="os-window-resize-handle se" onMouseDown={handleResizeMouseDown('se')} />
+            <div className="os-window-resize-handle sw" onMouseDown={handleResizeMouseDown('sw')} />
+            <div className="os-window-resize-handle nw" onMouseDown={handleResizeMouseDown('nw')} />
+          </>
+        )}
+      </div>
+    </>
+  )
+}

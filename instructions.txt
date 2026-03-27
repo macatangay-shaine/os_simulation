@@ -1,0 +1,836 @@
+PHASE 0 — DEFINE COMPLETED OS REQUIREMENTS (REFERENCE)
+
+These are the final requirements your OS must satisfy.
+
+Core OS Requirements
+
+Boot process simulation
+
+Kernel logic (process + file + permission handling)
+
+Virtual file system with optional real file access
+
+Process & memory simulation
+
+Desktop environment (windows, taskbar, apps)
+
+App execution & lifecycle
+
+Terminal emulator
+
+Resource monitoring (CPU, RAM – simulated)
+
+Supporting Requirements
+
+User & permission system
+
+Settings & system configuration
+
+Lightweight resource usage
+
+Secure sandboxing (no direct OS takeover)
+
+PHASE 1 — PROJECT SETUP
+
+Applies Requirements: 11, 12
+
+What You’re Building Here
+
+A clean separation between:
+
+Frontend (OS UI)
+
+Backend (Kernel simulator)
+
+Step 1.1 — Folder Structure
+simuos/
+├── backend/        # Python kernel simulator
+└── frontend/       # React desktop environment
+
+Step 1.2 — Backend Setup (Kernel Base)
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn sqlite3
+
+
+✅ Requirement applied:
+
+Kernel foundation
+
+Lightweight backend
+
+No virtualization
+
+Step 1.3 — Frontend Setup (OS Shell)
+cd frontend
+npm create vite@latest . -- --template react
+npm install
+npm run dev
+
+
+✅ Requirement applied:
+
+Desktop environment base
+
+Low memory usage (Vite + React)
+
+PHASE 2 — BOOT PROCESS
+
+Applies Requirements: 1, 2
+
+What You’re Simulating
+
+A real OS boot:
+
+Power On → Kernel Init → File System Mount → Desktop Launch
+
+Step 2.1 — Backend Boot Endpoint
+@app.get("/boot")
+def boot():
+    return {
+        "kernel": "loaded",
+        "filesystem": "mounted",
+        "services": ["process_manager", "fs_manager"]
+    }
+
+Step 2.2 — Frontend Boot Page
+
+Pages:
+
+BootScreen.jsx
+
+Features:
+
+Loading bar
+
+Boot logs
+
+Calls /boot
+
+Redirects to Desktop
+
+✅ Requirement applied:
+
+Boot simulation
+
+Kernel initialization logic
+
+PHASE 3 — KERNEL & PROCESS MANAGEMENT
+
+Applies Requirements: 2, 4, 6
+
+What This Represents
+
+Your Python backend IS the kernel.
+
+Step 3.1 — Process Table (Backend)
+
+Create:
+
+process_id
+
+name
+
+memory_usage
+
+state
+
+{
+  "pid": 3,
+  "app": "Terminal",
+  "memory": 14,
+  "state": "running"
+}
+
+Step 3.2 — Process APIs
+
+Endpoints:
+
+/process/start
+
+/process/kill
+
+/process/list
+
+✅ Requirement applied:
+
+Fake but realistic process lifecycle
+
+Resource control without real CPU usage
+
+PHASE 4 — FILE SYSTEM SIMULATION
+
+Applies Requirements: 3, 12
+
+Step 4.1 — Virtual File System Design
+
+Backend:
+
+SQLite database
+
+Tree-based structure
+
+/
+├── home/
+│   └── user/
+│       └── notes.txt
+├── bin/
+└── system/
+
+Step 4.2 — File APIs
+
+Create file
+
+Read file
+
+Write file
+
+Delete file
+
+Optional advanced:
+
+Browser File System Access API (manual permission only)
+
+✅ Requirement applied:
+
+File access
+
+Secure sandboxing
+
+No direct disk control
+
+PHASE 5 — DESKTOP ENVIRONMENT
+
+Applies Requirements: 5, 6
+
+Step 5.1 — Desktop Layout
+
+Components:
+
+Desktop.jsx
+
+Taskbar.jsx
+
+Window.jsx
+
+AppLauncher.jsx
+
+Desktop features:
+
+Icons
+
+Right-click menu
+
+App shortcuts
+
+Step 5.2 — Window System
+
+Each window:
+
+Draggable
+
+Minimize / close
+
+Tied to a process ID
+
+✅ Requirement applied:
+
+GUI OS behavior
+
+App lifecycle integration
+
+PHASE 6 — APP SYSTEM
+
+Applies Requirements: 6
+
+Step 6.1 — App Registry
+const apps = {
+  terminal: TerminalApp,
+  files: FileExplorer,
+  editor: TextEditor,
+  settings: Settings
+}
+
+Step 6.2 — App Launch Flow
+Click icon → Start process → Open window → Track memory
+
+
+✅ Requirement applied:
+
+Executable applications
+
+Controlled process creation
+
+PHASE 7 — TERMINAL EMULATOR
+
+Applies Requirements: 7, 2
+
+Step 7.1 — Terminal UI
+
+Command input
+
+Output console
+
+History
+
+Step 7.2 — Command Parser
+
+Supported commands:
+
+ls
+cd
+cat file.txt
+ps
+kill 2
+clear
+
+
+Commands → Backend → Response
+
+✅ Requirement applied:
+
+OS-like interaction
+
+Kernel command handling
+
+PHASE 8 — RESOURCE MONITOR
+
+Applies Requirements: 4, 8, 11
+
+Step 8.1 — Resource Simulation
+
+Backend:
+
+Max RAM limit
+
+Memory per app
+
+Randomized CPU load
+
+Frontend:
+
+System Monitor app
+
+Step 8.2 — Enforce Limits
+
+Rules:
+
+App won’t launch if RAM exceeded
+
+Kill background processes automatically
+
+✅ Requirement applied:
+
+Lightweight behavior
+
+OS realism without heavy usage
+
+PHASE 9 — USER & SETTINGS SYSTEM
+
+Applies Requirements: 9, 10
+
+Step 9.1 — User Profiles
+
+Username
+
+Permissions
+
+Home directory
+
+Step 9.2 — Settings App
+
+Theme
+
+Language
+
+Time
+
+System info
+
+✅ Requirement applied:
+
+Multi-user OS feel
+
+Configurable environment
+
+PPHASE 11 — USER AUTHENTICATION & SESSION MANAGEMENT
+
+(Windows Login & Lock Screen)
+
+Goal
+
+Introduce real OS sessions and user isolation.
+
+Features Added
+
+Lock screen
+
+Login screen
+
+Logout / switch user
+
+Session persistence
+
+Steps
+
+Create users table (id, username, password, role)
+
+Create session manager in backend
+
+Implement /login, /logout, /lock
+
+Build LockScreen.jsx
+
+Redirect unauthenticated users
+
+Create per-user home directories
+
+✅ Windows equivalent: User Account Control & Sessions
+
+PHASE 12 — START MENU SYSTEM
+
+(Windows Start Button Experience)
+
+Goal
+
+Centralize OS access like Windows.
+
+Features Added
+
+Start menu
+
+App search
+
+Recent apps
+
+Power options
+
+Steps
+
+Add Start button to taskbar
+
+Create Start Menu panel
+
+Connect app registry
+
+Implement app search
+
+Add power options (shutdown/restart)
+
+✅ Windows equivalent: Start Menu
+
+PHASE 13 — FILE EXPLORER ADVANCEMENTS
+
+(Windows Explorer-Level Features)
+
+Goal
+
+Move from basic file browser → Explorer-class.
+
+Features Added
+
+Address bar
+
+Breadcrumb navigation
+
+Context menu
+
+Drag & drop
+
+Steps
+
+Add path navigation UI
+
+Implement clipboard (copy/cut/paste)
+
+Add rename/delete confirmation
+
+Add file properties dialog
+
+Enable drag & drop --------
+
+✅ Windows equivalent: File Explorer
+
+PHASE 14 — SYSTEM TRAY & NOTIFICATIONS
+
+(Windows Notification Center)
+
+Goal
+
+Make the OS feel alive.
+
+Features Added
+
+System tray icons
+
+Notifications
+
+Background alerts
+
+Steps
+
+Create notification service (backend)
+
+Create toast UI
+
+Implement notification center panel
+
+Add system icons (fake Wi-Fi, volume)
+
+Trigger notifications from apps
+
+✅ Windows equivalent: Action Center
+
+PHASE 15 — ADVANCED TASK MANAGER
+
+(Windows Task Manager)
+
+Goal
+
+Full system observability.
+
+Features Added
+
+Process list
+
+CPU/RAM graphs
+
+End task
+
+Steps
+
+Extend process metadata
+
+Add performance metrics
+
+Create graph visualization
+
+Enable force-kill
+
+Add startup process tab
+
+✅ Windows equivalent: Task Manager
+
+PHASE 16 — WINDOW MANAGEMENT ENHANCEMENTS
+
+(Windows Multitasking)
+
+Goal
+
+Professional window behavior.
+
+Features Added
+
+Snap windows
+
+Alt + Tab
+
+Focus control
+
+Steps
+
+Implement snap zones
+
+Add keyboard shortcuts
+
+Create app switcher overlay
+
+Manage window z-index
+
+Highlight active window
+
+✅ Windows equivalent: Snap Assist & Task View
+
+PHASE 17 — SETTINGS (CONTROL PANEL STYLE)
+
+(Windows Settings App)
+
+Goal
+
+Central OS configuration.
+
+Features Added
+
+System info
+
+Personalization
+
+Storage usage
+
+Permissions
+
+Steps
+
+Redesign Settings app sections
+
+Add theme controls
+
+Display storage metrics
+
+Add permission toggles
+
+Persist preferences
+
+✅ Windows equivalent: Settings / Control Panel
+
+PHASE 18 — SOFTWARE INSTALLATION SYSTEM
+
+(Windows Installer Simulation)
+
+Goal
+
+Dynamic apps, not hard-coded.
+
+Features Added
+
+App installer
+
+App removal
+
+App permissions
+
+Steps
+
+Create app manifest format
+
+Add install/uninstall APIs
+
+Update app registry dynamically
+
+Implement permission prompts
+
+Add Installed Apps view
+
+✅ Windows equivalent: Programs & Features
+
+PHASE 19 — UPDATE SYSTEM
+
+(Windows Update Simulation)
+
+Goal
+
+Versioned OS lifecycle.
+
+Features Added
+
+Update checks
+
+Restart required
+
+Patch notes
+
+Steps
+
+Add OS versioning
+
+Create update metadata
+
+Build update UI
+
+Simulate reboot
+
+Show update history
+
+✅ Windows equivalent: Windows Update
+
+PHASE 20 — POWER MANAGEMENT
+
+(Windows Power States)
+
+Goal
+
+Complete OS lifecycle control.
+
+Features Added
+
+Shutdown
+
+Restart
+
+Sleep
+
+Resume
+
+Steps
+
+Implement power states
+
+Save UI + process state
+
+Pause background services
+
+Restore session
+
+Add power menu UI
+
+✅ Windows equivalent: Power Options
+
+PHASE 21 — SECURITY & PERMISSIONS (UAC-Lite)
+
+(Windows Security Model)
+
+Goal
+
+Controlled system access.
+
+Features Added
+
+Admin prompts
+
+Restricted apps
+
+File permissions
+
+Steps
+
+Add role checks
+
+Implement permission popups
+
+Restrict system folders
+
+Log security events
+
+Add security settings page
+
+✅ Windows equivalent: UAC
+
+PHASE 22 — ACCESSIBILITY & POLISH
+
+(Windows Ease of Access)
+
+Goal
+
+Professional usability.
+
+Features Added
+
+Text scaling
+
+High contrast
+
+Keyboard navigation
+
+Choose Desktop Background
+
+Steps
+
+Add accessibility settings
+
+Implement keyboard-only control
+
+Add theme presets
+
+Improve focus handling
+
+Test usability flows
+
+✅ Windows equivalent: Accessibility Settings
+
+PHASE 23 — EVENT LOGGING & ERROR HANDLING
+
+(Windows Event Viewer)
+
+Goal
+
+Transparency and debuggability.
+
+Features Added
+
+System logs
+
+Error dialogs
+
+Crash reporting
+
+Steps
+
+Create event logger
+
+Store logs in DB
+
+Build Event Viewer app
+
+Show error popups
+
+Add export logs feature
+
+✅ Windows equivalent: Event Viewer
+
+PHASE 24 — FINAL INTEGRATION & HARDENING
+
+(Release Candidate Phase)
+
+Goal
+
+Stability + realism.
+
+Steps
+
+Stress test apps
+
+Enforce memory caps
+
+Kill orphaned processes
+
+Validate permissions
+
+Final UI polish
+
+PHASE 25
+
+EXTRA APPLICATIONS
+RENAME THE VITRUOS TO JEZOS this will be the name of the OS and the SYSTEM
+THESE ARE ALSO DEFAULT APPLICATIONS - ADD THIS TO THE APPSTORE TOO
+CAMERA (FOR VIDEO AND PHOTOS): Images and Videos taken will be saved in the file explorer Images and Vidoes
+CALCULATOR - Simple Calculator (4 basic operation, percentatge, decimal, +- toggle, C[cLEAR], CE(Ckear Entry), Delete[Backspace], Equals)
+CLOCK APP - TIMER AND STOPWATCH
+CALENDAR - Calendar Viewing
+TIPS GETTING STARTED App
+
+
+PHASE 25.1 
+BROWSER APP - USING GOOGLE SEARCH ENGINE
+--------
+PHASE 26 — PROCESS MANAGEMENT
+Simulate operating system process handling.
+Create multiple simulated processes
+Maintain a process table (PID, name, state, memory usage)
+Support process states: Ready, Running, Waiting, Terminated
+Allow process creation and termination
+
+PHASE 27 CPU SCHEDULING
+Simulate CPU scheduling behavior.
+Implement one scheduling algorithm (FCFS or Round Robin)
+Determine execution order of processes
+Compute waiting time for each process
+Display execution timeline using a text-based Gantt chart
+
+PHASE 28 — MEMORY MANAGEMENT
+Simulate memory allocation using fixed partitions.
+Define fixed-size memory partitions
+Allocate one process per partition
+Deallocate memory when a process terminates
+Display memory usage using a console-based memory map
+
+PHASE 29 — FILE SYSTEM SIMULATION
+Simulate basic file system operations.
+Maintain a virtual file list or directory structure
+Create files
+Delete files
+Display file contents
+No actual disk access required
+
+PHASE 30 — SIMPLE I/O SIMULATION
+Simulate basic input/output operations.
+Simulate one I/O device (e.g., printer)
+Queue I/O requests (spooling)
+Process I/O requests in FIFO order
+Display I/O queue status
+
+PHASE 31 — SYSTEM INTERACTION & OUTPUT
+Demonstrate interaction between OS components.
+Show process, memory, file, and I/O status via CLI/Terminal output
+Display tables, memory maps, and scheduling charts
+Provide sample outputs for demonstration and reporting

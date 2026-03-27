@@ -1,0 +1,313 @@
+/* ============================================================================
+   Boot Screen Styles
+   ============================================================================ */
+
+.boot-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #000;
+  color: #f8fafc;
+  flex-direction: column;
+}
+
+.boot-stage-black {
+  background: #000;
+}
+
+.boot-stage-brand,
+.boot-stage-loading {
+  background: #000;
+}
+
+.boot-brand {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.boot-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.boot-logo {
+  display: grid;
+  grid-template-columns: repeat(2, 26px);
+  grid-template-rows: repeat(2, 26px);
+  gap: 6px;
+  width: max-content;
+}
+
+.boot-logo span {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.boot-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #f8fafc;
+}
+
+.boot-loader {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid rgba(248, 250, 252, 0.18);
+  border-top-color: #60a5fa;
+  animation: boot-loading 1s linear infinite;
+}
+
+@keyframes boot-loading {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.boot-error {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  font-size: 13px;
+  color: #fef2f2;
+}
+
+.boot-retry {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 250, 252, 0.3);
+  background: rgba(15, 23, 42, 0.7);
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.power-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #000;
+  color: #f8fafc;
+}
+
+.power-message {
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+
+.power-update-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.power-progress-bar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.power-progress-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#60a5fa 0%, #2563eb calc(var(--progress) * 1%), rgba(248, 250, 252, 0.15) calc(var(--progress) * 1%));
+  transition: background 0.1s linear;
+}
+
+.power-progress-fill::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  background: #000;
+  border-radius: 50%;
+}
+
+.power-progress-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: 0.05em;
+}
+
+.sleep-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #f8fafc;
+  z-index: 99999;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.42s ease;
+}
+
+.sleep-screen.waking {
+  opacity: 0;
+}
+
+.sleep-clock {
+  text-align: center;
+}
+
+.sleep-time {
+  font-size: 64px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.sleep-date {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(248, 250, 252, 0.8);
+}
+
+.sleep-hint {
+  font-size: 12px;
+  color: rgba(248, 250, 252, 0.6);
+}
+
+/* ============================================================================
+   Shutdown Screen
+   ============================================================================ */
+
+.shutdown-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.shutdown-message {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: rgba(248, 250, 252, 0.85);
+  animation: pulse-opacity 2s ease-in-out infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================================================
+   Login Transition Screen
+   ============================================================================ */
+
+.login-transition {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--desktop-wallpaper);
+  backdrop-filter: blur(40px) brightness(0.8);
+  animation: fadeOutTransition 0.8s ease-out 0.5s forwards;
+}
+
+.login-transition-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  animation: fadeOutContent 0.8s ease-out 0.5s forwards;
+}
+
+.login-transition-loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.login-transition-text {
+  font-size: 32px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes fadeOutTransition {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOutContent {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================================
+   High Contrast Mode for Boot and Sleep Screens
+   ============================================================================ */
+
+:root[data-contrast='high'] .boot-screen {
+  background: #000;
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .boot-logo span {
+  background: var(--win-accent);
+  box-shadow: inset 0 0 0 1px var(--win-accent);
+}
+
+:root[data-contrast='high'] .power-screen {
+  background: #000;
+}
+
+:root[data-contrast='high'] .sleep-screen {
+  background: #000;
+  color: #ffffff;
+}

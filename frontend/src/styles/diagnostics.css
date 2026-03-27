@@ -1,0 +1,367 @@
+/* System Diagnostics Styles */
+.diagnostics-container {
+  height: 100%;
+  overflow-y: auto;
+  background: #1e1e1e;
+  color: #e0e0e0;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.diagnostics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #3e3e42;
+}
+
+.diagnostics-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.diagnostics-overall {
+  font-size: 18px;
+}
+
+.health-indicator {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.health-indicator.healthy {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.health-indicator.unhealthy {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.diagnostics-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 16px;
+  color: #888;
+}
+
+/* Stats Grid */
+.diagnostics-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0078d4;
+}
+
+.stat-detail {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.stat-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.stat-status.ok {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.stat-status.warning {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+/* Sections */
+.diagnostics-section {
+  background: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.diagnostics-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+/* Issues List */
+.issues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issue-item {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-left: 4px solid;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.issue-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.issue-severity {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.issue-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.issue-recommendation {
+  font-size: 13px;
+  color: #b5cea8;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(181, 206, 168, 0.1);
+  border-radius: 4px;
+}
+
+.issue-details {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.issue-details pre {
+  margin: 0;
+  padding: 8px;
+  background: #0d0d0d;
+  border-radius: 4px;
+  overflow-x: auto;
+  color: #d4d4d4;
+  font-family: 'Consolas', monospace;
+}
+
+/* Actions */
+.diagnostics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.diag-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diag-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.diag-btn.btn-primary {
+  background: #0078d4;
+  color: #ffffff;
+}
+
+.diag-btn.btn-primary:hover:not(:disabled) {
+  background: #1084d8;
+}
+
+.diag-btn.btn-warning {
+  background: #ff9800;
+  color: #ffffff;
+}
+
+.diag-btn.btn-warning:hover:not(:disabled) {
+  background: #fb8c00;
+}
+
+.diag-btn.btn-secondary {
+  background: #3c3c3c;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+.diag-btn.btn-secondary:hover:not(:disabled) {
+  background: #4c4c4c;
+  border-color: #666;
+}
+
+/* Memory Chart */
+.memory-chart {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  height: 40px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.memory-bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  transition: width 0.5s ease, background-color 0.3s ease;
+  min-width: 60px;
+}
+
+.memory-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.memory-row:last-child {
+  border-bottom: none;
+}
+
+.memory-row span:first-child {
+  color: #999;
+}
+
+.memory-row span:last-child {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+/* Process Summary */
+.process-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0078d4;
+}
+
+.summary-value.success {
+  color: #4caf50;
+}
+
+.summary-value.muted {
+  color: #666;
+}
+
+/* Scrollbar */
+.diagnostics-container::-webkit-scrollbar {
+  width: 12px;
+}
+
+.diagnostics-container::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.diagnostics-container::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 6px;
+}
+
+.diagnostics-container::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .diagnostics-container {
+    padding: 12px;
+  }
+
+  .diagnostics-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .diagnostics-actions {
+    flex-direction: column;
+  }
+
+  .diag-btn {
+    width: 100%;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+}

@@ -1,0 +1,450 @@
+/* ============================================================================
+   App Store Styles
+   ============================================================================ */
+
+.app-store {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--win-bg);
+  color: var(--win-text);
+}
+
+/* Message banner */
+.app-store-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(34, 197, 94, 0.12);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.3);
+  color: #15803d;
+  gap: 12px;
+  animation: slideInDown 0.3s ease-out;
+}
+
+.app-store-message-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.app-store-message-close:hover {
+  opacity: 1;
+}
+
+/* Tabs */
+.app-store-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--win-border);
+  background: var(--win-surface);
+}
+
+.app-store-tab {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--win-muted);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.app-store-tab:hover {
+  color: var(--win-accent);
+}
+
+.app-store-tab.active {
+  color: var(--win-accent);
+  border-bottom-color: var(--win-accent);
+}
+
+/* Content area */
+.app-store-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--win-bg);
+}
+
+/* Grid layout */
+.app-store-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.app-store-empty {
+  grid-column: 1 / -1;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--win-muted);
+  font-size: 14px;
+}
+
+/* App item */
+.app-store-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--win-border);
+  background: var(--win-surface);
+  transition: all 0.2s ease;
+  animation: slideInUp 0.3s ease-out;
+  cursor: pointer;
+}
+
+.app-store-item:hover {
+  border-color: var(--win-accent);
+  background: var(--win-surface-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+}
+
+.app-store-icon {
+  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.05));
+  border-radius: 10px;
+}
+
+.app-store-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-store-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--win-text);
+  text-align: center;
+}
+
+.app-store-version {
+  font-size: 11px;
+  color: var(--win-muted);
+  text-align: center;
+}
+
+.app-store-description {
+  font-size: 12px;
+  color: var(--win-muted);
+  text-align: center;
+  line-height: 1.4;
+  min-height: 24px;
+}
+
+.app-store-category {
+  font-size: 11px;
+  color: var(--win-accent);
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.app-store-storage {
+  font-size: 12px;
+  color: var(--win-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+.app-store-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.15);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--win-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: center;
+}
+
+/* Action buttons */
+.app-store-install,
+.app-store-uninstall {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--win-accent);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.app-store-install:hover {
+  background: rgba(37, 99, 235, 0.85);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.app-store-uninstall {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.app-store-uninstall:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.app-store-install:active,
+.app-store-uninstall:active {
+  transform: scale(0.98);
+}
+
+/* Installation prompt overlay */
+.app-store-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.app-store-prompt-overlay.closing {
+  animation: fadeOut 0.2s ease-in forwards;
+}
+
+.app-store-prompt {
+  position: relative;
+  width: 90%;
+  max-width: 420px;
+  background: var(--win-surface);
+  border: 1px solid var(--win-border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.25s ease-out;
+}
+
+.app-store-prompt.closing {
+  animation: scaleOut 0.2s ease-in forwards;
+}
+
+.app-store-prompt-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--win-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.app-store-prompt-close:hover {
+  color: var(--win-text);
+}
+
+.app-store-prompt-icon {
+  text-align: center;
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.app-store-prompt-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--win-text);
+}
+
+.app-store-prompt-description {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: var(--win-muted);
+  line-height: 1.5;
+}
+
+.app-store-prompt-section {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(37, 99, 235, 0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.app-store-prompt-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--win-text);
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-store-permissions {
+  font-size: 12px;
+  color: var(--win-text);
+}
+
+.app-store-permissions ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.app-store-permissions li {
+  margin: 4px 0;
+  color: var(--win-muted);
+}
+
+.app-store-prompt-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.app-store-prompt-cancel,
+.app-store-prompt-confirm {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--win-border);
+  background: var(--win-surface);
+  color: var(--win-text);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.app-store-prompt-cancel:hover {
+  background: var(--win-surface-hover);
+  border-color: var(--win-accent);
+}
+
+.app-store-prompt-confirm {
+  background: var(--win-accent);
+  color: white;
+  border-color: var(--win-accent);
+}
+
+.app-store-prompt-confirm:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.app-store-prompt-confirm:active {
+  transform: scale(0.98);
+}
+/* ============================================================================
+   High Contrast Mode for App Store
+   ============================================================================ */
+
+:root[data-contrast='high'] .app-store {
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .app-store-message {
+  background: rgba(34, 197, 94, 0.2);
+  border-bottom-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+}
+
+:root[data-contrast='high'] .app-store-tabs {
+  background: rgba(0, 0, 0, 0.7);
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-contrast='high'] .app-store-tab {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-contrast='high'] .app-store-tab:hover,
+:root[data-contrast='high'] .app-store-tab.active {
+  color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .app-store-item {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-contrast='high'] .app-store-item:hover {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .app-store-item-info-name {
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .app-store-item-info-desc {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-contrast='high'] .app-store-action-button {
+  background: var(--win-accent);
+  color: #000000;
+  border-color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .app-store-action-button:hover {
+  opacity: 0.8;
+}
+
+:root[data-contrast='high'] .app-store-prompt {
+  background: rgba(0, 0, 0, 0.92);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+:root[data-contrast='high'] .app-store-prompt-cancel,
+:root[data-contrast='high'] .app-store-prompt-confirm {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+:root[data-contrast='high'] .app-store-prompt-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-contrast='high'] .app-store-prompt-confirm {
+  background: var(--win-accent);
+  color: #000000;
+  border-color: var(--win-accent);
+}
+
+:root[data-contrast='high'] .app-store-prompt-confirm:hover {
+  opacity: 0.8;
+}
