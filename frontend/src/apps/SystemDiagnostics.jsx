@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import '../styles/diagnostics.css';
+import '../styles/apps/diagnostics.css';
 
 const SystemDiagnostics = () => {
   const [healthStatus, setHealthStatus] = useState(null);

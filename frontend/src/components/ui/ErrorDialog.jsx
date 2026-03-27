@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import '../styles/error-dialog.css';
+import '../../styles/ui/error-dialog.css';
 
 const ErrorDialog = ({ error, onClose, onReport }) => {
   const [showDetails, setShowDetails] = useState(false);
