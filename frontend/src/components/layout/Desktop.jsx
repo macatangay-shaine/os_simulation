@@ -328,6 +328,41 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     return () => clearInterval(interval)
   }, [])
 
+  // Keep window list aligned with backend process state.
+  useEffect(() => {
+    const syncWindowsWithProcesses = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/process/list')
+        if (!response.ok) return
+        const processList = await response.json()
+        const runningPids = new Set(
+          (processList || [])
+            .filter((proc) => proc.state === 'running')
+            .map((proc) => proc.pid)
+        )
+
+        setWindows((prev) => prev.filter((win) => runningPids.has(win.id)))
+      } catch {
+        // Ignore transient backend failures.
+      }
+    }
+
+    syncWindowsWithProcesses()
+    const interval = setInterval(syncWindowsWithProcesses, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const handleProcessTerminated = (event) => {
+      const pid = Number(event?.detail?.pid)
+      if (!Number.isFinite(pid)) return
+      setWindows((prev) => prev.filter((win) => win.id !== pid))
+    }
+
+    window.addEventListener('process-terminated', handleProcessTerminated)
+    return () => window.removeEventListener('process-terminated', handleProcessTerminated)
+  }, [])
+
   // Handle opening desktop files
   useEffect(() => {
     const handleOpenFile = (event) => {
@@ -639,6 +674,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         // Check if we need to kill background processes
         if (data.killed_processes && data.killed_processes.length > 0) {
           console.log('Auto-killed background processes:', data.killed_processes)
+          const killedSet = new Set(data.killed_processes)
+          setWindows((prev) => prev.filter((win) => !killedSet.has(win.id)))
         }
       } else {
         const errorData = await response.json()
@@ -703,6 +740,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (!response.ok && response.status !== 404) {
         // Silently fail for missing processes
       }
+      window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
     } catch (error) {
       // Silently fail if process close fails
     }
