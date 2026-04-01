@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { FileText, Plus, Trash2, Save, FolderOpen, Printer } from 'lucide-react'
 
+import PrintPreviewDialog from '../components/PrintPreviewDialog'
+import { enqueuePrintJob } from '../utils/printJobs'
+
 export default function NotesApp() {
   const [content, setContent] = useState('')
   const [currentNote, setCurrentNote] = useState(null)
@@ -15,6 +18,8 @@ export default function NotesApp() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [viewMode, setViewMode] = useState('notes')
   const [trashNotes, setTrashNotes] = useState([])
+    const [showPrintPreview, setShowPrintPreview] = useState(false)
+    const [printJobDetails, setPrintJobDetails] = useState(null)
 
   useEffect(() => {
     // Load notes directory on mount
@@ -252,6 +257,51 @@ export default function NotesApp() {
     
     setStatus(`Print job submitted: ${fileName} (${pages} pages)`)
   }
+
+    const handlePrintClick = () => {
+      if (!currentNote) return
+    
+      const fileName = currentNote.path.split('/').pop()
+      const pages = Math.max(1, Math.ceil(content.length / 500))
+    
+      setPrintJobDetails({
+        fileName,
+        pages,
+        content
+      })
+      setShowPrintPreview(true)
+    }
+
+    const handleSubmitPrint = (printSettings) => {
+      if (!printJobDetails) return
+
+      const fileName = printJobDetails.fileName
+      const jobName = fileName.replace(/\.[^/.]+$/, '')
+
+      const copies = Math.max(1, Number(printSettings.copies) || 1)
+      for (let i = 0; i < copies; i++) {
+        const job = enqueuePrintJob({
+          jobName,
+          pages: printJobDetails.pages,
+          pid: 1,
+          fileName,
+          colorMode: printSettings.colorMode,
+          paperSize: printSettings.paperSize,
+          orientation: printSettings.orientation,
+          timestamp: printSettings.timestamp,
+          copyIndex: i + 1,
+          copies
+        })
+
+        window.dispatchEvent(new CustomEvent('submit-print-job', {
+          detail: job
+        }))
+      }
+
+      setStatus(`Print job submitted: ${fileName} (${printJobDetails.pages} pages x ${copies} ${copies === 1 ? 'copy' : 'copies'})`)
+      setShowPrintPreview(false)
+      setPrintJobDetails(null)
+    }
 
   const handleNewNote = () => {
     if (isModified) {
@@ -575,7 +625,7 @@ export default function NotesApp() {
               <button 
                 type="button" 
                 className="notes-toolbar-btn"
-                onClick={handlePrint}
+                  onClick={handlePrintClick}
                 disabled={!currentNote}
                 title="Print"
               >
@@ -653,6 +703,19 @@ export default function NotesApp() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPrintPreview && printJobDetails && (
+        <PrintPreviewDialog
+          content={printJobDetails.content}
+          fileName={printJobDetails.fileName}
+          pages={printJobDetails.pages}
+          onPrint={handleSubmitPrint}
+          onCancel={() => {
+            setShowPrintPreview(false)
+            setPrintJobDetails(null)
+          }}
+        />
       )}
     </div>
   )

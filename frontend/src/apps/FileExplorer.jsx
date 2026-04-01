@@ -31,6 +31,9 @@ import {
   RotateCcw
 } from 'lucide-react'
 
+import PrintPreviewDialog from '../components/PrintPreviewDialog'
+import { enqueuePrintJob } from '../utils/printJobs'
+
 // Icon mapping for app shortcuts
 const APP_SHORTCUT_ICONS = {
   'terminal': Terminal,
@@ -69,6 +72,8 @@ export default function FileExplorer({ onWindowTitleChange }) {
   const [fileContent, setFileContent] = useState(null)
   const [isLoadingFile, setIsLoadingFile] = useState(false)
   const [thumbnails, setThumbnails] = useState({})
+  const [showPrintPreview, setShowPrintPreview] = useState(false)
+  const [printPreviewData, setPrintPreviewData] = useState(null)
 
   // Quick access locations
   const quickAccessItems = [
@@ -575,23 +580,68 @@ export default function FileExplorer({ onWindowTitleChange }) {
     setDeleteTarget(null)
   }
 
-  const handlePrint = (e) => {
+  const handlePrint = async (e) => {
     e.stopPropagation()
     if (contextMenu.targetPath) {
-      const fileName = contextMenu.targetPath.split('/').pop()
-      const pages = Math.ceil(Math.random() * 10) + 1
-      
-      window.dispatchEvent(new CustomEvent('submit-print-job', {
-        detail: {
-          jobName: fileName,
-          pages,
-          pid: 1
+      const targetPath = contextMenu.targetPath
+      const fileName = targetPath.split('/').pop()
+      let content = `Preview unavailable for ${fileName}`
+
+      try {
+        const response = await fetchApi('/fs/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (typeof data.content === 'string' && data.content.length > 0) {
+            content = data.content
+          }
         }
-      }))
-      
-      setError(`Print job submitted: ${fileName} (${pages} pages)`)
+      } catch {
+        // Keep fallback preview text.
+      }
+
+      const pages = Math.max(1, Math.ceil(content.length / 800))
+      setPrintPreviewData({
+        fileName,
+        content,
+        pages
+      })
+      setShowPrintPreview(true)
     }
     setContextMenu({ visible: false, x: 0, y: 0, targetPath: null })
+  }
+
+  const handleSubmitPrint = (printSettings) => {
+    if (!printPreviewData) return
+
+    const jobName = printPreviewData.fileName.replace(/\.[^/.]+$/, '')
+    const copies = Math.max(1, Number(printSettings.copies) || 1)
+    for (let i = 0; i < copies; i++) {
+      const job = enqueuePrintJob({
+        jobName,
+        pages: printPreviewData.pages,
+        pid: 1,
+        fileName: printPreviewData.fileName,
+        colorMode: printSettings.colorMode,
+        paperSize: printSettings.paperSize,
+        orientation: printSettings.orientation,
+        timestamp: printSettings.timestamp,
+        copyIndex: i + 1,
+        copies
+      })
+
+      window.dispatchEvent(new CustomEvent('submit-print-job', {
+        detail: job
+      }))
+    }
+
+    setError(`Print job submitted: ${printPreviewData.fileName} (${printPreviewData.pages} pages x ${copies} ${copies === 1 ? 'copy' : 'copies'})`)
+    setShowPrintPreview(false)
+    setPrintPreviewData(null)
   }
 
   const handleShowProperties = async (e) => {
@@ -1158,6 +1208,19 @@ export default function FileExplorer({ onWindowTitleChange }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showPrintPreview && printPreviewData && (
+        <PrintPreviewDialog
+          content={printPreviewData.content}
+          fileName={printPreviewData.fileName}
+          pages={printPreviewData.pages}
+          onPrint={handleSubmitPrint}
+          onCancel={() => {
+            setShowPrintPreview(false)
+            setPrintPreviewData(null)
+          }}
+        />
       )}
     </div>
   )
