@@ -201,6 +201,22 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
     }
   }
 
+  const renderTaskbarIcon = (entry, imageClassName = 'taskbar-app-image') => {
+    if (entry.iconSrc) {
+      return <img src={entry.iconSrc} alt="" className={imageClassName} />
+    }
+
+    return entry.icon ? <entry.icon className="taskbar-app-icon" /> : null
+  }
+
+  const renderPreviewIcon = (entry) => {
+    if (entry.iconSrc) {
+      return <img src={entry.iconSrc} alt="" className="taskbar-preview-image" />
+    }
+
+    return entry.icon ? <entry.icon size={16} /> : null
+  }
+
   return (
     <div className="taskbar">
       <div className="taskbar-start-area">
@@ -252,7 +268,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
                     onTogglePin(app.id)
                   }}
                 >
-                  {app.icon ? <app.icon className="taskbar-app-icon" /> : null}
+                  {renderTaskbarIcon(app)}
                   {hasWindows && appWindows.length > 1 && (
                     <span className="taskbar-app-badge">{appWindows.length}</span>
                   )}
@@ -269,7 +285,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
                           handleWindowPreviewClick(win.id)
                         }}
                       >
-                        {win.icon && <win.icon size={16} />}
+                        {renderPreviewIcon(win)}
                         <span>{win.title} ({index + 1})</span>
                       </button>
                     ))}
@@ -316,7 +332,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
                       onTogglePin(appId)
                     }}
                   >
-                    {firstWindow.icon ? <firstWindow.icon className="taskbar-app-icon" /> : null}
+                    {renderTaskbarIcon(firstWindow)}
                     {appWindows.length > 1 && (
                       <span className="taskbar-app-badge">{appWindows.length}</span>
                     )}
@@ -332,7 +348,7 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
                           handleWindowPreviewClick(win.id)
                         }}
                       >
-                        {win.icon && <win.icon size={16} />}
+                        {renderPreviewIcon(win)}
                         <span>{win.title} ({index + 1})</span>
                       </button>
                     ))}

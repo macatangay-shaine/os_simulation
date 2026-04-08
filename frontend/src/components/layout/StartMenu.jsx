@@ -44,6 +44,14 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
     handleClose()
   }
 
+  const renderMenuIcon = (app) => {
+    if (app.iconSrc) {
+      return <img src={app.iconSrc} alt="" className="start-menu-icon-image" />
+    }
+
+    return app.icon ? <app.icon className="start-menu-icon" /> : null
+  }
+
   return (
     <>
       <div className="start-menu-overlay" onClick={handleClose} />
@@ -76,7 +84,7 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
                   onClick={() => handleAppClick(app)}
                 >
                   <span className="start-menu-recent-icon">
-                    {app.icon ? <app.icon className="start-menu-icon" /> : null}
+                    {renderMenuIcon(app)}
                   </span>
                   <span className="start-menu-recent-name">{app.title}</span>
                 </button>
@@ -99,7 +107,7 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
                 onClick={() => handleAppClick(app)}
               >
                 <span className="start-menu-app-icon">
-                  {app.icon ? <app.icon className="start-menu-icon" /> : null}
+                  {renderMenuIcon(app)}
                 </span>
                 <span className="start-menu-app-name">{app.title}</span>
               </button>

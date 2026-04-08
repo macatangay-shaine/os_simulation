@@ -21,6 +21,7 @@ export default function Window({
   onMove,
   onResize = () => {},
   onSnap,
+  touchpadEnabled = true,
   children
 }) {
   const { id, title, x, y, width, height, zIndex, minimized, isActive, isMaximized, noMaximize, minWidth = 300, minHeight = 200 } = windowData
@@ -112,6 +113,11 @@ export default function Window({
   }, [dragging, resizing, id, offset.x, offset.y, x, y, width, height, onMove, onResize, snapZone, onSnap])
 
   const handleMouseDown = (event) => {
+    if (!touchpadEnabled) {
+      onFocus(id)
+      return
+    }
+
     if (!headerRef.current) return
     const rect = headerRef.current.getBoundingClientRect()
     setOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top })
@@ -126,6 +132,7 @@ export default function Window({
   }
 
   const handleResizeMouseDown = (direction) => (event) => {
+    if (!touchpadEnabled) return
     event.stopPropagation()
     setResizing(direction)
     onFocus(id)
@@ -162,7 +169,12 @@ export default function Window({
         }}
         onMouseDown={() => onFocus(id)}
       >
-        <div className="os-window-header" ref={headerRef} onMouseDown={handleMouseDown} onDoubleClick={handleHeaderDoubleClick}>
+        <div
+          className={`os-window-header ${touchpadEnabled ? '' : 'touchpad-disabled'}`}
+          ref={headerRef}
+          onMouseDown={handleMouseDown}
+          onDoubleClick={handleHeaderDoubleClick}
+        >
           <span className="os-window-title">{title}</span>
           <div className="os-window-actions">
             <button type="button" className="os-window-btn" onClick={() => onMinimize(id)}>
@@ -185,14 +197,14 @@ export default function Window({
         
         {!isMaximized && (
           <>
-            <div className="os-window-resize-handle n" onMouseDown={handleResizeMouseDown('n')} />
-            <div className="os-window-resize-handle e" onMouseDown={handleResizeMouseDown('e')} />
-            <div className="os-window-resize-handle s" onMouseDown={handleResizeMouseDown('s')} />
-            <div className="os-window-resize-handle w" onMouseDown={handleResizeMouseDown('w')} />
-            <div className="os-window-resize-handle ne" onMouseDown={handleResizeMouseDown('ne')} />
-            <div className="os-window-resize-handle se" onMouseDown={handleResizeMouseDown('se')} />
-            <div className="os-window-resize-handle sw" onMouseDown={handleResizeMouseDown('sw')} />
-            <div className="os-window-resize-handle nw" onMouseDown={handleResizeMouseDown('nw')} />
+            <div className={`os-window-resize-handle n ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('n')} />
+            <div className={`os-window-resize-handle e ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('e')} />
+            <div className={`os-window-resize-handle s ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('s')} />
+            <div className={`os-window-resize-handle w ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('w')} />
+            <div className={`os-window-resize-handle ne ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('ne')} />
+            <div className={`os-window-resize-handle se ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('se')} />
+            <div className={`os-window-resize-handle sw ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('sw')} />
+            <div className={`os-window-resize-handle nw ${touchpadEnabled ? '' : 'touchpad-disabled'}`} onMouseDown={handleResizeMouseDown('nw')} />
           </>
         )}
       </div>

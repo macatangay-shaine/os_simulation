@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Query
 from datetime import datetime
 import random
+from pydantic import BaseModel, Field
 import config
 from database import (
     load_startup_processes,
@@ -11,6 +12,112 @@ from database import (
 )
 
 router = APIRouter(prefix="/system", tags=["system"])
+
+
+class GpuPerformanceModeRequest(BaseModel):
+    mode: str = Field(..., pattern="^(standard|eco|optimized)$")
+
+
+class GpuPerformanceNotificationRequest(BaseModel):
+    enabled: bool
+
+
+ARMOURY_CRATE_GPU_STATE = {
+    "mode": "eco",
+    "notifications_enabled": True
+}
+
+GPU_MODE_DEFINITIONS = {
+    "standard": {
+        "id": "standard",
+        "title": "Standard",
+        "summary": "[Windows Default] Also known as MSHybrid. Automatically switches to the discrete GPU for demanding applications, and the integrated graphics for everyday tasks."
+    },
+    "eco": {
+        "id": "eco",
+        "title": "Eco Mode",
+        "summary": "The discrete GPU is completely disabled for maximum energy savings, lower temperatures, and less noise. You can still use essential apps through the integrated graphics simulation."
+    },
+    "optimized": {
+        "id": "optimized",
+        "title": "Optimized",
+        "summary": "[Recommended] Automatically switches to the discrete GPU for demanding applications, and the integrated graphics for lighter workloads."
+    }
+}
+
+GPU_VISIBLE_APP_WEIGHTS = {
+    "Web Browser": 1.0,
+    "Camera": 0.95,
+    "Files": 0.42,
+    "Local Files": 0.48,
+    "App Store": 0.36,
+    "System Monitor": 0.54,
+    "Event Viewer": 0.18,
+    "Armoury Crate": 0.2,
+    "Settings": 0.16,
+    "Notes": 0.14,
+    "Clock": 0.1,
+    "Calendar": 0.12,
+    "Calculator": 0.08,
+    "Tips": 0.1
+}
+
+GPU_HIDDEN_APPS = {"System", "Kernel Services", "Terminal"}
+
+
+def build_gpu_candidate_processes():
+    """Build a simulated list of applications that can engage the dGPU."""
+    if ARMOURY_CRATE_GPU_STATE["mode"] == "eco":
+        return []
+
+    candidates = []
+    for record in config.process_table:
+        if record.state != "running" or record.app in GPU_HIDDEN_APPS or record.is_startup:
+            continue
+
+        weight = GPU_VISIBLE_APP_WEIGHTS.get(record.app)
+        demand_score = (
+            (weight if weight is not None else 0.0)
+            + min(record.cpu_usage / 100.0, 0.55)
+            + min(record.memory / config.MAX_MEMORY, 0.45)
+        )
+
+        if demand_score < 0.38:
+            continue
+
+        candidates.append(
+            {
+                "pid": record.pid,
+                "app": record.app,
+                "cpu_usage": round(record.cpu_usage, 1),
+                "memory": record.memory,
+                "gpu_score": round(min(demand_score, 1.95), 2)
+            }
+        )
+
+    return sorted(candidates, key=lambda item: (item["memory"], item["cpu_usage"]), reverse=True)
+
+
+def build_gpu_performance_state():
+    """Return the current Armoury Crate GPU performance simulation state."""
+    processes = build_gpu_candidate_processes()
+    mode = ARMOURY_CRATE_GPU_STATE["mode"]
+
+    if mode == "eco":
+        status_message = "The system is currently running in GPU-Eco mode."
+    elif processes:
+        status_message = f"{len(processes)} application(s) can still engage the discrete GPU in {GPU_MODE_DEFINITIONS[mode]['title']}."
+    else:
+        status_message = f"No active applications are currently engaging the discrete GPU in {GPU_MODE_DEFINITIONS[mode]['title']}."
+
+    return {
+        "mode": mode,
+        "reminderNotificationsEnabled": ARMOURY_CRATE_GPU_STATE["notifications_enabled"],
+        "statusMessage": status_message,
+        "modes": list(GPU_MODE_DEFINITIONS.values()),
+        "processes": processes,
+        "updatedAt": datetime.utcnow().isoformat() + "Z"
+    }
 
 
 def update_performance_history():
@@ -109,6 +216,46 @@ def remove_startup_process_endpoint(app_name: str = Query(..., min_length=1)):
         config.startup_processes.remove(app_name)
     
     return {"status": "removed", "app": app_name, "startup_processes": config.startup_processes}
+
+
+@router.get("/gpu-performance")
+def get_gpu_performance():
+    """Get the simulated Armoury Crate GPU performance state."""
+    return build_gpu_performance_state()
+
+
+@router.post("/gpu-performance/mode")
+def set_gpu_performance_mode(payload: GpuPerformanceModeRequest):
+    """Update the active simulated GPU performance mode."""
+    ARMOURY_CRATE_GPU_STATE["mode"] = payload.mode
+    return build_gpu_performance_state()
+
+
+@router.post("/gpu-performance/reminder")
+def set_gpu_performance_reminder(payload: GpuPerformanceNotificationRequest):
+    """Update Armoury Crate GPU reminder notifications."""
+    ARMOURY_CRATE_GPU_STATE["notifications_enabled"] = payload.enabled
+    return build_gpu_performance_state()
+
+
+@router.post("/gpu-performance/stop-all")
+def stop_all_gpu_processes():
+    """Terminate all simulated processes currently eligible for dGPU use."""
+    gpu_process_ids = {process["pid"] for process in build_gpu_candidate_processes()}
+    stopped_pids = []
+
+    if gpu_process_ids:
+        for index, record in enumerate(config.process_table):
+            if record.pid in gpu_process_ids and record.state == "running":
+                config.process_table[index] = record.model_copy(update={"state": "terminated"})
+                stopped_pids.append(record.pid)
+
+        update_performance_history()
+
+    return {
+        "stoppedPids": stopped_pids,
+        "state": build_gpu_performance_state()
+    }
 
 
 @router.get("/storage")

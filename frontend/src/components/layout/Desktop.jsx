@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, FileText, Folder, HardDrive, Settings, Terminal, Bell, Package, AlertCircle, Stethoscope, Calculator, Camera, Clock, Calendar as CalendarIcon, Lightbulb } from 'lucide-react'
+import { Activity, FileText, Folder, HardDrive, Settings, Terminal, Bell, Package, AlertCircle, Stethoscope, Calculator, Camera, Clock, Calendar as CalendarIcon, Lightbulb, Shield } from 'lucide-react'
 import AppLauncher from '../app-management/AppLauncher.jsx'
 import ContextMenu from '../ui/ContextMenu.jsx'
 import StartMenu from './StartMenu.jsx'
@@ -25,8 +25,10 @@ import ClockApp from '../../apps/ClockApp.jsx'
 import CalendarViewerApp from '../../apps/CalendarViewerApp.jsx'
 import TipsApp from '../../apps/TipsApp.jsx'
 import WebBrowserApp from '../../apps/WebBrowserApp.jsx'
+import ArmouryCrateApp from '../../apps/ArmouryCrateApp.jsx'
 
 const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
+const ARMOURY_DEVICE_SETTINGS_STORAGE_KEY = 'jezos_armoury_device_settings'
 const RECYCLE_BIN_DESKTOP_ITEM = {
   path: RECYCLE_BIN_PATH,
   type: 'dir',
@@ -49,7 +51,8 @@ const APP_COMPONENTS = {
   'clock': ClockApp,
   'calendar': CalendarViewerApp,
   'tips': TipsApp,
-  'webbrowser': WebBrowserApp
+  'webbrowser': WebBrowserApp,
+  'armourycrate': ArmouryCrateApp
 }
 
 // Icon mapping for all apps
@@ -68,7 +71,12 @@ const APP_ICONS = {
   'clock': Clock,
   'calendar': CalendarIcon,
   'tips': Lightbulb,
-  'webbrowser': Package // You can replace with a browser icon if available
+  'webbrowser': Package, // You can replace with a browser icon if available
+  'armourycrate': Shield
+}
+
+const APP_ICON_SOURCES = {
+  'armourycrate': '/armoury-crate-icon.png'
 }
 
 const WINDOW_DEFAULTS = {
@@ -88,7 +96,8 @@ const MAXIMIZED_BY_DEFAULT_APP_IDS = new Set([
   'webbrowser',
   'appstore',
   'eventviewer',
-  'diagnostics'
+  'diagnostics',
+  'armourycrate'
 ])
 
 export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown, onSleep, isSleeping = false }) {
@@ -110,6 +119,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const [recentApps, setRecentApps] = useState([])
   const [taskbarSearchQuery, setTaskbarSearchQuery] = useState('')
   const [updateStatus, setUpdateStatus] = useState(null)
+  const [armouryDeviceSettings, setArmouryDeviceSettings] = useState(() => loadArmouryDeviceSettings())
   const [pinnedAppIds, setPinnedAppIds] = useState(() => {
     try {
       const saved = localStorage.getItem('jez_os_pinned_apps')
@@ -174,7 +184,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         { id: 'webbrowser', title: 'Web Browser', icon: Package, component: WebBrowserApp },
         { id: 'appstore', title: 'App Store', icon: Package, component: AppStore },
         { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, component: EventViewer },
-        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics }
+        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics },
+        { id: 'armourycrate', title: 'Armoury Crate', icon: Shield, iconSrc: APP_ICON_SOURCES.armourycrate, component: ArmouryCrateApp }
       ]
 
       try {
@@ -205,6 +216,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           id: app.id,
           title: app.name,
           icon: APP_ICONS[app.id] || Package,
+          iconSrc: APP_ICON_SOURCES[app.id] || null,
           component: APP_COMPONENTS[app.id] || AppStore,
           installed: app.installed
         }))
@@ -228,6 +240,13 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           registry = [
             ...registry,
             { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics, installed: 1 }
+          ]
+        }
+
+        if (!registry.some((app) => app.id === 'armourycrate')) {
+          registry = [
+            ...registry,
+            { id: 'armourycrate', title: 'Armoury Crate', icon: Shield, iconSrc: APP_ICON_SOURCES.armourycrate, component: ArmouryCrateApp, installed: 1 }
           ]
         }
         
@@ -268,6 +287,20 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
     
     loadApps()
+  }, [])
+
+  useEffect(() => {
+    const syncArmouryDeviceSettings = (event) => {
+      if (event?.detail) {
+        setArmouryDeviceSettings((previous) => ({ ...previous, ...event.detail }))
+        return
+      }
+
+      setArmouryDeviceSettings(loadArmouryDeviceSettings())
+    }
+
+    window.addEventListener('jezos_armoury_device_settings_updated', syncArmouryDeviceSettings)
+    return () => window.removeEventListener('jezos_armoury_device_settings_updated', syncArmouryDeviceSettings)
   }, [])
 
   useEffect(() => {
@@ -702,6 +735,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         appId: app.id,
         title: options.windowTitle || app.title,
         icon: app.icon,
+        iconSrc: app.iconSrc || null,
         memory,
         minimized: false,
         isMaximized: shouldStartMaximized,
@@ -952,6 +986,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           iconPositions={iconPositions}
           onIconMove={handleIconMove}
           onAppContextMenu={handleAppContextMenu}
+          touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
         />
       </div>
 
@@ -968,6 +1003,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             onMove={moveWindow}
             onResize={resizeWindow}
             onSnap={snapWindow}
+            touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
           >
             {AppComponent ? <AppComponent onWindowTitleChange={(title) => updateWindowTitle(win.id, title)} /> : (
               <div className="window-placeholder">
@@ -1064,4 +1100,21 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       />
     </div>
   )
+}
+
+function loadArmouryDeviceSettings() {
+  try {
+    const savedSettings = localStorage.getItem(ARMOURY_DEVICE_SETTINGS_STORAGE_KEY)
+    if (!savedSettings) return { 'touch-pad': true, 'win-key': true }
+
+    const parsed = JSON.parse(savedSettings)
+    return {
+      'touch-pad': true,
+      'win-key': true,
+      ...parsed
+    }
+  } catch (error) {
+    console.warn('Failed to load Armoury Crate device settings in Desktop:', error)
+    return { 'touch-pad': true, 'win-key': true }
+  }
 }

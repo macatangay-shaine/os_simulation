@@ -284,6 +284,28 @@
   background: var(--icon-gradient-appstore);
 }
 
+.taskbar-app[data-app="armourycrate"] .taskbar-app-icon {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  filter: none;
+}
+
+.taskbar-app-image {
+  width: 32px;
+  height: 32px;
+  display: block;
+  object-fit: contain;
+}
+
+.taskbar-preview-image {
+  width: 16px;
+  height: 16px;
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .taskbar-user-icon,
 .taskbar-menu-icon {
   width: 16px;
@@ -704,11 +726,24 @@
   background: var(--icon-gradient-appstore);
 }
 
+.start-menu-app[data-app="armourycrate"] .start-menu-app-icon,
+.start-menu-recent-item[data-app="armourycrate"] .start-menu-recent-icon {
+  background: transparent;
+  box-shadow: none;
+}
+
 .start-menu-icon {
   width: 24px;
   height: 24px;
   color: #ffffff;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.start-menu-icon-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 .start-menu-app-name {

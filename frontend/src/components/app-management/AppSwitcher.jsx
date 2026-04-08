@@ -30,7 +30,8 @@ export default function AppSwitcher({ windows, selectedIndex, onSelect, onClose 
               }}
             >
               <div className="app-switcher-icon">
-                {Icon && <Icon size={32} />}
+                {win.iconSrc ? <img src={win.iconSrc} alt="" className="app-switcher-image" /> : null}
+                {!win.iconSrc && Icon ? <Icon size={32} /> : null}
               </div>
               <div className="app-switcher-title">{win.title}</div>
             </div>
