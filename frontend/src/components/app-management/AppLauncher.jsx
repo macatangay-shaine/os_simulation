@@ -2,7 +2,15 @@ import { FileText, Folder, Trash2 } from 'lucide-react'
 
 const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
 
-export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPositions = {}, onIconMove, onAppContextMenu }) {
+export default function AppLauncher({
+  apps,
+  desktopFiles = [],
+  onLaunch,
+  iconPositions = {},
+  onIconMove,
+  onAppContextMenu,
+  touchpadEnabled = true
+}) {
   const GRID_COLS = 5
   const CELL_WIDTH = 100
   const CELL_HEIGHT = 110
@@ -72,16 +80,23 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
   }
 
   const handleDragStart = (e, appId) => {
+    if (!touchpadEnabled) {
+      e.preventDefault()
+      return
+    }
+
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('appId', appId)
   }
 
   const handleDragOver = (e) => {
+    if (!touchpadEnabled) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
 
   const handleDrop = (e) => {
+    if (!touchpadEnabled) return
     e.preventDefault()
     e.stopPropagation()
     
@@ -119,6 +134,14 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
     }
   }
 
+  const renderAppIcon = (app) => {
+    if (app.iconSrc) {
+      return <img src={app.iconSrc} alt="" className="app-icon-image" />
+    }
+
+    return app.icon ? <app.icon className="app-icon-svg" /> : null
+  }
+
   return (
     <div 
       className="app-launcher"
@@ -147,13 +170,13 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
             className="app-icon app-icon-draggable"
             data-app={app.id}
             style={gridStyle}
-            draggable="true"
+            draggable={touchpadEnabled}
             onDragStart={(e) => handleDragStart(e, app.id)}
             onClick={() => onLaunch(app)}
             onContextMenu={(e) => onAppContextMenu?.(e, app)}
           >
             <div className="app-icon-badge">
-              {app.icon ? <app.icon className="app-icon-svg" /> : null}
+              {renderAppIcon(app)}
             </div>
             <div className="app-icon-label">{app.title}</div>
           </button>
@@ -177,7 +200,7 @@ export default function AppLauncher({ apps, desktopFiles = [], onLaunch, iconPos
             className="app-icon app-icon-draggable"
             data-app={fileId}
             style={gridStyle}
-            draggable="true"
+            draggable={touchpadEnabled}
             onDragStart={(e) => handleDragStart(e, fileId)}
             onClick={() => {
               // Create a synthetic app object for file operations

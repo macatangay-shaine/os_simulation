@@ -103,6 +103,10 @@
   cursor: nwse-resize;
 }
 
+.os-window-resize-handle.touchpad-disabled {
+  cursor: default !important;
+}
+
 .os-window-header {
   height: 40px;
   display: flex;
@@ -112,6 +116,10 @@
   background: var(--win-surface);
   border-bottom: 1px solid var(--win-border);
   cursor: grab;
+}
+
+.os-window-header.touchpad-disabled {
+  cursor: default;
 }
 
 .os-window-title {

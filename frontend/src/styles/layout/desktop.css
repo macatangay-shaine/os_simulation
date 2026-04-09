@@ -91,6 +91,10 @@
   cursor: grab;
 }
 
+.app-icon-draggable[draggable="false"] {
+  cursor: pointer;
+}
+
 .app-icon-draggable:active {
   cursor: grabbing;
   opacity: 0.8;
@@ -137,11 +141,23 @@
   background: var(--icon-gradient-appstore);
 }
 
+.app-icon[data-app="armourycrate"] .app-icon-badge {
+  background: transparent;
+  box-shadow: none;
+}
+
 .app-icon-svg {
   width: 24px;
   height: 24px;
   color: #ffffff;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.app-icon-image {
+  width: 48px;
+  height: 48px;
+  display: block;
+  object-fit: contain;
 }
 
 .app-icon-label {

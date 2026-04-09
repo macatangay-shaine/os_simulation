@@ -136,6 +136,13 @@ textarea:focus-visible,
   color: var(--win-accent);
 }
 
+.app-switcher-image {
+  width: 40px;
+  height: 40px;
+  display: block;
+  object-fit: contain;
+}
+
 .app-switcher-title {
   font-size: 13px;
   font-weight: 500;
