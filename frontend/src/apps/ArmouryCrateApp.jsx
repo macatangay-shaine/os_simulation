@@ -70,6 +70,8 @@ const ARMOURY_DEVICE_SETTINGS_STORAGE_KEY = 'jezos_armoury_device_settings'
 const ARMOURY_LIGHTING_STATE_STORAGE_KEY = 'jezos_armoury_lighting_state'
 const ARMOURY_AUDIO_STATE_STORAGE_KEY = 'jezos_armoury_audio_state'
 const ARMOURY_RESOURCE_MONITOR_STATE_STORAGE_KEY = 'jezos_armoury_resource_monitor_state'
+const ARMOURY_AURA_SYNC_STATE_STORAGE_KEY = 'jezos_armoury_aura_sync_state'
+const ARMOURY_SCENARIO_PROFILES_STORAGE_KEY = 'jezos_armoury_scenario_profiles_state'
 
 const DEVICE_TABS = [
   { id: 'system-configuration', label: 'System Configuration' },
@@ -78,6 +80,12 @@ const DEVICE_TABS = [
   { id: 'lighting', label: 'Lighting' },
   { id: 'audio', label: 'Audio' },
   { id: 'resource-monitor', label: 'Resource Monitor' }
+]
+
+const AURA_SYNC_TABS = [
+  { id: 'sync-devices', label: 'Sync devices' },
+  { id: 'aura-effects', label: 'Aura Effects' },
+  { id: 'ai-aura-lighting', label: 'AI Aura Lighting' }
 ]
 
 const DEVICE_TAB_PLACEHOLDERS = {
@@ -259,7 +267,40 @@ const LIGHTING_EFFECTS = [
   { id: 'color-cycle', label: 'Color Cycle', icon: LightingColorCycleIcon }
 ]
 
+const AURA_BASIC_EFFECTS = [
+  { id: 'static', label: 'Static', icon: AuraEffectStaticIcon, lightingEffect: 'static' },
+  { id: 'breathing', label: 'Breathing', icon: AuraEffectBreathingIcon, lightingEffect: 'breathing' },
+  { id: 'strobing', label: 'Strobing', icon: AuraEffectStrobingIcon, lightingEffect: 'strobing' },
+  { id: 'color-cycle', label: 'Color Cycle', icon: AuraEffectColorCycleIcon, lightingEffect: 'color-cycle' },
+  { id: 'rainbow', label: 'Rainbow', icon: AuraEffectRainbowIcon, lightingEffect: 'color-cycle' },
+  { id: 'starry-night', label: 'Starry night', icon: AuraEffectStarryNightIcon, lightingEffect: 'breathing' },
+  { id: 'music', label: 'Music', icon: AuraEffectMusicIcon, lightingEffect: 'strobing' },
+  { id: 'smart', label: 'Smart', icon: AuraEffectSmartIcon, lightingEffect: 'breathing' },
+  { id: 'adaptive-color', label: 'Adaptive Color', icon: AuraEffectAdaptiveColorIcon, lightingEffect: 'color-cycle' },
+  { id: 'dark', label: 'Dark (Off)', icon: AuraEffectDarkIcon, lightingEffect: 'static' },
+  { id: 'ai-aura-lighting', label: 'AI Aura Lighting', icon: AuraEffectAiLightingIcon, lightingEffect: 'color-cycle' }
+]
+
 const LIGHTING_COLOR_PRESETS = ['#f5f5f5', '#ffab1f', '#ff5757', '#68d4ff', '#7fe08d', '#c084fc']
+const AURA_GRADIENT_COLOR_PRESETS = [
+  ['#ff1a1a', '#1f1cff'],
+  ['#ff8b1f', '#ffd966'],
+  ['#68d4ff', '#7fe08d'],
+  ['#a335ff', '#ff4d8d']
+]
+const AURA_GRADIENT_DIRECTIONS = [
+  { id: 'horizontal', label: 'Horizontal' },
+  { id: 'vertical', label: 'Vertical' },
+  { id: 'diagonal', label: 'Diagonal' }
+]
+const AURA_ADVANCED_EFFECT_OPTIONS = ['Comet', 'Flash and Dash', 'Laser', 'Ripple', 'Meteor', 'Voltage']
+const SCENARIO_PROFILE_MODE_OPTIONS = [
+  { id: 'windows', label: 'Windows®' },
+  { id: 'silent', label: 'Silent' },
+  { id: 'performance', label: 'Performance' },
+  { id: 'turbo', label: 'Turbo' }
+]
+const SCENARIO_GAME_VISUAL_OPTIONS = ['Default', 'Racing', 'Scenery', 'FPS', 'Cinema']
 
 const DEFAULT_LIGHTING_STATE = {
   effect: 'static',
@@ -332,6 +373,58 @@ const DEFAULT_RESOURCE_MONITOR_STATE = {
   logStorageLocation: 'C:\\Users\\Princess Shaira\\Desktop',
   recording: false
 }
+
+const DEFAULT_AURA_SYNC_STATE = {
+  activeTab: 'sync-devices',
+  performanceModeEnabled: false,
+  performanceExpanded: false,
+  performanceSmoothness: 1,
+  hueBridgeConnected: false,
+  lastHueScanAt: null,
+  selectedEffect: 'static',
+  colorMode: 'gradient',
+  singleColor: '#5a575d',
+  gradientColors: ['#ff1a1a', '#1f1cff'],
+  gradientDirection: 'horizontal',
+  advancedEffect: 'Comet',
+  inGameLightingEnabled: false,
+  inGameLightingCollapsed: true,
+  aiProfile: 'adaptive',
+  aiLoggedIn: false
+}
+
+const DEFAULT_SCENARIO_PROFILE_STATE = {
+  profileName: 'Profile 1',
+  linkedApps: [],
+  appSelectorOpen: false,
+  touchPadEnabled: true,
+  batteryMode: 'windows',
+  pluggedMode: 'performance',
+  auraEffect: 'static',
+  hostBrightness: 67,
+  gameVisual: 'Default',
+  clearCacheEnabled: true,
+  lastSavedDraft: null,
+  lastAppliedAt: null
+}
+
+const AURA_AI_LIGHTING_PROFILES = [
+  {
+    id: 'adaptive',
+    title: 'Adaptive',
+    description: 'Matches the current Armoury Crate operating mode and keeps the synced device in step with system mood.'
+  },
+  {
+    id: 'focus',
+    title: 'Focus',
+    description: 'Keeps lighting stable and bright for clear visibility during work and study sessions.'
+  },
+  {
+    id: 'pulse',
+    title: 'Pulse',
+    description: 'Adds stronger contrast and motion for gameplay, streaming, and higher activity workloads.'
+  }
+]
 
 const DEFAULT_RESOURCE_MONITOR_RUNTIME = {
   fps: 0,
@@ -490,6 +583,11 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   const [lightingState, setLightingState] = useState(() => loadArmouryLightingState())
   const [audioState, setAudioState] = useState(() => loadArmouryAudioState())
   const [resourceMonitorState, setResourceMonitorState] = useState(() => loadArmouryResourceMonitorState())
+  const [auraSyncState, setAuraSyncState] = useState(() => loadArmouryAuraSyncState())
+  const [scenarioProfileState, setScenarioProfileState] = useState(() => loadArmouryScenarioProfileState())
+  const [scenarioAvailableApps, setScenarioAvailableApps] = useState([])
+  const [isScenarioAppsLoading, setIsScenarioAppsLoading] = useState(false)
+  const [isScenarioSaving, setIsScenarioSaving] = useState(false)
   const [resourceMonitorRuntime, setResourceMonitorRuntime] = useState(DEFAULT_RESOURCE_MONITOR_RUNTIME)
   const [isResourceMonitorLoading, setIsResourceMonitorLoading] = useState(false)
 
@@ -536,6 +634,14 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   useEffect(() => {
     localStorage.setItem(ARMOURY_RESOURCE_MONITOR_STATE_STORAGE_KEY, JSON.stringify(resourceMonitorState))
   }, [resourceMonitorState])
+
+  useEffect(() => {
+    localStorage.setItem(ARMOURY_AURA_SYNC_STATE_STORAGE_KEY, JSON.stringify(auraSyncState))
+  }, [auraSyncState])
+
+  useEffect(() => {
+    localStorage.setItem(ARMOURY_SCENARIO_PROFILES_STORAGE_KEY, JSON.stringify(scenarioProfileState))
+  }, [scenarioProfileState])
 
   useEffect(() => {
     if (activeNav !== 'devices' || activeDeviceTab !== 'memory') return undefined
@@ -705,6 +811,50 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
       window.clearInterval(intervalId)
     }
   }, [activeNav, activeDeviceTab, resourceMonitorState.monitorLevel, resourceMonitorState.realtimeEnabled])
+
+  useEffect(() => {
+    if (activeNav !== 'scenario-profiles') return undefined
+
+    let cancelled = false
+
+    const loadScenarioApps = async (showLoadingState) => {
+      if (showLoadingState) setIsScenarioAppsLoading(true)
+
+      try {
+        const response = await fetch('http://localhost:8000/process/list')
+        if (!response.ok) return
+
+        const processData = await response.json()
+        if (cancelled) return
+
+        const linkedApps = [...new Set(
+          processData
+            .filter((process) => process.state === 'running' && process.app)
+            .map((process) => process.app)
+        )].sort((left, right) => left.localeCompare(right))
+
+        setScenarioAvailableApps(linkedApps)
+        setScenarioProfileState((previous) => ({
+          ...previous,
+          linkedApps: previous.linkedApps.filter((app) => linkedApps.includes(app))
+        }))
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load Armoury Crate scenario profile apps:', error)
+        }
+      } finally {
+        if (!cancelled) setIsScenarioAppsLoading(false)
+      }
+    }
+
+    loadScenarioApps(scenarioAvailableApps.length === 0)
+    const intervalId = window.setInterval(() => loadScenarioApps(false), 4000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [activeNav])
 
   function handleNavSelect(itemId) {
     setActiveNav(itemId)
@@ -908,6 +1058,59 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
     }))
   }
 
+  function updateAuraSyncState(updater) {
+    setAuraSyncState((previous) => ({
+      ...previous,
+      ...(typeof updater === 'function' ? updater(previous) : updater)
+    }))
+  }
+
+  function updateScenarioProfileState(updater) {
+    setScenarioProfileState((previous) => ({
+      ...previous,
+      ...(typeof updater === 'function' ? updater(previous) : updater)
+    }))
+  }
+
+  function markScenarioProfileSaved() {
+    setScenarioProfileState((previous) => ({
+      ...previous,
+      lastSavedDraft: createScenarioProfileDraft(previous)
+    }))
+  }
+
+  async function saveScenarioProfile({ apply = false } = {}) {
+    if (isScenarioSaving) return
+
+    setIsScenarioSaving(true)
+    try {
+      if (apply) {
+        setDeviceSettings((previous) => ({
+          ...previous,
+          'touch-pad': scenarioProfileState.touchPadEnabled
+        }))
+        setActiveMode(scenarioProfileState.pluggedMode)
+        setLightingState((previous) => ({
+          ...previous,
+          effect: mapScenarioAuraEffectToLightingEffect(scenarioProfileState.auraEffect),
+          brightness: scenarioProfileState.hostBrightness
+        }))
+        setAuraSyncState((previous) => ({
+          ...previous,
+          selectedEffect: scenarioProfileState.auraEffect === 'color cycle' ? 'color-cycle' : scenarioProfileState.auraEffect
+        }))
+        setScenarioProfileState((previous) => ({
+          ...previous,
+          lastAppliedAt: new Date().toISOString()
+        }))
+      }
+
+      markScenarioProfileSaved()
+    } finally {
+      window.setTimeout(() => setIsScenarioSaving(false), 260)
+    }
+  }
+
   function updateResourceMonitorState(updater) {
     setResourceMonitorState((previous) => ({
       ...previous,
@@ -958,7 +1161,7 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
         </nav>
       </aside>
 
-      <section className={`armoury-crate-home ${activeNav === 'devices' ? 'devices-page-active' : ''}`}>
+      <section className={`armoury-crate-home ${['devices', 'aura-sync', 'scenario-profiles'].includes(activeNav) ? 'devices-page-active' : ''}`}>
         {activeNav === 'devices' ? (
           <ArmouryCrateDevicesPage
             activeTab={activeDeviceTab}
@@ -998,6 +1201,28 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
             onResourceMonitorStateChange={updateResourceMonitorState}
             deviceSettings={deviceSettings}
             onToggleDeviceSetting={toggleDeviceSetting}
+          />
+        ) : activeNav === 'aura-sync' ? (
+          <ArmouryCrateAuraSyncSimulationPage
+            auraSyncState={auraSyncState}
+            lightingState={lightingState}
+            activeMode={activeMode}
+            onChange={updateAuraSyncState}
+            onLightingStateChange={updateLightingState}
+            onOpenDeviceLighting={() => {
+              setActiveNav('devices')
+              setActiveDeviceTab('lighting')
+            }}
+          />
+        ) : activeNav === 'scenario-profiles' ? (
+          <ArmouryCrateScenarioProfilesPage
+            profileState={scenarioProfileState}
+            availableApps={scenarioAvailableApps}
+            isAppsLoading={isScenarioAppsLoading}
+            isSaving={isScenarioSaving}
+            onChange={updateScenarioProfileState}
+            onSave={() => saveScenarioProfile({ apply: false })}
+            onApplyAndSave={() => saveScenarioProfile({ apply: true })}
           />
         ) : (
           <ArmouryCrateHomePage telemetry={telemetry} activeMode={activeMode} onModeChange={setActiveMode} />
@@ -1219,6 +1444,1116 @@ function ArmouryCrateHomePage({ telemetry, activeMode, onModeChange }) {
         </div>
       </div>
     </>
+  )
+}
+
+function ArmouryCrateAuraSyncPage({
+  auraSyncState,
+  lightingState,
+  activeMode,
+  onChange,
+  onLightingStateChange,
+  onOpenDeviceLighting
+}) {
+  const [isSearchingHue, setIsSearchingHue] = useState(false)
+  const activeEffect = LIGHTING_EFFECTS.find((effect) => effect.id === lightingState.effect) || LIGHTING_EFFECTS[0]
+  const aiPreset = getAuraAiLightingPreset(auraSyncState.aiProfile, activeMode)
+
+  useEffect(() => {
+    if (!isSearchingHue) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSearchingHue(false)
+      onChange({
+        hueBridgeConnected: true,
+        lastHueScanAt: new Date().toISOString()
+      })
+    }, 1400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isSearchingHue, onChange])
+
+  function handleHueSearch() {
+    if (isSearchingHue) return
+    setIsSearchingHue(true)
+  }
+
+  function handleApplyAiProfile(profileId) {
+    const preset = getAuraAiLightingPreset(profileId, activeMode)
+    onChange({ aiProfile: profileId })
+    onLightingStateChange({
+      effect: preset.effect,
+      color: preset.color,
+      brightness: preset.brightness
+    })
+  }
+
+  return (
+    <section className="armoury-crate-aura-page">
+      <header className="armoury-crate-aura-header">
+        <h1>Aura Sync</h1>
+        <div className="armoury-crate-device-header-tools" aria-hidden="true">
+          <DeviceHeaderIcon />
+        </div>
+      </header>
+
+      <div className="armoury-crate-aura-tab-row" role="tablist" aria-label="Aura Sync tabs">
+        {AURA_SYNC_TABS.map((tab) => {
+          const isActive = auraSyncState.activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`armoury-crate-aura-tab ${isActive ? 'active' : ''}`}
+              onClick={() => onChange({ activeTab: tab.id })}
+            >
+              <span>{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="armoury-crate-aura-content">
+        {auraSyncState.activeTab === 'sync-devices' ? (
+          <>
+            <div className="armoury-crate-aura-device-zone">
+              <article className="armoury-crate-aura-device-card">
+                <span
+                  className={`armoury-crate-aura-device-status ${lightingState.brightness > 0 ? 'active' : ''}`}
+                  aria-hidden="true"
+                >
+                  <span />
+                </span>
+                <div className="armoury-crate-aura-device-icon">
+                  <AuraSyncLaptopIcon />
+                </div>
+                <div className="armoury-crate-aura-device-name">FX506HE</div>
+                <div className="armoury-crate-aura-device-copy">
+                  {activeEffect.label} · {lightingState.brightness}% brightness
+                </div>
+                <button type="button" className="armoury-crate-aura-device-link" onClick={onOpenDeviceLighting}>
+                  Set device lighting
+                </button>
+              </article>
+            </div>
+
+            <section className={`armoury-crate-aura-panel ${auraSyncState.performanceExpanded ? 'expanded' : ''}`}>
+              <div className="armoury-crate-aura-panel-row">
+                <div className="armoury-crate-aura-panel-copy">
+                  <h2>Aura Performance Mode</h2>
+                  <p>
+                    If the lighting effects on Aura Sync devices are laggy, enable Aura Performance Mode and select a
+                    Lighting Effect Smoothness level that optimizes the current simulation.
+                  </p>
+                </div>
+
+                <div className="armoury-crate-aura-panel-actions">
+                  <span className="armoury-crate-audio-info-mark aura-info" aria-hidden="true">
+                    i
+                  </span>
+                  <button
+                    type="button"
+                    className={`armoury-crate-audio-toggle ${auraSyncState.performanceModeEnabled ? 'enabled' : ''}`}
+                    onClick={() => onChange((previous) => ({ performanceModeEnabled: !previous.performanceModeEnabled }))}
+                  >
+                    <span className="armoury-crate-audio-toggle-label">
+                      {auraSyncState.performanceModeEnabled ? 'ON' : 'OFF'}
+                    </span>
+                    <span className="armoury-crate-audio-toggle-track">
+                      <span className="armoury-crate-audio-toggle-thumb" />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`armoury-crate-aura-collapse-button ${auraSyncState.performanceExpanded ? 'expanded' : ''}`}
+                    onClick={() => onChange((previous) => ({ performanceExpanded: !previous.performanceExpanded }))}
+                    aria-label={auraSyncState.performanceExpanded ? 'Collapse Aura Performance Mode' : 'Expand Aura Performance Mode'}
+                  >
+                    <span />
+                  </button>
+                </div>
+              </div>
+
+              {auraSyncState.performanceExpanded ? (
+                <div className="armoury-crate-aura-performance-body">
+                  <div className="armoury-crate-aura-performance-levels">
+                    {['Low', 'Mid', 'High'].map((label, index) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={`armoury-crate-aura-level-chip ${auraSyncState.performanceSmoothness === index ? 'active' : ''}`}
+                        onClick={() => onChange({ performanceSmoothness: index })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="armoury-crate-aura-performance-note">
+                    {auraSyncState.performanceModeEnabled
+                      ? `Performance Mode is reducing animation overhead while keeping ${activeEffect.label.toLowerCase()} synced.`
+                      : 'Performance Mode is off. Lighting continues with the current Aura Sync simulation.'}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="armoury-crate-aura-panel">
+              <div className="armoury-crate-aura-panel-row">
+                <div className="armoury-crate-aura-panel-copy">
+                  <h2>Hue Connection</h2>
+                  <p>
+                    Ensure the Hue Bridge and your system are connected to the same network. Also, check the firmware
+                    version of the Hue Bridge in the Hue app to match the desktop simulation flow.
+                  </p>
+                  {auraSyncState.hueBridgeConnected ? (
+                    <div className="armoury-crate-aura-panel-status">
+                      Hue Bridge detected. Last scan:{' '}
+                      {auraSyncState.lastHueScanAt ? new Date(auraSyncState.lastHueScanAt).toLocaleTimeString() : 'just now'}
+                    </div>
+                  ) : (
+                    <div className="armoury-crate-aura-panel-status">No Hue Bridge detected in the current simulation.</div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="armoury-crate-aura-action-button"
+                  onClick={handleHueSearch}
+                  disabled={isSearchingHue}
+                >
+                  {isSearchingHue ? 'Searching...' : 'Search for devices'}
+                </button>
+              </div>
+            </section>
+          </>
+        ) : auraSyncState.activeTab === 'aura-effects' ? (
+          <div className="armoury-crate-aura-effects-layout">
+            <div className="armoury-crate-aura-effects-grid">
+              {LIGHTING_EFFECTS.map((effect) => {
+                const Icon = effect.icon
+                const isActive = lightingState.effect === effect.id
+                return (
+                  <button
+                    key={effect.id}
+                    type="button"
+                    className={`armoury-crate-aura-effect-card ${isActive ? 'active' : ''}`}
+                    onClick={() => onLightingStateChange({ effect: effect.id })}
+                  >
+                    <span className="armoury-crate-aura-effect-icon" aria-hidden="true">
+                      <Icon active={isActive} />
+                    </span>
+                    <span className="armoury-crate-aura-effect-title">{effect.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <aside className="armoury-crate-aura-side-panel">
+              <h2>{activeEffect.label}</h2>
+              <p>Apply the same Aura effect to the synced laptop device using the existing lighting simulation state.</p>
+
+              <div className="armoury-crate-aura-color-row">
+                {LIGHTING_COLOR_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`armoury-crate-aura-color-swatch ${lightingState.color === color ? 'active' : ''}`}
+                    style={{ '--lighting-preview': color }}
+                    onClick={() => onLightingStateChange({ color })}
+                    aria-label={`Set Aura Sync color to ${color}`}
+                  />
+                ))}
+              </div>
+
+              <div className="armoury-crate-aura-brightness">
+                <div className="armoury-crate-aura-brightness-head">
+                  <span>BRIGHTNESS</span>
+                  <strong>{lightingState.brightness}%</strong>
+                </div>
+                <div className="armoury-crate-lighting-slider-shell">
+                  <div className="armoury-crate-lighting-slider-fill" style={{ width: `${lightingState.brightness}%` }} />
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={lightingState.brightness}
+                    onChange={(event) => onLightingStateChange({ brightness: Number(event.target.value) })}
+                    aria-label="Aura Sync brightness"
+                  />
+                </div>
+              </div>
+
+              <button type="button" className="armoury-crate-aura-action-button wide" onClick={onOpenDeviceLighting}>
+                Open device lighting
+              </button>
+            </aside>
+          </div>
+        ) : (
+          <div className="armoury-crate-aura-ai-layout">
+            <div className="armoury-crate-aura-ai-grid">
+              {AURA_AI_LIGHTING_PROFILES.map((profile) => {
+                const isActive = auraSyncState.aiProfile === profile.id
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    className={`armoury-crate-aura-ai-card ${isActive ? 'active' : ''}`}
+                    onClick={() => handleApplyAiProfile(profile.id)}
+                  >
+                    <strong>{profile.title}</strong>
+                    <span>{profile.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <aside className="armoury-crate-aura-side-panel ai-panel">
+              <h2>{aiPreset.title}</h2>
+              <p>
+                Recommended for the current <span>{MODE_PRESETS[activeMode].label}</span> operating mode.
+              </p>
+
+              <div className="armoury-crate-aura-ai-preview">
+                <div>
+                  <span>Effect</span>
+                  <strong>{LIGHTING_EFFECTS.find((effect) => effect.id === aiPreset.effect)?.label || activeEffect.label}</strong>
+                </div>
+                <div>
+                  <span>Color</span>
+                  <strong>{aiPreset.color}</strong>
+                </div>
+                <div>
+                  <span>Brightness</span>
+                  <strong>{aiPreset.brightness}%</strong>
+                </div>
+              </div>
+
+              <button type="button" className="armoury-crate-aura-action-button wide" onClick={() => handleApplyAiProfile(auraSyncState.aiProfile)}>
+                Apply AI lighting
+              </button>
+            </aside>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function ArmouryCrateAuraSyncSimulationPage({
+  auraSyncState,
+  lightingState,
+  activeMode,
+  onChange,
+  onLightingStateChange,
+  onOpenDeviceLighting
+}) {
+  const [isSearchingHue, setIsSearchingHue] = useState(false)
+  const activeEffect =
+    AURA_BASIC_EFFECTS.find((effect) => effect.id === auraSyncState.selectedEffect) ||
+    AURA_BASIC_EFFECTS[0]
+  const aiPreset = getAuraAiLightingPreset(auraSyncState.aiProfile, activeMode)
+  const gradientDirectionLabel =
+    AURA_GRADIENT_DIRECTIONS.find((direction) => direction.id === auraSyncState.gradientDirection)?.label || 'Horizontal'
+  const isGradientMode = auraSyncState.colorMode === 'gradient'
+  const heroGradientColors =
+    auraSyncState.colorMode === 'gradient'
+      ? auraSyncState.gradientColors
+      : [aiPreset.color, activeMode === 'turbo' ? '#671ddf' : '#1f1cff']
+
+  useEffect(() => {
+    if (!isSearchingHue) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSearchingHue(false)
+      onChange({
+        hueBridgeConnected: true,
+        lastHueScanAt: new Date().toISOString()
+      })
+    }, 1400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isSearchingHue, onChange])
+
+  function handleHueSearch() {
+    if (isSearchingHue) return
+    setIsSearchingHue(true)
+  }
+
+  function handleSelectAuraEffect(effectId) {
+    const selectedEffect = AURA_BASIC_EFFECTS.find((effect) => effect.id === effectId) || AURA_BASIC_EFFECTS[0]
+    const nextState = { selectedEffect: effectId }
+
+    if (effectId === 'dark') {
+      onLightingStateChange({ effect: 'static', brightness: 0 })
+      onChange({
+        ...nextState,
+        colorMode: 'single'
+      })
+      return
+    }
+
+    if (['rainbow', 'adaptive-color', 'ai-aura-lighting'].includes(effectId)) {
+      nextState.colorMode = 'gradient'
+    }
+
+    onLightingStateChange({
+      effect: selectedEffect.lightingEffect,
+      brightness: lightingState.brightness === 0 ? DEFAULT_LIGHTING_STATE.brightness : lightingState.brightness
+    })
+    onChange(nextState)
+  }
+
+  function handleApplyAiProfile(profileId) {
+    const preset = getAuraAiLightingPreset(profileId, activeMode)
+    onChange({
+      aiProfile: profileId,
+      selectedEffect: 'ai-aura-lighting',
+      colorMode: 'gradient',
+      gradientColors: preset.gradientColors || [preset.color, '#4d2cff']
+    })
+    onLightingStateChange({
+      effect: preset.effect,
+      color: preset.color,
+      brightness: preset.brightness
+    })
+  }
+
+  function handleResetAuraEffects() {
+    onChange({
+      selectedEffect: 'static',
+      colorMode: 'gradient',
+      singleColor: '#5a575d',
+      gradientColors: ['#ff1a1a', '#1f1cff'],
+      gradientDirection: 'horizontal',
+      advancedEffect: 'Comet',
+      inGameLightingEnabled: false
+    })
+    onLightingStateChange({
+      effect: DEFAULT_LIGHTING_STATE.effect,
+      color: DEFAULT_LIGHTING_STATE.color,
+      brightness: DEFAULT_LIGHTING_STATE.brightness
+    })
+  }
+
+  return (
+    <section className="armoury-crate-aura-page">
+      <header className="armoury-crate-aura-header">
+        <h1>Aura Sync</h1>
+        <div className="armoury-crate-device-header-tools" aria-hidden="true">
+          <DeviceHeaderIcon />
+        </div>
+      </header>
+
+      <div className="armoury-crate-aura-tab-row" role="tablist" aria-label="Aura Sync tabs">
+        {AURA_SYNC_TABS.map((tab) => {
+          const isActive = auraSyncState.activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`armoury-crate-aura-tab ${isActive ? 'active' : ''}`}
+              onClick={() => onChange({ activeTab: tab.id })}
+            >
+              <span>{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="armoury-crate-aura-content">
+        {auraSyncState.activeTab === 'sync-devices' ? (
+          <>
+            <div className="armoury-crate-aura-device-zone">
+              <article className="armoury-crate-aura-device-card">
+                <span
+                  className={`armoury-crate-aura-device-status ${lightingState.brightness > 0 ? 'active' : ''}`}
+                  aria-hidden="true"
+                >
+                  <span />
+                </span>
+                <div className="armoury-crate-aura-device-icon">
+                  <AuraSyncLaptopIcon />
+                </div>
+                <div className="armoury-crate-aura-device-name">FX506HE</div>
+                <div className="armoury-crate-aura-device-copy">
+                  {activeEffect.label} · {Math.max(lightingState.brightness, 0)}% brightness
+                </div>
+                <button type="button" className="armoury-crate-aura-device-link" onClick={onOpenDeviceLighting}>
+                  Set device lighting
+                </button>
+              </article>
+            </div>
+
+            <section className={`armoury-crate-aura-panel ${auraSyncState.performanceExpanded ? 'expanded' : ''}`}>
+              <div className="armoury-crate-aura-panel-row">
+                <div className="armoury-crate-aura-panel-copy">
+                  <h2>Aura Performance Mode</h2>
+                  <p>
+                    If the lighting effects on Aura Sync devices are laggy, enable Aura Performance Mode and select a
+                    Lighting Effect Smoothness level that optimizes the current simulation.
+                  </p>
+                </div>
+
+                <div className="armoury-crate-aura-panel-actions">
+                  <span className="armoury-crate-audio-info-mark aura-info" aria-hidden="true">
+                    i
+                  </span>
+                  <button
+                    type="button"
+                    className={`armoury-crate-audio-toggle ${auraSyncState.performanceModeEnabled ? 'enabled' : ''}`}
+                    onClick={() => onChange((previous) => ({ performanceModeEnabled: !previous.performanceModeEnabled }))}
+                  >
+                    <span className="armoury-crate-audio-toggle-label">
+                      {auraSyncState.performanceModeEnabled ? 'ON' : 'OFF'}
+                    </span>
+                    <span className="armoury-crate-audio-toggle-track">
+                      <span className="armoury-crate-audio-toggle-thumb" />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`armoury-crate-aura-collapse-button ${auraSyncState.performanceExpanded ? 'expanded' : ''}`}
+                    onClick={() => onChange((previous) => ({ performanceExpanded: !previous.performanceExpanded }))}
+                    aria-label={auraSyncState.performanceExpanded ? 'Collapse Aura Performance Mode' : 'Expand Aura Performance Mode'}
+                  >
+                    <span />
+                  </button>
+                </div>
+              </div>
+
+              {auraSyncState.performanceExpanded ? (
+                <div className="armoury-crate-aura-performance-body">
+                  <div className="armoury-crate-aura-performance-levels">
+                    {['Low', 'Mid', 'High'].map((label, index) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={`armoury-crate-aura-level-chip ${auraSyncState.performanceSmoothness === index ? 'active' : ''}`}
+                        onClick={() => onChange({ performanceSmoothness: index })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="armoury-crate-aura-performance-note">
+                    {auraSyncState.performanceModeEnabled
+                      ? `Performance Mode is reducing animation overhead while keeping ${activeEffect.label.toLowerCase()} synced.`
+                      : 'Performance Mode is off. Lighting continues with the current Aura Sync simulation.'}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="armoury-crate-aura-panel">
+              <div className="armoury-crate-aura-panel-row">
+                <div className="armoury-crate-aura-panel-copy">
+                  <h2>Hue Connection</h2>
+                  <p>
+                    Ensure the Hue Bridge and your system are connected to the same network. Also, check the firmware
+                    version of the Hue Bridge in the Hue app to match the desktop simulation flow.
+                  </p>
+                  {auraSyncState.hueBridgeConnected ? (
+                    <div className="armoury-crate-aura-panel-status">
+                      Hue Bridge detected. Last scan:{' '}
+                      {auraSyncState.lastHueScanAt ? new Date(auraSyncState.lastHueScanAt).toLocaleTimeString() : 'just now'}
+                    </div>
+                  ) : (
+                    <div className="armoury-crate-aura-panel-status">No Hue Bridge detected in the current simulation.</div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="armoury-crate-aura-action-button"
+                  onClick={handleHueSearch}
+                  disabled={isSearchingHue}
+                >
+                  {isSearchingHue ? 'Searching...' : 'Search for devices'}
+                </button>
+              </div>
+            </section>
+          </>
+        ) : auraSyncState.activeTab === 'aura-effects' ? (
+          <div className="armoury-crate-aura-effects-layout">
+            <div className="armoury-crate-aura-effects-main">
+              <div className="armoury-crate-lighting-topbar aura-effects-head">
+                <div className="armoury-crate-gpu-heading armoury-crate-lighting-heading">
+                  <span className="armoury-crate-gpu-heading-mark" aria-hidden="true" />
+                  <h2>Basic Effects</h2>
+                </div>
+
+                <div className="armoury-crate-lighting-actions">
+                  <button type="button" className="armoury-crate-lighting-top-button" onClick={handleResetAuraEffects}>
+                    Reset to default
+                  </button>
+                </div>
+              </div>
+
+              <div className="armoury-crate-aura-effects-grid">
+                {AURA_BASIC_EFFECTS.map((effect) => {
+                  const Icon = effect.icon
+                  const isActive = auraSyncState.selectedEffect === effect.id
+                  return (
+                    <button
+                      key={effect.id}
+                      type="button"
+                      className={`armoury-crate-aura-effect-card ${isActive ? 'active' : ''}`}
+                      onClick={() => handleSelectAuraEffect(effect.id)}
+                    >
+                      <span className="armoury-crate-aura-effect-icon" aria-hidden="true">
+                        <Icon active={isActive} />
+                      </span>
+                      <span className="armoury-crate-aura-effect-title">{effect.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <section className="armoury-crate-aura-advanced">
+                <div className="armoury-crate-gpu-heading armoury-crate-lighting-heading">
+                  <span className="armoury-crate-gpu-heading-mark" aria-hidden="true" />
+                  <h2>Advanced Effects</h2>
+                </div>
+
+                <div className="armoury-crate-aura-advanced-row">
+                  <div className="armoury-crate-aura-creator-mark" aria-hidden="true">
+                    <AuraCreatorIcon />
+                  </div>
+
+                  <div className="armoury-crate-aura-advanced-copy">
+                    <div className="armoury-crate-resource-select-shell">
+                      <select
+                        value={auraSyncState.advancedEffect}
+                        onChange={(event) => onChange({ advancedEffect: event.target.value })}
+                        className="armoury-crate-resource-select"
+                      >
+                        {AURA_ADVANCED_EFFECT_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+                    </div>
+                    <p>Use Aura Creator to create unique lighting effects between synchronized devices.</p>
+                  </div>
+
+                  <button type="button" className="armoury-crate-aura-action-button">
+                    Aura Creator
+                  </button>
+                </div>
+              </section>
+
+              <section className={`armoury-crate-aura-ingame ${auraSyncState.inGameLightingCollapsed ? 'collapsed' : ''}`}>
+                <div className="armoury-crate-aura-panel-row">
+                  <div className="armoury-crate-aura-panel-copy">
+                    <h2>In-Game lighting effects</h2>
+                    {!auraSyncState.inGameLightingCollapsed ? (
+                      <p>Game-linked effects follow the current Aura Sync preset without requiring backend changes.</p>
+                    ) : null}
+                  </div>
+
+                  <div className="armoury-crate-aura-panel-actions">
+                    <button type="button" className="armoury-crate-aura-game-list-button">
+                      Game list
+                    </button>
+                    <button
+                      type="button"
+                      className={`armoury-crate-audio-toggle ${auraSyncState.inGameLightingEnabled ? 'enabled' : ''}`}
+                      onClick={() => onChange((previous) => ({ inGameLightingEnabled: !previous.inGameLightingEnabled }))}
+                    >
+                      <span className="armoury-crate-audio-toggle-label">
+                        {auraSyncState.inGameLightingEnabled ? 'ON' : 'OFF'}
+                      </span>
+                      <span className="armoury-crate-audio-toggle-track">
+                        <span className="armoury-crate-audio-toggle-thumb" />
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`armoury-crate-aura-collapse-button ${!auraSyncState.inGameLightingCollapsed ? 'expanded' : ''}`}
+                      onClick={() => onChange((previous) => ({ inGameLightingCollapsed: !previous.inGameLightingCollapsed }))}
+                      aria-label={auraSyncState.inGameLightingCollapsed ? 'Expand in-game lighting effects' : 'Collapse in-game lighting effects'}
+                    >
+                      <span />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside className="armoury-crate-aura-side-panel aura-effects-panel">
+              <h2>{activeEffect.label}</h2>
+              <div className="armoury-crate-aura-panel-divider" />
+
+              <div className="armoury-crate-aura-control-group">
+                <div className="armoury-crate-aura-control-title">Color</div>
+
+                <button
+                  type="button"
+                  className={`armoury-crate-aura-radio-row ${auraSyncState.colorMode === 'single' ? 'selected' : ''}`}
+                  onClick={() => onChange({ colorMode: 'single' })}
+                >
+                  <span className="armoury-crate-aura-radio" aria-hidden="true">
+                    <span />
+                  </span>
+                  <span>Single</span>
+                </button>
+
+                <div className="armoury-crate-aura-single-color-boxes">
+                  <button
+                    type="button"
+                    className="armoury-crate-aura-single-color-box"
+                    style={{ '--lighting-preview': auraSyncState.singleColor }}
+                    onClick={() => {
+                      const currentIndex = LIGHTING_COLOR_PRESETS.indexOf(auraSyncState.singleColor)
+                      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % LIGHTING_COLOR_PRESETS.length
+                      const nextColor = LIGHTING_COLOR_PRESETS[nextIndex]
+                      onChange({ singleColor: nextColor, colorMode: 'single' })
+                      onLightingStateChange({ color: nextColor })
+                    }}
+                    aria-label={`Selected single color ${auraSyncState.singleColor}`}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className={`armoury-crate-aura-radio-row ${isGradientMode ? 'selected' : ''}`}
+                  onClick={() => onChange({ colorMode: 'gradient' })}
+                >
+                  <span className="armoury-crate-aura-radio" aria-hidden="true">
+                    <span />
+                  </span>
+                  <span>Gradient</span>
+                </button>
+
+                <div className="armoury-crate-aura-gradient-editor">
+                  <div className="armoury-crate-aura-gradient-column">
+                    <span>Color scheme</span>
+                    <div className="armoury-crate-aura-gradient-color-row">
+                      <button
+                        type="button"
+                        className="armoury-crate-aura-gradient-swatch"
+                        style={{ '--lighting-preview': auraSyncState.gradientColors[0] }}
+                        onClick={() => {
+                          const currentIndex = AURA_GRADIENT_COLOR_PRESETS.findIndex(
+                            (pair) => pair[0] === auraSyncState.gradientColors[0] && pair[1] === auraSyncState.gradientColors[1]
+                          )
+                          const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % AURA_GRADIENT_COLOR_PRESETS.length
+                          onChange({ gradientColors: AURA_GRADIENT_COLOR_PRESETS[nextIndex], colorMode: 'gradient' })
+                        }}
+                        aria-label={`Gradient start color ${auraSyncState.gradientColors[0]}`}
+                      />
+                      <button
+                        type="button"
+                        className="armoury-crate-aura-gradient-swatch"
+                        style={{ '--lighting-preview': auraSyncState.gradientColors[1] }}
+                        onClick={() => onChange({ gradientColors: [...auraSyncState.gradientColors].reverse(), colorMode: 'gradient' })}
+                        aria-label={`Gradient end color ${auraSyncState.gradientColors[1]}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="armoury-crate-aura-gradient-column compact">
+                    <span>Direction</span>
+                    <div className="armoury-crate-resource-select-shell">
+                      <select
+                        value={auraSyncState.gradientDirection}
+                        onChange={(event) => onChange({ gradientDirection: event.target.value, colorMode: 'gradient' })}
+                        className="armoury-crate-resource-select"
+                      >
+                        {AURA_GRADIENT_DIRECTIONS.map((direction) => (
+                          <option key={direction.id} value={direction.id}>
+                            {direction.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="armoury-crate-aura-preview-block">
+                <span>Preview</span>
+                <div className={`armoury-crate-aura-live-preview ${isGradientMode ? 'gradient' : 'single'}`} style={getAuraPreviewStyle(auraSyncState)} />
+                <small>
+                  {isGradientMode ? `${auraSyncState.gradientColors[0]} to ${auraSyncState.gradientColors[1]}` : auraSyncState.singleColor}
+                  {' · '}
+                  {gradientDirectionLabel}
+                </small>
+              </div>
+
+              <button type="button" className="armoury-crate-aura-action-button wide" onClick={onOpenDeviceLighting}>
+                Open device lighting
+              </button>
+            </aside>
+          </div>
+        ) : (
+          <div className="armoury-crate-aura-ai-shell">
+            <div className="armoury-crate-lighting-topbar aura-ai-topbar">
+              <div className="armoury-crate-gpu-heading armoury-crate-lighting-heading aura-ai-heading">
+                <span className="armoury-crate-gpu-heading-mark" aria-hidden="true" />
+                <h2>Lighting Generation Panel</h2>
+                <span className="armoury-crate-aura-experimental-badge">Experimental</span>
+              </div>
+
+              <div className="armoury-crate-lighting-actions">
+                <button type="button" className="armoury-crate-lighting-top-button" disabled={!auraSyncState.aiLoggedIn}>
+                  Create new
+                </button>
+                <button
+                  type="button"
+                  className="armoury-crate-lighting-top-button"
+                  onClick={() => onChange({ activeTab: 'aura-effects' })}
+                >
+                  Lighting Gallery
+                </button>
+              </div>
+            </div>
+
+            <p className="armoury-crate-aura-ai-terms">
+              By using AI Aura Lighting, you accept the <span>Terms</span>. Do not share confidential or sensitive
+              information.
+            </p>
+
+            <section
+              className="armoury-crate-aura-ai-hero"
+              style={{
+                '--aura-hero-color-a': heroGradientColors[0],
+                '--aura-hero-color-b': heroGradientColors[1],
+                '--aura-hero-color-c': aiPreset.color,
+                '--aura-hero-color-d': '#050505'
+              }}
+            >
+              <div className="armoury-crate-aura-ai-hero-copy">
+                <h2>Your Style, Shining Brightly!</h2>
+                <p>Turn your inspiration into vibrant lighting effects that enhance every moment.</p>
+              </div>
+
+              <div className="armoury-crate-aura-ai-hero-actions">
+                <div className="armoury-crate-aura-ai-profile-row">
+                  {AURA_AI_LIGHTING_PROFILES.map((profile) => (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      className={`armoury-crate-aura-ai-chip ${auraSyncState.aiProfile === profile.id ? 'active' : ''}`}
+                      onClick={() => onChange({ aiProfile: profile.id })}
+                    >
+                      {profile.title}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="armoury-crate-aura-ai-login"
+                  onClick={() => {
+                    if (auraSyncState.aiLoggedIn) {
+                      handleApplyAiProfile(auraSyncState.aiProfile)
+                    } else {
+                      onChange({ aiLoggedIn: true })
+                    }
+                  }}
+                >
+                  {auraSyncState.aiLoggedIn ? 'Apply lighting' : 'Log in'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function ArmouryCrateScenarioProfilesPage({
+  profileState,
+  availableApps,
+  isAppsLoading,
+  isSaving,
+  onChange,
+  onSave,
+  onApplyAndSave
+}) {
+  const currentDraft = createScenarioProfileDraft(profileState)
+  const savedDraft = profileState.lastSavedDraft || createScenarioProfileDraft(DEFAULT_SCENARIO_PROFILE_STATE)
+  const isDirty = JSON.stringify(currentDraft) !== JSON.stringify(savedDraft)
+
+  return (
+    <section className="armoury-crate-scenario-page">
+      <header className="armoury-crate-scenario-header">
+        <h1>Scenario Profiles</h1>
+        <div className="armoury-crate-scenario-header-tools" aria-hidden="true">
+          <ScenarioProfileBadgeIcon />
+          <span className="armoury-crate-scenario-grid-corners" />
+          <span className="armoury-crate-scenario-more-dots" />
+        </div>
+      </header>
+
+      <div className="armoury-crate-scenario-layout">
+        <div className="armoury-crate-scenario-left">
+          <div className="armoury-crate-scenario-name-row">
+            <div className="armoury-crate-scenario-name-icon" aria-hidden="true">
+              <ScenarioProfileBadgeIcon />
+            </div>
+
+            <label className="armoury-crate-scenario-name-field">
+              <span>Profile Name</span>
+              <input
+                type="text"
+                value={profileState.profileName}
+                onChange={(event) => onChange({ profileName: event.target.value })}
+                placeholder="Profile name"
+              />
+            </label>
+          </div>
+
+          <section className="armoury-crate-scenario-apps-panel">
+            <div className="armoury-crate-scenario-apps-head">
+              <h2>Select Apps to Link</h2>
+              <button
+                type="button"
+                className="armoury-crate-scenario-options-button"
+                onClick={() => onChange((previous) => ({ appSelectorOpen: !previous.appSelectorOpen }))}
+              >
+                {profileState.appSelectorOpen ? 'Hide Options' : 'See Options'}
+              </button>
+            </div>
+
+            {profileState.linkedApps.length > 0 ? (
+              <div className="armoury-crate-scenario-linked-apps">
+                {profileState.linkedApps.map((app) => (
+                  <button
+                    key={app}
+                    type="button"
+                    className="armoury-crate-scenario-app-chip"
+                    onClick={() =>
+                      onChange((previous) => ({
+                        linkedApps: previous.linkedApps.filter((item) => item !== app)
+                      }))
+                    }
+                  >
+                    <span>{app}</span>
+                    <strong>×</strong>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="armoury-crate-scenario-apps-empty">
+                Click "See Options" to select apps you wish to apply this profile to.
+              </p>
+            )}
+
+            {profileState.appSelectorOpen ? (
+              <div className="armoury-crate-scenario-apps-options">
+                {isAppsLoading && availableApps.length === 0 ? (
+                  <div className="armoury-crate-scenario-apps-status">Loading running apps...</div>
+                ) : availableApps.length === 0 ? (
+                  <div className="armoury-crate-scenario-apps-status">No running apps available.</div>
+                ) : (
+                  availableApps.map((app) => {
+                    const selected = profileState.linkedApps.includes(app)
+                    return (
+                      <button
+                        key={app}
+                        type="button"
+                        className={`armoury-crate-scenario-app-option ${selected ? 'selected' : ''}`}
+                        onClick={() =>
+                          onChange((previous) => ({
+                            linkedApps: previous.linkedApps.includes(app)
+                              ? previous.linkedApps.filter((item) => item !== app)
+                              : [...previous.linkedApps, app]
+                          }))
+                        }
+                      >
+                        <span className={`armoury-crate-scenario-app-checkbox ${selected ? 'checked' : ''}`} />
+                        <span>{app}</span>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <div className="armoury-crate-scenario-right">
+          <div className="armoury-crate-scenario-section-head">
+            <span className="armoury-crate-gpu-heading-mark" aria-hidden="true" />
+            <h2>Configuration</h2>
+            <div className="armoury-crate-scenario-config-actions" aria-hidden="true">
+              <ScenarioEditIcon />
+              <ScenarioRefreshIcon />
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-config-divider" />
+
+          <div className="armoury-crate-scenario-row">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioTouchPadIcon />
+              <span>Touch Pad</span>
+            </div>
+            <button
+              type="button"
+              className={`armoury-crate-audio-toggle ${profileState.touchPadEnabled ? 'enabled' : ''}`}
+              onClick={() => onChange((previous) => ({ touchPadEnabled: !previous.touchPadEnabled }))}
+            >
+              <span className="armoury-crate-audio-toggle-label">{profileState.touchPadEnabled ? 'ON' : 'OFF'}</span>
+              <span className="armoury-crate-audio-toggle-track">
+                <span className="armoury-crate-audio-toggle-thumb" />
+              </span>
+            </button>
+          </div>
+
+          <div className="armoury-crate-scenario-row alt">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioBatteryIcon />
+              <span>Operating Mode On Battery</span>
+            </div>
+            <div className="armoury-crate-resource-select-shell scenario-select">
+              <select
+                value={profileState.batteryMode}
+                onChange={(event) => onChange({ batteryMode: event.target.value })}
+                className="armoury-crate-resource-select"
+              >
+                {SCENARIO_PROFILE_MODE_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-row">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioPlugIcon />
+              <span>Operating Mode Plugged In</span>
+            </div>
+            <div className="armoury-crate-resource-select-shell scenario-select">
+              <select
+                value={profileState.pluggedMode}
+                onChange={(event) => onChange({ pluggedMode: event.target.value })}
+                className="armoury-crate-resource-select"
+              >
+                {SCENARIO_PROFILE_MODE_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-subhead">
+            <span className="armoury-crate-scenario-app-warning" aria-hidden="true" />
+            <h3>App Configuration</h3>
+          </div>
+
+          <div className="armoury-crate-scenario-row alt">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioAuraIcon />
+              <span>Aura Sync</span>
+            </div>
+            <div className="armoury-crate-resource-select-shell scenario-select">
+              <select
+                value={profileState.auraEffect}
+                onChange={(event) => onChange({ auraEffect: event.target.value })}
+                className="armoury-crate-resource-select"
+              >
+                {['static', 'breathing', 'strobing', 'color cycle'].map((option) => (
+                  <option key={option} value={option}>
+                    {toScenarioOptionLabel(option)}
+                  </option>
+                ))}
+              </select>
+              <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-row">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioAuraIcon />
+              <span>Host device lighting effect brightness</span>
+            </div>
+            <div className="armoury-crate-scenario-slider-wrap">
+              <div className="armoury-crate-lighting-slider-shell">
+                <div className="armoury-crate-lighting-slider-fill" style={{ width: `${profileState.hostBrightness}%` }} />
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={profileState.hostBrightness}
+                  onChange={(event) => onChange({ hostBrightness: Number(event.target.value) })}
+                  aria-label="Scenario host device brightness"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-row alt">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioGameVisualIcon />
+              <span>GameVisual</span>
+            </div>
+            <div className="armoury-crate-resource-select-shell scenario-select">
+              <select
+                value={profileState.gameVisual}
+                onChange={(event) => onChange({ gameVisual: event.target.value })}
+                className="armoury-crate-resource-select"
+              >
+                {SCENARIO_GAME_VISUAL_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <span className="armoury-crate-resource-select-arrow" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div className="armoury-crate-scenario-row">
+            <div className="armoury-crate-scenario-row-label">
+              <ScenarioBroomIcon />
+              <span>Clear Cache</span>
+            </div>
+            <button
+              type="button"
+              className={`armoury-crate-audio-toggle ${profileState.clearCacheEnabled ? 'enabled' : ''}`}
+              onClick={() => onChange((previous) => ({ clearCacheEnabled: !previous.clearCacheEnabled }))}
+            >
+              <span className="armoury-crate-audio-toggle-label">{profileState.clearCacheEnabled ? 'ON' : 'OFF'}</span>
+              <span className="armoury-crate-audio-toggle-track">
+                <span className="armoury-crate-audio-toggle-thumb" />
+              </span>
+            </button>
+          </div>
+
+          <div className="armoury-crate-scenario-footer">
+            <button
+              type="button"
+              className="armoury-crate-scenario-save-button"
+              onClick={onSave}
+              disabled={!isDirty || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button type="button" className="armoury-crate-scenario-apply-button" onClick={onApplyAndSave} disabled={isSaving}>
+              {isSaving ? 'Applying...' : 'Apply & Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -2246,6 +3581,198 @@ function AudioSpeakerIcon() {
   )
 }
 
+function AuraSyncLaptopIcon() {
+  return (
+    <svg viewBox="0 0 112 96" className="armoury-crate-aura-laptop-icon">
+      <path
+        d="M28 25h56v34H28zM22 64h68l-7 8H29Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="4.2"
+        strokeLinejoin="round"
+      />
+      <path d="M37 35h38M37 47h26" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity="0.42" />
+    </svg>
+  )
+}
+
+function AuraEffectStaticIcon({ active }) {
+  return <LightingStaticIcon active={active} />
+}
+
+function AuraEffectBreathingIcon({ active }) {
+  return <LightingBreathingIcon active={active} />
+}
+
+function AuraEffectStrobingIcon({ active }) {
+  return <LightingStrobingIcon active={active} />
+}
+
+function AuraEffectColorCycleIcon({ active }) {
+  return <LightingColorCycleIcon active={active} />
+}
+
+function AuraEffectRainbowIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M18 56a26 26 0 0 1 52 0" fill="none" stroke="currentColor" strokeWidth="6" />
+      <path d="M26 56a18 18 0 0 1 36 0" fill="none" stroke="currentColor" strokeWidth="6" />
+      <path d="M34 56a10 10 0 0 1 20 0" fill="none" stroke="currentColor" strokeWidth="6" />
+    </svg>
+  )
+}
+
+function AuraEffectStarryNightIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M44 18l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2Z" fill="none" stroke="currentColor" strokeWidth="5" strokeLinejoin="round" />
+      <circle cx="62" cy="18" r="4" fill="currentColor" />
+      <circle cx="22" cy="58" r="3.5" fill="currentColor" opacity="0.9" />
+    </svg>
+  )
+}
+
+function AuraEffectMusicIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M16 62V38M26 62V26M36 62V32M46 62V20M56 62V28M66 62V40" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="square" />
+    </svg>
+  )
+}
+
+function AuraEffectSmartIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M44 19v20M29 35a18 18 0 1 1 30 13M33 58h22" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="44" cy="56" r="9" fill="none" stroke="currentColor" strokeWidth="6" />
+      <circle cx="44" cy="56" r="2.8" fill="currentColor" />
+    </svg>
+  )
+}
+
+function AuraEffectAdaptiveColorIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M22 24h18M22 24v18M66 24H48M66 24v18M22 64h18M22 64V46M66 64H48M66 64V46" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="square" />
+      <path d="M52 52h14M59 45v14" fill="none" stroke="currentColor" strokeWidth="6" />
+    </svg>
+  )
+}
+
+function AuraEffectDarkIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <circle cx="44" cy="44" r="22" fill="none" stroke="currentColor" strokeWidth="6" />
+      <path d="M26 26 62 62" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function AuraEffectAiLightingIcon({ active }) {
+  return (
+    <svg viewBox="0 0 88 88" className={`armoury-crate-lighting-icon ${active ? 'active' : ''}`}>
+      <path d="M44 18 64 38 44 58 24 38Z" fill="none" stroke="currentColor" strokeWidth="6" />
+      <circle cx="44" cy="18" r="4.2" fill="currentColor" />
+      <circle cx="68" cy="34" r="4.2" fill="currentColor" />
+      <circle cx="20" cy="42" r="4.2" fill="currentColor" />
+      <circle cx="60" cy="66" r="4.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+function AuraCreatorIcon() {
+  return (
+    <svg viewBox="0 0 92 92" className="armoury-crate-aura-creator-icon">
+      <defs>
+        <linearGradient id="aura-creator-gradient" x1="0" x2="1" y1="1" y2="0">
+          <stop offset="0%" stopColor="#ff00b8" />
+          <stop offset="32%" stopColor="#0070ff" />
+          <stop offset="68%" stopColor="#00f57b" />
+          <stop offset="100%" stopColor="#ffe600" />
+        </linearGradient>
+      </defs>
+      <path d="M46 12 84 78H8Z" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" />
+      <path d="M46 22 72 72H20Z" fill="url(#aura-creator-gradient)" />
+      <path d="M35 52 48 36l6 18-7 7Z" fill="#0b0b0b" />
+    </svg>
+  )
+}
+
+function ScenarioProfileBadgeIcon() {
+  return (
+    <svg viewBox="0 0 76 76" className="armoury-crate-scenario-badge-icon">
+      <path d="M18 14h28l16 24-16 24H18Z" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinejoin="round" />
+      <path d="M29 24h13l8 14-8 14H29Z" fill="none" stroke="currentColor" strokeWidth="3.1" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioEditIcon() {
+  return (
+    <svg viewBox="0 0 30 30" className="armoury-crate-scenario-inline-icon">
+      <path d="M6 23h18M8 20l11-11 3 3-11 11H8Z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioRefreshIcon() {
+  return (
+    <svg viewBox="0 0 30 30" className="armoury-crate-scenario-inline-icon">
+      <path d="M10 11a8 8 0 1 1-2 10M10 11V6M10 11h5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioTouchPadIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M4 6h24v16H4zM4 18h24M16 18v4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioBatteryIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M6 9h22v12H6zM28 13h3M16 15h4M18 13v4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioPlugIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M14 6v7M22 6v7M11 13h14v5l-6 6h-2l-6-6Z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ScenarioAuraIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M19 6 28 20H10Z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+      <path d="M16 12h6M14 16h10M12 20h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ScenarioGameVisualIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M4 6h24v15H4zM8 10h3M13 10h3M8 14h8M8 18h11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 23h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ScenarioBroomIcon() {
+  return (
+    <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
+      <path d="M18 6v8M15 14h6l3 10H12Z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function groupMemoryProcesses(processes) {
   const grouped = new Map()
 
@@ -2339,6 +3866,121 @@ function loadArmouryResourceMonitorState() {
     console.warn('Failed to load Armoury Crate resource monitor state:', error)
     return DEFAULT_RESOURCE_MONITOR_STATE
   }
+}
+
+function loadArmouryAuraSyncState() {
+  try {
+    const savedState = localStorage.getItem(ARMOURY_AURA_SYNC_STATE_STORAGE_KEY)
+    if (!savedState) return DEFAULT_AURA_SYNC_STATE
+
+    const parsed = JSON.parse(savedState)
+    return {
+      ...DEFAULT_AURA_SYNC_STATE,
+      ...parsed
+    }
+  } catch (error) {
+    console.warn('Failed to load Armoury Crate Aura Sync state:', error)
+    return DEFAULT_AURA_SYNC_STATE
+  }
+}
+
+function loadArmouryScenarioProfileState() {
+  try {
+    const savedState = localStorage.getItem(ARMOURY_SCENARIO_PROFILES_STORAGE_KEY)
+    if (!savedState) {
+      return {
+        ...DEFAULT_SCENARIO_PROFILE_STATE,
+        lastSavedDraft: createScenarioProfileDraft(DEFAULT_SCENARIO_PROFILE_STATE)
+      }
+    }
+
+    const parsed = JSON.parse(savedState)
+    return {
+      ...DEFAULT_SCENARIO_PROFILE_STATE,
+      ...parsed,
+      lastSavedDraft: parsed.lastSavedDraft || createScenarioProfileDraft({ ...DEFAULT_SCENARIO_PROFILE_STATE, ...parsed })
+    }
+  } catch (error) {
+    console.warn('Failed to load Armoury Crate scenario profile state:', error)
+    return {
+      ...DEFAULT_SCENARIO_PROFILE_STATE,
+      lastSavedDraft: createScenarioProfileDraft(DEFAULT_SCENARIO_PROFILE_STATE)
+    }
+  }
+}
+
+function getAuraAiLightingPreset(profileId, activeMode) {
+  if (profileId === 'focus') {
+    return {
+      title: 'Focus',
+      effect: 'static',
+      color: '#f5f5f5',
+      brightness: 68,
+      gradientColors: ['#f5f5f5', '#a8c7ff']
+    }
+  }
+
+  if (profileId === 'pulse') {
+    return {
+      title: 'Pulse',
+      effect: activeMode === 'turbo' ? 'strobing' : 'breathing',
+      color: activeMode === 'turbo' ? '#ff5757' : '#ffab1f',
+      brightness: activeMode === 'turbo' ? 76 : 62,
+      gradientColors: activeMode === 'turbo' ? ['#ff2d55', '#7a1cff'] : ['#ffab1f', '#ff2d55']
+    }
+  }
+
+  const adaptiveMap = {
+    silent: { color: '#68d4ff', brightness: 26, effect: 'static', title: 'Adaptive', gradientColors: ['#0f0f17', '#68d4ff'] },
+    windows: { color: '#f5f5f5', brightness: 36, effect: 'static', title: 'Adaptive', gradientColors: ['#f5f5f5', '#68d4ff'] },
+    performance: { color: '#ffab1f', brightness: 54, effect: 'breathing', title: 'Adaptive', gradientColors: ['#ffab1f', '#7fe08d'] },
+    turbo: { color: '#ff5757', brightness: 74, effect: 'color-cycle', title: 'Adaptive', gradientColors: ['#ff5757', '#7a1cff'] }
+  }
+
+  return adaptiveMap[activeMode] || adaptiveMap.windows
+}
+
+function getAuraGradientAngle(direction) {
+  if (direction === 'vertical') return '180deg'
+  if (direction === 'diagonal') return '135deg'
+  return '90deg'
+}
+
+function getAuraPreviewStyle(auraSyncState) {
+  if (auraSyncState.colorMode !== 'gradient') {
+    return {
+      '--lighting-preview': auraSyncState.singleColor,
+      background: auraSyncState.singleColor
+    }
+  }
+
+  return {
+    background: `linear-gradient(${getAuraGradientAngle(auraSyncState.gradientDirection)}, ${auraSyncState.gradientColors[0]}, ${auraSyncState.gradientColors[1]})`
+  }
+}
+
+function createScenarioProfileDraft(state) {
+  return {
+    profileName: state.profileName,
+    linkedApps: [...(state.linkedApps || [])].sort((left, right) => left.localeCompare(right)),
+    touchPadEnabled: state.touchPadEnabled,
+    batteryMode: state.batteryMode,
+    pluggedMode: state.pluggedMode,
+    auraEffect: state.auraEffect,
+    hostBrightness: state.hostBrightness,
+    gameVisual: state.gameVisual,
+    clearCacheEnabled: state.clearCacheEnabled
+  }
+}
+
+function mapScenarioAuraEffectToLightingEffect(effect) {
+  if (effect === 'color cycle') return 'color-cycle'
+  return effect
+}
+
+function toScenarioOptionLabel(option) {
+  if (option === 'color cycle') return 'Color Cycle'
+  return option.charAt(0).toUpperCase() + option.slice(1)
 }
 
 function TelemetryPanel({ title, rows }) {
