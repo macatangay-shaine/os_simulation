@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">AniMe Vision Sakura Circuit</title>
+  <desc id="desc">A cherry blossom and neon circuitry wallpaper for AniMe Vision content.</desc>
+  <defs>
+    <linearGradient id="asBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#120c18"/>
+      <stop offset="0.45" stop-color="#26152e"/>
+      <stop offset="1" stop-color="#090b13"/>
+    </linearGradient>
+    <linearGradient id="asCircuit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#70d6ff"/>
+      <stop offset="1" stop-color="#ff79d3"/>
+    </linearGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#asBg)"/>
+  <g fill="none" stroke="url(#asCircuit)" stroke-width="4" opacity="0.9">
+    <path d="M104 92H280V148H410V202H540V248H688"/>
+    <path d="M164 306V198H286V110H396"/>
+    <path d="M496 80V162H618V250"/>
+  </g>
+  <g fill="#ffb8df" opacity="0.9">
+    <circle cx="188" cy="112" r="18"/><circle cx="214" cy="86" r="12"/><circle cx="224" cy="126" r="10"/>
+    <circle cx="526" cy="88" r="18"/><circle cx="550" cy="62" r="12"/><circle cx="562" cy="104" r="10"/>
+    <circle cx="612" cy="196" r="16"/><circle cx="638" cy="176" r="10"/><circle cx="646" cy="214" r="8"/>
+  </g>
+  <g opacity="0.92">
+    <path d="M348 326L380 168L422 152L458 176L488 326Z" fill="#1a1822"/>
+    <circle cx="414" cy="128" r="26" fill="#e8d7de"/>
+    <path d="M394 126L412 110L434 112L446 132L428 142L404 142Z" fill="#111319"/>
+  </g>
+</svg>

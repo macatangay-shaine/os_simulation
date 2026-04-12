@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 620" role="img" aria-labelledby="title desc">
+  <title id="title">Aura Wallpaper Evolution promotional hero</title>
+  <desc id="desc">A stylized neon promotional hero inspired by Armoury Crate content banners.</desc>
+  <defs>
+    <linearGradient id="heroBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#030307"/>
+      <stop offset="0.42" stop-color="#11111b"/>
+      <stop offset="1" stop-color="#171014"/>
+    </linearGradient>
+    <linearGradient id="rogArcA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3558ff"/>
+      <stop offset="1" stop-color="#c31ef2"/>
+    </linearGradient>
+    <linearGradient id="rogArcB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9d13ff"/>
+      <stop offset="1" stop-color="#ff3c88"/>
+    </linearGradient>
+    <linearGradient id="heroSlash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="heroGlow" cx="78%" cy="36%" r="48%">
+      <stop offset="0" stop-color="#ff5f9e" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ff5f9e" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="heroBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="620" fill="url(#heroBg)"/>
+  <rect width="1600" height="620" fill="url(#heroGlow)"/>
+  <ellipse cx="1140" cy="208" rx="360" ry="230" fill="#ff4b7a" opacity="0.16" filter="url(#heroBlur)"/>
+  <path d="M230 38C560 62 840 160 1180 46C1092 116 1018 172 880 244C698 338 474 362 242 334C226 218 224 112 230 38Z" fill="url(#rogArcA)" opacity="0.96"/>
+  <path d="M298 74C648 102 860 168 1290 76C1168 152 1102 198 926 268C738 344 542 354 320 332C298 224 294 158 298 74Z" fill="url(#rogArcB)" opacity="0.96"/>
+  <path d="M236 346L828 168L916 246L320 424Z" fill="#0a0711" opacity="0.92"/>
+  <path d="M814 166L920 242L1268 144L1164 68Z" fill="#2d263a" opacity="0.72"/>
+  <path d="M592 364L1306 132" stroke="url(#heroSlash)" stroke-width="5"/>
+  <g opacity="0.92">
+    <path d="M174 468L220 254L286 198L340 212L360 294L318 468Z" fill="#6f8195"/>
+    <path d="M226 238L250 202L292 196L314 222L294 246Z" fill="#2a3440"/>
+    <path d="M188 280L112 316L98 288L168 240Z" fill="#dadde7"/>
+    <path d="M264 286L322 264L340 286L292 316Z" fill="#455369"/>
+    <path d="M188 468L202 380L250 362L246 468Z" fill="#37404b"/>
+    <path d="M250 362L302 350L318 468L246 468Z" fill="#7f8c98"/>
+  </g>
+  <g opacity="0.86">
+    <circle cx="492" cy="350" r="44" fill="#2e293d"/>
+    <path d="M454 462L476 364L508 364L530 462Z" fill="#4b465b"/>
+    <path d="M516 308L546 264L578 252L594 290L560 324Z" fill="#7a6f8f"/>
+  </g>
+  <g opacity="0.94">
+    <path d="M920 446L956 260L1014 212L1060 220L1078 292L1046 446Z" fill="#d4d9e3"/>
+    <path d="M954 252L982 220L1022 216L1042 236L1012 262Z" fill="#1d2631"/>
+    <path d="M1006 292L1088 270L1100 292L1032 328Z" fill="#ef5948"/>
+    <path d="M938 446L958 364L1000 352L998 446Z" fill="#7c8691"/>
+    <path d="M1000 352L1046 344L1064 446L998 446Z" fill="#55616c"/>
+  </g>
+  <g opacity="0.98">
+    <path d="M1184 484L1228 300L1292 214L1376 186L1450 220L1476 310L1454 484Z" fill="#9a5f50"/>
+    <path d="M1268 218C1316 188 1364 188 1406 226C1384 274 1348 304 1310 330C1276 318 1246 286 1234 250Z" fill="#d9b6a4"/>
+    <path d="M1262 230L1310 196L1342 202L1306 242Z" fill="#1b1718"/>
+    <path d="M1310 250L1368 240L1382 258L1326 274Z" fill="#e04e9d"/>
+    <path d="M1234 392L1264 304L1304 298L1320 484L1214 484Z" fill="#3b2f31"/>
+    <path d="M1304 298L1376 292L1420 484L1320 484Z" fill="#5a4140"/>
+    <path d="M1420 484L1388 312L1440 324L1454 484Z" fill="#352729"/>
+  </g>
+  <ellipse cx="1000" cy="476" rx="138" ry="58" fill="#0a090d" opacity="0.72"/>
+  <ellipse cx="1318" cy="506" rx="160" ry="58" fill="#0a090d" opacity="0.86"/>
+  <ellipse cx="492" cy="500" rx="108" ry="44" fill="#09080c" opacity="0.68"/>
+  <text x="74" y="86" fill="#4091ff" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="54" font-weight="700" letter-spacing="3">FOR THOSE</text>
+  <text x="74" y="154" fill="#7a70ff" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="86" font-weight="800" letter-spacing="2">WHO DARE</text>
+</svg>

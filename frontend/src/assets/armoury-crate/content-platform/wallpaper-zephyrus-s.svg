@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">Zephyrus S wallpaper</title>
+  <desc id="desc">A warm to cool gradient wallpaper with a stylized ROG slash mark.</desc>
+  <defs>
+    <linearGradient id="zsBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff3d30"/>
+      <stop offset="0.38" stop-color="#ff9327"/>
+      <stop offset="0.68" stop-color="#d0ab37"/>
+      <stop offset="1" stop-color="#2f8f82"/>
+    </linearGradient>
+    <linearGradient id="zsMark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a140f"/>
+      <stop offset="1" stop-color="#0a0f0f"/>
+    </linearGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#zsBg)"/>
+  <path d="M0 312L740 108" stroke="#ffffff" stroke-width="16" opacity="0.16"/>
+  <path d="M180 256C250 200 330 176 500 190C438 214 398 236 344 280C306 312 248 322 180 256Z" fill="url(#zsMark)"/>
+  <path d="M304 176C374 148 446 136 574 152C506 188 450 212 392 248C356 270 322 244 304 176Z" fill="url(#zsMark)"/>
+  <path d="M390 126C450 112 520 110 622 134C568 156 520 174 472 196C430 214 404 194 390 126Z" fill="url(#zsMark)"/>
+  <path d="M164 304C256 232 358 208 544 226" stroke="#1a130f" stroke-width="8" opacity="0.5"/>
+</svg>

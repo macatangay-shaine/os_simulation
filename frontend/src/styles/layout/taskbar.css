@@ -4,24 +4,39 @@
 
 :root {
   --taskbar-height: 54px;
-  --taskbar-bg: rgba(28, 28, 31, 0.9);
-  --taskbar-border: rgba(255, 255, 255, 0.08);
-  --taskbar-shadow: 0 -10px 26px rgba(2, 6, 23, 0.3);
-  --taskbar-hover: rgba(255, 255, 255, 0.08);
-  --taskbar-pressed: rgba(255, 255, 255, 0.12);
-  --taskbar-pill-bg: rgba(72, 72, 78, 0.88);
-  --taskbar-pill-border: rgba(255, 255, 255, 0.08);
-  --taskbar-pill-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --taskbar-muted-strong: rgba(241, 245, 249, 0.84);
+  --taskbar-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), transparent 55%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(229, 236, 246, 0.92));
+  --taskbar-border: rgba(148, 163, 184, 0.3);
+  --taskbar-shadow: 0 -10px 26px rgba(15, 23, 42, 0.14);
+  --taskbar-hover: rgba(255, 255, 255, 0.52);
+  --taskbar-pressed: rgba(226, 232, 240, 0.88);
+  --taskbar-pill-bg: rgba(255, 255, 255, 0.74);
+  --taskbar-pill-border: rgba(148, 163, 184, 0.28);
+  --taskbar-pill-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --taskbar-text: #0f172a;
+  --taskbar-muted: rgba(15, 23, 42, 0.68);
+  --taskbar-muted-strong: rgba(15, 23, 42, 0.82);
+  --taskbar-icon-color: rgba(15, 23, 42, 0.88);
+  --taskbar-start-icon: #2563eb;
+  --taskbar-running-indicator: rgba(15, 23, 42, 0.44);
+  --taskbar-active-indicator: var(--win-accent);
+  --taskbar-search-placeholder: rgba(15, 23, 42, 0.56);
+  --taskbar-flyout-bg: rgba(255, 255, 255, 0.88);
+  --taskbar-flyout-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
   --start-menu-bg:
-    radial-gradient(circle at 50% 26%, rgba(37, 99, 235, 0.3), transparent 36%),
-    linear-gradient(180deg, rgba(10, 16, 31, 0.86), rgba(17, 24, 39, 0.94));
-  --start-menu-footer-bg: rgba(7, 12, 24, 0.68);
-  --start-menu-search-bg: rgba(22, 30, 46, 0.82);
+    radial-gradient(circle at 50% 26%, rgba(96, 165, 250, 0.22), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(231, 238, 247, 0.96));
+  --start-menu-footer-bg: rgba(241, 245, 249, 0.82);
+  --start-menu-search-bg: rgba(255, 255, 255, 0.82);
+  --start-menu-card-bg: rgba(255, 255, 255, 0.58);
+  --start-menu-footer-border: rgba(148, 163, 184, 0.22);
 }
 
 :root[data-theme='dark'] {
-  --taskbar-bg: rgba(31, 32, 35, 0.94);
+  --taskbar-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 55%),
+    linear-gradient(180deg, rgba(36, 36, 39, 0.94), rgba(22, 22, 25, 0.92));
   --taskbar-border: rgba(255, 255, 255, 0.08);
   --taskbar-shadow: 0 -10px 26px rgba(2, 6, 23, 0.3);
   --taskbar-hover: rgba(255, 255, 255, 0.07);
@@ -29,12 +44,23 @@
   --taskbar-pill-bg: rgba(62, 64, 71, 0.96);
   --taskbar-pill-border: rgba(255, 255, 255, 0.06);
   --taskbar-pill-shadow: none;
+  --taskbar-text: #f8fafc;
+  --taskbar-muted: rgba(255, 255, 255, 0.72);
   --taskbar-muted-strong: rgba(241, 245, 249, 0.84);
+  --taskbar-icon-color: rgba(255, 255, 255, 0.88);
+  --taskbar-start-icon: #6dd3ff;
+  --taskbar-running-indicator: rgba(255, 255, 255, 0.72);
+  --taskbar-active-indicator: #7dd3fc;
+  --taskbar-search-placeholder: rgba(255, 255, 255, 0.72);
+  --taskbar-flyout-bg: rgba(27, 28, 34, 0.94);
+  --taskbar-flyout-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
   --start-menu-bg:
     radial-gradient(circle at 50% 26%, rgba(37, 99, 235, 0.3), transparent 36%),
     linear-gradient(180deg, rgba(10, 16, 31, 0.86), rgba(17, 24, 39, 0.94));
   --start-menu-footer-bg: rgba(7, 12, 24, 0.68);
   --start-menu-search-bg: rgba(22, 30, 46, 0.82);
+  --start-menu-card-bg: rgba(255, 255, 255, 0.08);
+  --start-menu-footer-border: rgba(148, 163, 184, 0.16);
 }
 
 .taskbar {
@@ -48,11 +74,9 @@
   align-items: center;
   gap: 12px;
   padding: 0 10px 0 6px;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   z-index: 1001;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 55%),
-    linear-gradient(180deg, rgba(36, 36, 39, 0.94), rgba(22, 22, 25, 0.92));
+  background: var(--taskbar-bg);
   border-top: 1px solid var(--taskbar-border);
   backdrop-filter: blur(22px) saturate(140%);
   box-shadow: var(--taskbar-shadow);
@@ -65,7 +89,7 @@
   min-width: 0;
   justify-self: start;
   padding: 0 6px 0 0;
-  color: #f8fafc;
+  color: var(--taskbar-text);
 }
 
 .taskbar-weather-badge {
@@ -108,7 +132,7 @@
 
 .taskbar-weather-copy small {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--taskbar-muted);
 }
 
 .taskbar-center {
@@ -133,7 +157,7 @@
   border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   transition: background 0.16s ease, transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
@@ -152,7 +176,7 @@
 .taskbar-start-icon {
   width: 20px;
   height: 20px;
-  color: #6dd3ff;
+  color: var(--taskbar-start-icon);
 }
 
 .taskbar-search {
@@ -173,7 +197,7 @@
   left: 16px;
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--taskbar-search-placeholder);
   pointer-events: none;
 }
 
@@ -185,11 +209,11 @@
   background: transparent;
   padding: 0 16px 0 42px;
   font-size: 13px;
-  color: #ffffff;
+  color: var(--taskbar-text);
 }
 
 .taskbar-search input::placeholder {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--taskbar-search-placeholder);
 }
 
 .taskbar-search:focus-within {
@@ -251,13 +275,13 @@
 .taskbar-app.running::after {
   width: 4px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--taskbar-running-indicator);
 }
 
 .taskbar-app.active::after {
   width: 16px;
   height: 2px;
-  background: #7dd3fc;
+  background: var(--taskbar-active-indicator);
 }
 
 .taskbar-app-badge {
@@ -291,8 +315,8 @@
   gap: 6px;
   border-radius: 18px;
   border: 1px solid var(--taskbar-pill-border);
-  background: rgba(27, 28, 34, 0.92);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  background: var(--taskbar-flyout-bg);
+  box-shadow: var(--taskbar-flyout-shadow);
   backdrop-filter: blur(24px) saturate(160%);
   opacity: 0;
   visibility: hidden;
@@ -318,7 +342,7 @@
   border: 1px solid transparent;
   border-radius: 14px;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   text-align: left;
   transition: background 0.16s ease, border-color 0.16s ease;
@@ -345,7 +369,7 @@
   padding: 0;
   border-radius: 8px;
   background: transparent;
-  color: #ffffff;
+  color: var(--taskbar-icon-color);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
 }
 
@@ -422,7 +446,7 @@
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   transition: background 0.16s ease, transform 0.16s ease, border-color 0.16s ease;
 }
@@ -447,7 +471,7 @@
 .taskbar-notification-icon {
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--taskbar-icon-color);
 }
 
 .wifi-signal-0 {
@@ -483,8 +507,8 @@
   align-items: center;
   border-radius: 18px;
   border: 1px solid var(--taskbar-pill-border);
-  background: rgba(27, 28, 34, 0.94);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  background: var(--taskbar-flyout-bg);
+  box-shadow: var(--taskbar-flyout-shadow);
   backdrop-filter: blur(24px) saturate(160%);
   z-index: 1002;
 }
@@ -519,7 +543,7 @@
 
 .volume-value {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--taskbar-muted);
 }
 
 .taskbar-clock {
@@ -533,7 +557,7 @@
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease;
 }
@@ -552,7 +576,7 @@
 
 .taskbar-date {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--taskbar-muted);
   white-space: nowrap;
   line-height: 1.1;
 }
@@ -564,7 +588,7 @@
   justify-content: center;
   min-width: 38px;
   padding: 0 2px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--taskbar-muted-strong);
   line-height: 1;
 }
 
@@ -589,7 +613,7 @@
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease;
 }
@@ -648,8 +672,8 @@
   gap: 4px;
   border-radius: 18px;
   border: 1px solid var(--taskbar-pill-border);
-  background: rgba(27, 28, 34, 0.94);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  background: var(--taskbar-flyout-bg);
+  box-shadow: var(--taskbar-flyout-shadow);
   backdrop-filter: blur(24px) saturate(160%);
 }
 
@@ -661,7 +685,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: #f8fafc;
+  color: var(--taskbar-text);
   cursor: pointer;
   text-align: left;
 }
@@ -797,7 +821,7 @@
   padding: 12px 14px;
   border: 1px solid transparent;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--start-menu-card-bg);
   color: var(--win-text);
   cursor: pointer;
   text-align: left;
@@ -953,7 +977,7 @@
   justify-content: center;
   gap: 8px;
   padding: 14px 20px 18px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-top: 1px solid var(--start-menu-footer-border);
   background: var(--start-menu-footer-bg);
 }
 

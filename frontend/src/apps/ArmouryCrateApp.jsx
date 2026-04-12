@@ -21,6 +21,9 @@ import {
   UserRound,
   Volume2
 } from 'lucide-react'
+import ContentPlatformPage from './armoury-crate/content-platform/ContentPlatformPage.jsx'
+import GameLibraryPage from './armoury-crate/game-library/GameLibraryPage.jsx'
+import MacrosPage from './armoury-crate/macros/MacrosPage.jsx'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import '../styles/apps/armoury-crate.css'
 
@@ -650,6 +653,7 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   const [resourceMonitorRuntime, setResourceMonitorRuntime] = useState(DEFAULT_RESOURCE_MONITOR_RUNTIME)
   const shouldUseSharedSystemData =
     activeNav === 'home' ||
+    activeNav === 'game-library' ||
     activeNav === 'display-settings' ||
     (activeNav === 'devices' && ['memory', 'resource-monitor'].includes(activeDeviceTab))
   const sharedSystemPollInterval = activeNav === 'devices' && activeDeviceTab === 'resource-monitor' ? 950 : 2000
@@ -1280,6 +1284,8 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
               setActiveDeviceTab('lighting')
             }}
           />
+        ) : activeNav === 'macros' ? (
+          <MacrosPage />
         ) : activeNav === 'scenario-profiles' ? (
           <ArmouryCrateScenarioProfilesPage
             profileState={scenarioProfileState}
@@ -1301,6 +1307,14 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
             panelPowerSaverEnabled={deviceSettings['panel-power-saver']}
             onChange={updateDisplaySettingsState}
           />
+        ) : activeNav === 'game-library' ? (
+          <GameLibraryPage
+            runningProcesses={runningProcesses}
+            onRefreshProcesses={refreshSharedSystemData}
+            onOpenGameDeals={() => setActiveNav('content-platform')}
+          />
+        ) : activeNav === 'content-platform' ? (
+          <ContentPlatformPage />
         ) : (
           <ArmouryCrateHomePage
             telemetry={telemetry}

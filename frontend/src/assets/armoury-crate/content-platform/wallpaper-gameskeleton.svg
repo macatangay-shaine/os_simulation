@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">Gameskeleton wallpaper</title>
+  <desc id="desc">A blueprint styled wallpaper with neon system lines.</desc>
+  <defs>
+    <linearGradient id="gsBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#130e12"/>
+      <stop offset="0.55" stop-color="#161317"/>
+      <stop offset="1" stop-color="#081014"/>
+    </linearGradient>
+    <linearGradient id="gsLine" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff6d7f"/>
+      <stop offset="0.45" stop-color="#ffd451"/>
+      <stop offset="1" stop-color="#77ff86"/>
+    </linearGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#gsBg)"/>
+  <g opacity="0.26" stroke="#ffffff" stroke-width="1">
+    <path d="M0 82H740"/><path d="M0 142H740"/><path d="M0 202H740"/><path d="M0 262H740"/><path d="M0 322H740"/>
+    <path d="M88 0V384"/><path d="M198 0V384"/><path d="M308 0V384"/><path d="M418 0V384"/><path d="M528 0V384"/><path d="M638 0V384"/>
+  </g>
+  <g fill="none" stroke="url(#gsLine)" stroke-width="4" opacity="0.92">
+    <path d="M108 288H278V230H392V176H470V104H616"/>
+    <path d="M226 320V206H344V146H454V84"/>
+    <path d="M482 316V238H592V172H660"/>
+    <path d="M110 126H248V86H376V134H508"/>
+  </g>
+  <g fill="none" stroke="#7df7d1" stroke-width="3" opacity="0.84">
+    <rect x="268" y="98" width="194" height="138" rx="18"/>
+    <circle cx="364" cy="168" r="52"/>
+    <path d="M364 116V220"/>
+    <path d="M312 168H416"/>
+  </g>
+  <g fill="#ffd84a" opacity="0.88">
+    <path d="M314 58L338 34L422 34L444 58L418 92H340Z"/>
+    <path d="M468 160L546 120L592 150L550 198Z"/>
+  </g>
+  <g fill="#89ff67" opacity="0.64">
+    <circle cx="160" cy="88" r="18"/><circle cx="606" cy="102" r="12"/><circle cx="566" cy="264" r="16"/>
+  </g>
+</svg>
