@@ -21,6 +21,7 @@ import {
   UserRound,
   Volume2
 } from 'lucide-react'
+import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import '../styles/apps/armoury-crate.css'
 
 const SIDEBAR_SECTIONS = [
@@ -72,6 +73,7 @@ const ARMOURY_AUDIO_STATE_STORAGE_KEY = 'jezos_armoury_audio_state'
 const ARMOURY_RESOURCE_MONITOR_STATE_STORAGE_KEY = 'jezos_armoury_resource_monitor_state'
 const ARMOURY_AURA_SYNC_STATE_STORAGE_KEY = 'jezos_armoury_aura_sync_state'
 const ARMOURY_SCENARIO_PROFILES_STORAGE_KEY = 'jezos_armoury_scenario_profiles_state'
+const ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY = 'jezos_armoury_display_settings_state'
 
 const DEVICE_TABS = [
   { id: 'system-configuration', label: 'System Configuration' },
@@ -301,6 +303,62 @@ const SCENARIO_PROFILE_MODE_OPTIONS = [
   { id: 'turbo', label: 'Turbo' }
 ]
 const SCENARIO_GAME_VISUAL_OPTIONS = ['Default', 'Racing', 'Scenery', 'FPS', 'Cinema']
+const DISPLAY_VISUAL_PRESETS = [
+  {
+    id: 'default',
+    title: 'Default',
+    description: 'Provides the best viewing experience for browsing photos and websites.',
+    accent: '#f5a623'
+  },
+  {
+    id: 'racing',
+    title: 'Racing',
+    description: 'Fine-tuned for fast-paced games.',
+    accent: '#b7bcc7'
+  },
+  {
+    id: 'scenery',
+    title: 'Scenery',
+    description: 'Fine-tunes brightness, contrast and saturation for more vibrant hues.',
+    accent: '#9fb3c6'
+  },
+  {
+    id: 'rts-rpg',
+    title: 'RTS/RPG',
+    description: 'Best for viewing gaming graphics with enhanced sharpness and color performance.',
+    accent: '#b0a79d'
+  },
+  {
+    id: 'fps',
+    title: 'FPS',
+    description: 'Enhances the visibility in dark scenes and makes it easier to spot your enemies.',
+    accent: '#d3d7df'
+  },
+  {
+    id: 'cinema',
+    title: 'Cinema',
+    description: 'Enhances contrast and color saturation to deliver livelier and more vivid visuals.',
+    accent: '#a0a6ad'
+  },
+  {
+    id: 'eyecare',
+    title: 'Eyecare',
+    description: 'Adjusts gamma, saturation and hue to reduce blue light during longer sessions.',
+    accent: '#d8dadf'
+  },
+  {
+    id: 'vivid',
+    title: 'Vivid',
+    description: 'Enhances color saturation and image brightness for punchier visuals.',
+    accent: '#beb7b0'
+  },
+  {
+    id: 'e-reading',
+    title: 'E-Reading',
+    description: 'Switches the display toward a softer reading profile to reduce eye strain.',
+    accent: '#d9dde2'
+  }
+]
 
 const DEFAULT_LIGHTING_STATE = {
   effect: 'static',
@@ -406,6 +464,14 @@ const DEFAULT_SCENARIO_PROFILE_STATE = {
   clearCacheEnabled: true,
   lastSavedDraft: null,
   lastAppliedAt: null
+}
+
+const DEFAULT_DISPLAY_SETTINGS_STATE = {
+  gameVisualEnabled: true,
+  selectedPreset: 'default',
+  colorTemperature: 50,
+  osdEnabled: true,
+  lastUserSelectionAt: null
 }
 
 const AURA_AI_LIGHTING_PROFILES = [
@@ -563,33 +629,53 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   const [startupStage, setStartupStage] = useState('trace')
   const [telemetry, setTelemetry] = useState(() => createTelemetrySnapshot('silent'))
   const [activeDeviceTab, setActiveDeviceTab] = useState(DEVICE_TAB_DEFAULT)
-  const [memoryProcesses, setMemoryProcesses] = useState([])
-  const [memoryResources, setMemoryResources] = useState({
-    maxMemory: 512,
-    usedMemory: 0,
-    availableMemory: 512,
-    memoryUsagePercent: 0,
-    processCount: 0
-  })
   const [selectedMemoryPids, setSelectedMemoryPids] = useState([])
-  const [isMemoryLoading, setIsMemoryLoading] = useState(false)
   const [isMemoryFreeingUp, setIsMemoryFreeingUp] = useState(false)
   const [gpuPerformanceState, setGpuPerformanceState] = useState(DEFAULT_GPU_PERFORMANCE_STATE)
   const [isGpuPerformanceLoading, setIsGpuPerformanceLoading] = useState(false)
   const [isGpuPerformanceSaving, setIsGpuPerformanceSaving] = useState(false)
   const [isGpuStoppingAll, setIsGpuStoppingAll] = useState(false)
   const [isGpuProcessCollapsed, setIsGpuProcessCollapsed] = useState(false)
+  const [homeStorageInfo, setHomeStorageInfo] = useState(null)
   const [deviceSettings, setDeviceSettings] = useState(() => loadArmouryDeviceSettings())
   const [lightingState, setLightingState] = useState(() => loadArmouryLightingState())
   const [audioState, setAudioState] = useState(() => loadArmouryAudioState())
   const [resourceMonitorState, setResourceMonitorState] = useState(() => loadArmouryResourceMonitorState())
   const [auraSyncState, setAuraSyncState] = useState(() => loadArmouryAuraSyncState())
   const [scenarioProfileState, setScenarioProfileState] = useState(() => loadArmouryScenarioProfileState())
+  const [displaySettingsState, setDisplaySettingsState] = useState(() => loadArmouryDisplaySettingsState())
   const [scenarioAvailableApps, setScenarioAvailableApps] = useState([])
   const [isScenarioAppsLoading, setIsScenarioAppsLoading] = useState(false)
   const [isScenarioSaving, setIsScenarioSaving] = useState(false)
   const [resourceMonitorRuntime, setResourceMonitorRuntime] = useState(DEFAULT_RESOURCE_MONITOR_RUNTIME)
-  const [isResourceMonitorLoading, setIsResourceMonitorLoading] = useState(false)
+  const shouldUseSharedSystemData =
+    activeNav === 'home' ||
+    activeNav === 'display-settings' ||
+    (activeNav === 'devices' && ['memory', 'resource-monitor'].includes(activeDeviceTab))
+  const sharedSystemPollInterval = activeNav === 'devices' && activeDeviceTab === 'resource-monitor' ? 950 : 2000
+  const {
+    processes: sharedProcesses,
+    systemStats,
+    performanceHistory,
+    hasLoaded: hasSharedSystemData,
+    isLoading: isSharedSystemDataLoading,
+    refresh: refreshSharedSystemData
+  } = useSharedSystemMonitorData({
+    enabled: shouldUseSharedSystemData,
+    intervalMs: sharedSystemPollInterval
+  })
+  const runningProcesses = sharedProcesses.filter((process) => process.state === 'running')
+  const memoryProcesses = runningProcesses
+  const memoryResources = {
+    maxMemory: systemStats.totalMemory,
+    usedMemory: systemStats.usedMemory,
+    availableMemory: systemStats.availableMemory,
+    memoryUsagePercent: systemStats.memoryUsagePercent,
+    processCount: systemStats.processCount
+  }
+  const isMemoryLoading = activeNav === 'devices' && activeDeviceTab === 'memory' && !hasSharedSystemData && isSharedSystemDataLoading
+  const isResourceMonitorLoading =
+    activeNav === 'devices' && activeDeviceTab === 'resource-monitor' && !hasSharedSystemData && isSharedSystemDataLoading
 
   useEffect(() => {
     onWindowTitleChange?.('Armoury Crate')
@@ -644,50 +730,54 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   }, [scenarioProfileState])
 
   useEffect(() => {
-    if (activeNav !== 'devices' || activeDeviceTab !== 'memory') return undefined
+    localStorage.setItem(ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(displaySettingsState))
+    window.dispatchEvent(new CustomEvent('jezos_armoury_display_settings_updated', { detail: displaySettingsState }))
+  }, [displaySettingsState])
+
+  useEffect(() => {
+    setSelectedMemoryPids((previous) =>
+      previous.filter((pid) => runningProcesses.some((process) => process.pid === pid))
+    )
+  }, [sharedProcesses])
+
+  useEffect(() => {
+    if (activeNav !== 'home') return undefined
 
     let cancelled = false
 
-    const loadMemoryData = async (showLoadingState) => {
-      if (showLoadingState) setIsMemoryLoading(true)
-
+    const loadStorageInfo = async () => {
       try {
-        const resourcesResponse = await fetch('http://localhost:8000/system/resources')
-        const processResponse = await fetch('http://localhost:8000/process/list')
+        const response = await fetch('http://localhost:8000/system/storage')
+        if (!response.ok) return
 
-        if (!resourcesResponse.ok || !processResponse.ok) return
-
-        const resourcesData = await resourcesResponse.json()
-        const processData = await processResponse.json()
-
+        const data = await response.json()
         if (cancelled) return
 
-        const runningProcesses = processData.filter((process) => process.state === 'running')
-        setMemoryProcesses(runningProcesses)
-        setMemoryResources(resourcesData)
-        setSelectedMemoryPids((previous) =>
-          previous.filter((pid) => runningProcesses.some((process) => process.pid === pid))
-        )
+        setHomeStorageInfo({
+          totalMb: Math.round((Number(data.total_capacity_bytes) || 0) / (1024 * 1024)),
+          usedMb: Math.round((Number(data.used_bytes) || 0) / (1024 * 1024)),
+          usagePercent: Number(data.usage_percent) || 0
+        })
       } catch (error) {
         if (!cancelled) {
-          console.error('Failed to load Armoury Crate memory data:', error)
+          console.error('Failed to load Armoury Crate storage data:', error)
         }
-      } finally {
-        if (!cancelled) setIsMemoryLoading(false)
       }
     }
 
-    loadMemoryData(memoryProcesses.length === 0)
-    const intervalId = window.setInterval(() => loadMemoryData(false), 2500)
+    loadStorageInfo()
+    const intervalId = window.setInterval(loadStorageInfo, 10000)
 
     return () => {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [activeNav, activeDeviceTab])
+  }, [activeNav])
 
   useEffect(() => {
-    if (activeNav !== 'devices' || activeDeviceTab !== 'gpu-performance') return undefined
+    const shouldLoadGpuState =
+      activeNav === 'home' || activeNav === 'display-settings' || (activeNav === 'devices' && activeDeviceTab === 'gpu-performance')
+    if (!shouldLoadGpuState) return undefined
 
     let cancelled = false
 
@@ -725,92 +815,69 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
 
   useEffect(() => {
     if (activeNav !== 'devices' || activeDeviceTab !== 'resource-monitor') return undefined
+    if (!hasSharedSystemData) return undefined
 
-    let cancelled = false
+    const workload = computeResourceMonitorWorkload(runningProcesses)
 
-    const loadResourceMonitorData = async (showLoadingState) => {
-      if (showLoadingState) setIsResourceMonitorLoading(true)
+    setResourceMonitorRuntime((previous) => ({
+      ...previous,
+      fps: resourceMonitorState.realtimeEnabled
+        ? deriveResourceMonitorFps({
+            cpuUsage: systemStats.cpuUsage,
+            memoryPercent: systemStats.memoryUsagePercent,
+            processCount: systemStats.processCount,
+            workload,
+            monitorLevel: resourceMonitorState.monitorLevel
+          })
+        : previous.fps,
+      history:
+        previous.timestamp == null && performanceHistory.length > 0
+          ? [
+              ...RESOURCE_MONITOR_DEFAULT_HISTORY,
+              ...performanceHistory.slice(-18).reduce((values, snapshot, index, items) => {
+                values.push(
+                  deriveResourceMonitorGraphValue({
+                    cpuUsage: snapshot.cpu_usage,
+                    previousCpuUsage: items[Math.max(index - 1, 0)]?.cpu_usage ?? snapshot.cpu_usage,
+                    memoryPercent: snapshot.memory_percent,
+                    processCount: snapshot.process_count,
+                    workload,
+                    monitorLevel: resourceMonitorState.monitorLevel,
+                    previousValue: values.at(-1) ?? 0
+                  })
+                )
+                return values
+              }, [])
+            ].slice(-60)
+          : [
+              ...previous.history.slice(1),
+              deriveResourceMonitorGraphValue({
+                cpuUsage: systemStats.cpuUsage,
+                previousCpuUsage: performanceHistory.at(-2)?.cpu_usage ?? systemStats.cpuUsage,
+                memoryPercent: systemStats.memoryUsagePercent,
+                processCount: systemStats.processCount,
+                workload,
+                monitorLevel: resourceMonitorState.monitorLevel,
+                previousValue: previous.history.at(-1) ?? 0
+              })
+            ],
+      timestamp: systemStats.timestamp || new Date().toISOString()
+    }))
 
-      try {
-        const [resourcesResponse, historyResponse, processResponse] = await Promise.all([
-          fetch('http://localhost:8000/system/resources'),
-          fetch('http://localhost:8000/system/performance-history'),
-          fetch('http://localhost:8000/process/list')
-        ])
-
-        if (!resourcesResponse.ok || !historyResponse.ok || !processResponse.ok) return
-
-        const resourcesData = await resourcesResponse.json()
-        const historyData = await historyResponse.json()
-        const processData = await processResponse.json()
-
-        if (cancelled) return
-
-        const runningProcesses = processData.filter((process) => process.state === 'running')
-        const workload = computeResourceMonitorWorkload(runningProcesses)
-        const fps = resourceMonitorState.realtimeEnabled
-          ? deriveResourceMonitorFps({
-              cpuUsage: resourcesData.cpuUsage,
-              memoryPercent: resourcesData.memoryUsagePercent,
-              processCount: resourcesData.processCount,
-              workload,
-              monitorLevel: resourceMonitorState.monitorLevel
-            })
-          : resourceMonitorRuntime.fps
-
-        const backendHistory = Array.isArray(historyData.history) ? historyData.history : []
-        const nextGraphValue = deriveResourceMonitorGraphValue({
-          cpuUsage: resourcesData.cpuUsage,
-          previousCpuUsage: backendHistory.at(-2)?.cpu_usage ?? resourcesData.cpuUsage,
-          memoryPercent: resourcesData.memoryUsagePercent,
-          processCount: resourcesData.processCount,
-          workload,
-          monitorLevel: resourceMonitorState.monitorLevel,
-          previousValue: resourceMonitorRuntime.history.at(-1) ?? 0
-        })
-
-        setResourceMonitorRuntime((previous) => ({
-          ...previous,
-          fps,
-          history:
-            previous.timestamp == null && backendHistory.length > 0
-              ? [
-                  ...RESOURCE_MONITOR_DEFAULT_HISTORY,
-                  ...backendHistory.slice(-18).reduce((values, snapshot, index, items) => {
-                    values.push(
-                      deriveResourceMonitorGraphValue({
-                        cpuUsage: snapshot.cpu_usage,
-                        previousCpuUsage: items[Math.max(index - 1, 0)]?.cpu_usage ?? snapshot.cpu_usage,
-                        memoryPercent: snapshot.memory_percent,
-                        processCount: snapshot.process_count,
-                        workload,
-                        monitorLevel: resourceMonitorState.monitorLevel,
-                        previousValue: values.at(-1) ?? 0
-                      })
-                    )
-                    return values
-                  }, [])
-                ].slice(-60)
-              : [...previous.history.slice(1), nextGraphValue],
-          timestamp: resourcesData.timestamp || new Date().toISOString()
-        }))
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to load Armoury Crate resource monitor data:', error)
-        }
-      } finally {
-        if (!cancelled) setIsResourceMonitorLoading(false)
-      }
-    }
-
-    loadResourceMonitorData(resourceMonitorRuntime.timestamp == null)
-    const intervalId = window.setInterval(() => loadResourceMonitorData(false), 950)
-
-    return () => {
-      cancelled = true
-      window.clearInterval(intervalId)
-    }
-  }, [activeNav, activeDeviceTab, resourceMonitorState.monitorLevel, resourceMonitorState.realtimeEnabled])
+    return undefined
+  }, [
+    activeNav,
+    activeDeviceTab,
+    hasSharedSystemData,
+    performanceHistory,
+    resourceMonitorState.monitorLevel,
+    resourceMonitorState.realtimeEnabled,
+    sharedProcesses,
+    systemStats.cpuUsage,
+    systemStats.memoryUsagePercent,
+    systemStats.processCount,
+    systemStats.timestamp
+  ])
 
   useEffect(() => {
     if (activeNav !== 'scenario-profiles') return undefined
@@ -864,26 +931,10 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   async function refreshMemoryProcesses() {
     if (activeNav !== 'devices' || activeDeviceTab !== 'memory') return
 
-    setIsMemoryLoading(true)
     try {
-      const resourcesResponse = await fetch('http://localhost:8000/system/resources')
-      const processResponse = await fetch('http://localhost:8000/process/list')
-
-      if (!resourcesResponse.ok || !processResponse.ok) return
-
-      const resourcesData = await resourcesResponse.json()
-      const processData = await processResponse.json()
-      const runningProcesses = processData.filter((process) => process.state === 'running')
-
-      setMemoryProcesses(runningProcesses)
-      setMemoryResources(resourcesData)
-      setSelectedMemoryPids((previous) =>
-        previous.filter((pid) => runningProcesses.some((process) => process.pid === pid))
-      )
+      await refreshSharedSystemData()
     } catch (error) {
       console.error('Failed to refresh Armoury Crate memory data:', error)
-    } finally {
-      setIsMemoryLoading(false)
     }
   }
 
@@ -1030,6 +1081,8 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
           window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
         })
       }
+
+      await refreshSharedSystemData()
     } catch (error) {
       console.error('Failed to stop Armoury Crate GPU processes:', error)
     } finally {
@@ -1089,6 +1142,12 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
           ...previous,
           'touch-pad': scenarioProfileState.touchPadEnabled
         }))
+        setDisplaySettingsState((previous) => ({
+          ...previous,
+          gameVisualEnabled: true,
+          selectedPreset: mapScenarioGameVisualToDisplayPreset(scenarioProfileState.gameVisual),
+          lastUserSelectionAt: new Date().toISOString()
+        }))
         setActiveMode(scenarioProfileState.pluggedMode)
         setLightingState((previous) => ({
           ...previous,
@@ -1113,6 +1172,13 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
 
   function updateResourceMonitorState(updater) {
     setResourceMonitorState((previous) => ({
+      ...previous,
+      ...(typeof updater === 'function' ? updater(previous) : updater)
+    }))
+  }
+
+  function updateDisplaySettingsState(updater) {
+    setDisplaySettingsState((previous) => ({
       ...previous,
       ...(typeof updater === 'function' ? updater(previous) : updater)
     }))
@@ -1161,7 +1227,7 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
         </nav>
       </aside>
 
-      <section className={`armoury-crate-home ${['devices', 'aura-sync', 'scenario-profiles'].includes(activeNav) ? 'devices-page-active' : ''}`}>
+      <section className={`armoury-crate-home ${['devices', 'aura-sync', 'scenario-profiles', 'display-settings'].includes(activeNav) ? 'devices-page-active' : ''}`}>
         {activeNav === 'devices' ? (
           <ArmouryCrateDevicesPage
             activeTab={activeDeviceTab}
@@ -1224,8 +1290,29 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
             onSave={() => saveScenarioProfile({ apply: false })}
             onApplyAndSave={() => saveScenarioProfile({ apply: true })}
           />
+        ) : activeNav === 'display-settings' ? (
+          <ArmouryCrateDisplaySettingsPage
+            displayState={displaySettingsState}
+            systemStats={systemStats}
+            performanceHistory={performanceHistory}
+            runningProcesses={runningProcesses}
+            gpuState={gpuPerformanceState}
+            activeMode={activeMode}
+            panelPowerSaverEnabled={deviceSettings['panel-power-saver']}
+            onChange={updateDisplaySettingsState}
+          />
         ) : (
-          <ArmouryCrateHomePage telemetry={telemetry} activeMode={activeMode} onModeChange={setActiveMode} />
+          <ArmouryCrateHomePage
+            telemetry={telemetry}
+            activeMode={activeMode}
+            onModeChange={setActiveMode}
+            systemStats={systemStats}
+            performanceHistory={performanceHistory}
+            runningProcesses={runningProcesses}
+            gpuState={gpuPerformanceState}
+            storageInfo={homeStorageInfo}
+            isSystemDataReady={hasSharedSystemData}
+          />
         )}
       </section>
 
@@ -1309,7 +1396,83 @@ function ArmouryCrateStartupTrace() {
   )
 }
 
-function ArmouryCrateHomePage({ telemetry, activeMode, onModeChange }) {
+function getAverageHistoryValue(history, key) {
+  const samples = history
+    .slice(-18)
+    .map((entry) => Number(entry?.[key]))
+    .filter((value) => Number.isFinite(value))
+
+  if (samples.length === 0) return 0
+  return samples.reduce((total, value) => total + value, 0) / samples.length
+}
+
+function getPeakHistoryValue(history, key) {
+  const samples = history
+    .slice(-18)
+    .map((entry) => Number(entry?.[key]))
+    .filter((value) => Number.isFinite(value))
+
+  if (samples.length === 0) return 0
+  return Math.max(...samples)
+}
+
+function getTopProcessByMetric(processes, key) {
+  return processes.reduce((topProcess, process) => {
+    const nextValue = Number(process?.[key]) || 0
+    const currentTopValue = Number(topProcess?.[key]) || 0
+    return nextValue > currentTopValue ? process : topProcess
+  }, null)
+}
+
+function formatPercent(value, digits = 1) {
+  if (!Number.isFinite(value)) return '--'
+  return `${Math.max(0, value).toFixed(digits)}%`
+}
+
+function formatCompactMegabytes(value) {
+  if (!Number.isFinite(value)) return '--'
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} GB`
+  return `${Math.max(0, Math.round(value))} MB`
+}
+
+function formatStorageSummary(storageInfo) {
+  if (!storageInfo) return '--'
+  return `${formatCompactMegabytes(storageInfo.usedMb)} / ${formatCompactMegabytes(storageInfo.totalMb)}`
+}
+
+function formatTopProcessValue(process, key, formatter) {
+  if (!process?.app) return 'No active workload'
+  return `${process.app} · ${formatter(Number(process[key]) || 0)}`
+}
+
+function deriveGpuUsagePercent(gpuState) {
+  const processes = gpuState?.processes || []
+  if (gpuState?.mode === 'eco' || processes.length === 0) return 0
+
+  const totalDemand = processes.reduce((total, process) => total + (Number(process.gpu_score) || 0), 0)
+  const averageDemand = totalDemand / processes.length
+  return clampValue((averageDemand / 1.95) * 100 + Math.min(processes.length * 6, 18), 0, 100)
+}
+
+function ArmouryCrateHomePage({
+  telemetry,
+  activeMode,
+  onModeChange,
+  systemStats,
+  performanceHistory,
+  runningProcesses,
+  gpuState,
+  storageInfo,
+  isSystemDataReady
+}) {
+  const cpuAverage = getAverageHistoryValue(performanceHistory, 'cpu_usage')
+  const cpuPeak = getPeakHistoryValue(performanceHistory, 'cpu_usage')
+  const topCpuProcess = getTopProcessByMetric(runningProcesses, 'cpu_usage')
+  const topMemoryProcess = getTopProcessByMetric(runningProcesses, 'memory')
+  const gpuMode = gpuState.modes.find((mode) => mode.id === gpuState.mode) || gpuState.modes[0]
+  const gpuTopProcess = gpuState.processes?.[0] || null
+  const gpuUsagePercent = deriveGpuUsagePercent(gpuState)
+
   return (
     <>
       <header className="armoury-crate-home-header">
@@ -1365,22 +1528,48 @@ function ArmouryCrateHomePage({ telemetry, activeMode, onModeChange }) {
             <TelemetryPanel
               title="CPU"
               rows={[
-                { label: 'Frequency', value: formatValue(telemetry.cpuFrequency), barPercent: getBarPercent(telemetry.cpuFrequency) },
-                { label: 'Usage', value: formatValue(telemetry.cpuUsage), barPercent: getBarPercent(telemetry.cpuUsage) },
-                { label: 'Memory Frequency', value: formatValue(telemetry.memoryFrequency) },
-                { label: 'Temperature', value: formatValue(telemetry.cpuTemperature) },
-                { label: 'Voltage', value: formatValue(telemetry.cpuVoltage) }
+                {
+                  label: 'Usage',
+                  value: isSystemDataReady ? formatPercent(systemStats.cpuUsage) : 'Loading...',
+                  barPercent: isSystemDataReady ? systemStats.cpuUsage : undefined
+                },
+                {
+                  label: 'Average',
+                  value: isSystemDataReady ? formatPercent(cpuAverage) : 'Loading...',
+                  barPercent: isSystemDataReady ? cpuAverage : undefined
+                },
+                {
+                  label: 'Peak',
+                  value: isSystemDataReady ? formatPercent(cpuPeak) : 'Loading...',
+                  barPercent: isSystemDataReady ? cpuPeak : undefined
+                },
+                { label: 'Running Apps', value: isSystemDataReady ? `${systemStats.processCount}` : 'Loading...' },
+                {
+                  label: 'Top App',
+                  value: isSystemDataReady ? formatTopProcessValue(topCpuProcess, 'cpu_usage', (value) => formatPercent(value)) : 'Loading...'
+                }
               ]}
             />
 
             <TelemetryPanel
               title="GPU"
               rows={[
-                { label: 'Frequency', value: formatValue(telemetry.gpuFrequency), barPercent: getBarPercent(telemetry.gpuFrequency) },
-                { label: 'Usage', value: formatValue(telemetry.gpuUsage), barPercent: getBarPercent(telemetry.gpuUsage) },
-                { label: 'Memory Frequency', value: formatValue(telemetry.gpuMemoryFrequency) },
-                { label: 'Temperature', value: formatValue(telemetry.gpuTemperature) },
-                { label: 'Voltage', value: formatValue(telemetry.gpuVoltage) }
+                { label: 'Mode', value: gpuState.updatedAt ? gpuMode?.title || 'GPU Mode' : 'Loading...' },
+                {
+                  label: 'Usage',
+                  value: gpuState.updatedAt ? formatPercent(gpuUsagePercent) : 'Loading...',
+                  barPercent: gpuState.updatedAt ? gpuUsagePercent : undefined
+                },
+                { label: 'Apps Engaged', value: gpuState.updatedAt ? `${gpuState.processes.length}` : 'Loading...' },
+                { label: 'Top App', value: gpuState.updatedAt ? gpuTopProcess?.app || 'No active workload' : 'Loading...' },
+                {
+                  label: 'Process Memory',
+                  value: gpuState.updatedAt
+                    ? gpuTopProcess
+                      ? formatCompactMegabytes(gpuTopProcess.memory)
+                      : '0 MB'
+                    : 'Loading...'
+                }
               ]}
             />
 
@@ -1399,15 +1588,29 @@ function ArmouryCrateHomePage({ telemetry, activeMode, onModeChange }) {
               rows={[
                 {
                   label: 'Storage',
-                  value: formatStorage(telemetry.storageUsed, telemetry.storageTotal),
-                  barPercent: (telemetry.storageUsed.value / telemetry.storageTotal.value) * 100
+                  value: storageInfo ? formatStorageSummary(storageInfo) : 'Loading...',
+                  barPercent: storageInfo ? storageInfo.usagePercent : undefined
                 },
                 {
                   label: 'RAM',
-                  value: formatRam(telemetry.ramUsed, telemetry.ramTotal),
-                  barPercent: (telemetry.ramUsed.value / telemetry.ramTotal.value) * 100
+                  value: isSystemDataReady ? `${systemStats.usedMemory} / ${systemStats.totalMemory} MB` : 'Loading...',
+                  barPercent: isSystemDataReady ? systemStats.memoryUsagePercent : undefined
                 },
-                ...PLACEHOLDER_ROWS.map((row, index) => ({ label: row, value: row, key: `memory-placeholder-${index}` }))
+                {
+                  label: 'Available',
+                  value: isSystemDataReady ? formatCompactMegabytes(systemStats.availableMemory) : 'Loading...'
+                },
+                {
+                  label: 'Usage',
+                  value: isSystemDataReady ? formatPercent(systemStats.memoryUsagePercent) : 'Loading...',
+                  barPercent: isSystemDataReady ? systemStats.memoryUsagePercent : undefined
+                },
+                {
+                  label: 'Top App',
+                  value: isSystemDataReady
+                    ? formatTopProcessValue(topMemoryProcess, 'memory', (value) => formatCompactMegabytes(value))
+                    : 'Loading...'
+                }
               ]}
             />
           </div>
@@ -2554,6 +2757,239 @@ function ArmouryCrateScenarioProfilesPage({
         </div>
       </div>
     </section>
+  )
+}
+
+function ArmouryCrateDisplaySettingsPage({
+  displayState,
+  systemStats,
+  performanceHistory,
+  runningProcesses,
+  gpuState,
+  activeMode,
+  panelPowerSaverEnabled,
+  onChange
+}) {
+  const selectedPreset =
+    DISPLAY_VISUAL_PRESETS.find((preset) => preset.id === displayState.selectedPreset) || DISPLAY_VISUAL_PRESETS[0]
+  const recommendation = deriveDisplayRecommendation({ activeMode, systemStats, gpuState, runningProcesses })
+  const cpuTrend = performanceHistory.slice(-24).map((entry) => Number(entry.cpu_usage) || 0)
+  const cpuTrendPoints = cpuTrend.length > 1 ? createResourceMonitorSeries(cpuTrend, 100, 84) : ''
+  const groupedApps = groupMemoryProcesses(runningProcesses).slice(0, 3)
+  const gpuModeTitle = getGpuModeTitle(gpuState)
+  const temperatureKelvin = getDisplayTemperatureKelvin(displayState.colorTemperature)
+  const temperatureLabel = getDisplayTemperatureLabel(displayState.colorTemperature)
+  const previewTint = getDisplayTemperatureTint(displayState.colorTemperature)
+  const previewGlow = displayState.gameVisualEnabled ? selectedPreset.accent : '#6e6a65'
+  const lastSyncedAt = formatArmouryTime(systemStats.timestamp || gpuState.updatedAt)
+
+  return (
+    <section className="armoury-crate-display-page">
+      <header className="armoury-crate-display-header">
+        <div className="armoury-crate-display-header-copy">
+          <h1>Display Settings</h1>
+        </div>
+
+        <div className="armoury-crate-device-header-tools" aria-hidden="true">
+          <DisplayHeaderIcon />
+        </div>
+      </header>
+
+      <div className="armoury-crate-display-tab-row" role="tablist" aria-label="Display settings tabs">
+        <button type="button" role="tab" aria-selected={true} className="armoury-crate-display-tab active">
+          GameVisual
+        </button>
+      </div>
+
+      <div className="armoury-crate-display-content">
+        <section className="armoury-crate-display-hero">
+          <div className="armoury-crate-display-hero-main">
+            <div className="armoury-crate-display-toggle-row">
+              <button
+                type="button"
+                className={`armoury-crate-audio-toggle ${displayState.gameVisualEnabled ? 'enabled' : ''}`}
+                onClick={() => onChange({ gameVisualEnabled: !displayState.gameVisualEnabled })}
+              >
+                <span className="armoury-crate-audio-toggle-label">{displayState.gameVisualEnabled ? 'ON' : 'OFF'}</span>
+                <span className="armoury-crate-audio-toggle-track">
+                  <span className="armoury-crate-audio-toggle-thumb" />
+                </span>
+              </button>
+
+              <div className="armoury-crate-display-hero-copy">
+                <h2>GameVisual effect</h2>
+                <p>
+                  Multiple color modes are simulated here in the Armoury Crate style. The page follows the existing
+                  system workload, GPU mode and running apps without introducing a new backend path.
+                </p>
+              </div>
+            </div>
+
+            <div className="armoury-crate-display-grid">
+              {DISPLAY_VISUAL_PRESETS.map((preset) => {
+                const isSelected = displayState.selectedPreset === preset.id
+                const isRecommended = recommendation.id === preset.id
+                return (
+                  <DisplayPresetCard
+                    key={preset.id}
+                    preset={preset}
+                    selected={isSelected}
+                    recommended={isRecommended}
+                    enabled={displayState.gameVisualEnabled}
+                    onSelect={() =>
+                      onChange({
+                        gameVisualEnabled: true,
+                        selectedPreset: preset.id,
+                        lastUserSelectionAt: new Date().toISOString()
+                      })
+                    }
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          <aside
+            className={`armoury-crate-display-preview ${displayState.gameVisualEnabled ? 'enabled' : 'disabled'}`}
+            style={{
+              '--display-preview-accent': previewGlow,
+              '--display-preview-tint': previewTint
+            }}
+          >
+            <div className="armoury-crate-display-preview-head">
+              <span className="armoury-crate-display-preview-chip">Live Sync</span>
+              <span>{lastSyncedAt}</span>
+            </div>
+
+            <div className="armoury-crate-display-preview-screen">
+              <div className="armoury-crate-display-preview-overlay" />
+              <div className="armoury-crate-display-preview-copy">
+                <strong>{displayState.gameVisualEnabled ? selectedPreset.title : 'GameVisual Off'}</strong>
+                <span>{displayState.gameVisualEnabled ? selectedPreset.description : 'The panel is using a neutral base image.'}</span>
+              </div>
+              {cpuTrendPoints ? (
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="armoury-crate-display-preview-graph" aria-hidden="true">
+                  <polyline points={cpuTrendPoints} />
+                </svg>
+              ) : null}
+            </div>
+
+            <div className="armoury-crate-display-preview-stats">
+              <DisplayStatusTile label="Recommended" value={getDisplayPresetTitle(recommendation.id)} detail={recommendation.reason} accent />
+              <DisplayStatusTile label="Operating Mode" value={MODE_PRESETS[activeMode]?.label || 'Silent'} detail={`${gpuModeTitle} active`} />
+              <DisplayStatusTile
+                label="System Load"
+                value={`${Math.round(systemStats.cpuUsage || 0)}% CPU / ${Math.round(systemStats.memoryUsagePercent || 0)}% RAM`}
+                detail={`${systemStats.processCount || runningProcesses.length} running processes`}
+              />
+              <DisplayStatusTile
+                label="Top App Focus"
+                value={groupedApps[0]?.app || 'Idle desktop'}
+                detail={groupedApps.length > 1 ? groupedApps.slice(1).map((app) => app.app).join(' | ') : 'No competing foreground load'}
+              />
+            </div>
+          </aside>
+        </section>
+
+        <section className="armoury-crate-display-control-panel">
+          <div className="armoury-crate-display-control-title">Color Temperature</div>
+          <div className="armoury-crate-display-temperature-shell">
+            <div className="armoury-crate-display-temperature-copy">
+              <strong>{temperatureKelvin} K</strong>
+              <span>{temperatureLabel}</span>
+            </div>
+            <div className="armoury-crate-display-temperature-slider">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={displayState.colorTemperature}
+                onChange={(event) => onChange({ colorTemperature: Number(event.target.value) })}
+                aria-label="Adjust color temperature"
+              />
+              <span className="armoury-crate-display-temperature-thumb" style={{ left: `${displayState.colorTemperature}%` }} aria-hidden="true" />
+            </div>
+          </div>
+        </section>
+
+        <section className="armoury-crate-display-settings-group">
+          <div className="armoury-crate-section-heading">
+            <span className="armoury-crate-section-accent" aria-hidden="true" />
+            <h2>GameVisual Control</h2>
+          </div>
+
+          <div className="armoury-crate-display-settings-grid">
+            <article className="armoury-crate-display-setting-card">
+              <div className="armoury-crate-display-setting-copy">
+                <h3>OSD</h3>
+                <p>When turned on, an OSD will show the current GameVisual mode after each simulated reboot.</p>
+              </div>
+              <button
+                type="button"
+                className={`armoury-crate-audio-toggle ${displayState.osdEnabled ? 'enabled' : ''}`}
+                onClick={() => onChange({ osdEnabled: !displayState.osdEnabled })}
+              >
+                <span className="armoury-crate-audio-toggle-label">{displayState.osdEnabled ? 'ON' : 'OFF'}</span>
+                <span className="armoury-crate-audio-toggle-track">
+                  <span className="armoury-crate-audio-toggle-thumb" />
+                </span>
+              </button>
+            </article>
+
+            <article className="armoury-crate-display-setting-card compact">
+              <div className="armoury-crate-display-setting-copy">
+                <h3>Panel Power Saver</h3>
+                <p>{panelPowerSaverEnabled ? 'Enabled from System Configuration and reflected here.' : 'Disabled from System Configuration.'}</p>
+              </div>
+              <div className={`armoury-crate-display-pill ${panelPowerSaverEnabled ? 'active' : ''}`}>
+                {panelPowerSaverEnabled ? 'Enabled' : 'Disabled'}
+              </div>
+            </article>
+
+            <article className="armoury-crate-display-setting-card compact">
+              <div className="armoury-crate-display-setting-copy">
+                <h3>Backend Follow</h3>
+                <p>Recommendation logic follows the current CPU, memory, process and GPU simulation state.</p>
+              </div>
+              <div className="armoury-crate-display-pill active">Linked</div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+  )
+}
+
+function DisplayPresetCard({ preset, selected, recommended, enabled, onSelect }) {
+  const badgeLabel = selected && recommended ? 'Live Match' : selected ? 'Selected' : recommended ? 'Recommended' : null
+
+  return (
+    <button
+      type="button"
+      className={`armoury-crate-display-card ${selected ? 'selected' : ''} ${!enabled ? 'effect-disabled' : ''}`}
+      onClick={onSelect}
+      style={{ '--display-card-accent': preset.accent }}
+      aria-pressed={selected}
+    >
+      {badgeLabel ? <span className={`armoury-crate-display-card-badge ${selected ? 'selected' : 'recommended'}`}>{badgeLabel}</span> : null}
+      <div className="armoury-crate-display-card-icon" aria-hidden="true">
+        <DisplayModeVisualIcon modeId={preset.id} active={selected && enabled} />
+      </div>
+      <div className="armoury-crate-display-card-copy">
+        <h3>{preset.title}</h3>
+        <p>{preset.description}</p>
+      </div>
+    </button>
+  )
+}
+
+function DisplayStatusTile({ label, value, detail, accent = false }) {
+  return (
+    <div className={`armoury-crate-display-status-tile ${accent ? 'accent' : ''}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
   )
 }
 
@@ -3765,6 +4201,112 @@ function ScenarioGameVisualIcon() {
   )
 }
 
+function DisplayHeaderIcon() {
+  return (
+    <svg viewBox="0 0 112 74" role="img">
+      <g fill="none" stroke="#f2f2f2" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+        <path d="M28 14H50V56H28Z" />
+        <path d="M52 58H26" />
+        <path d="M63 18V52" />
+        <path d="M72 14V58" opacity="0.4" />
+        <path d="M81 24V48" opacity="0.6" />
+        <path d="M90 20V54" opacity="0.25" />
+      </g>
+    </svg>
+  )
+}
+
+function DisplayModeVisualIcon({ modeId, active = false }) {
+  const stroke = active ? '#f7f2e9' : '#c4c0bb'
+  const fill = active ? 'rgba(245, 166, 35, 0.9)' : 'rgba(255, 255, 255, 0.16)'
+
+  if (modeId === 'default') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M28 22h25l13 18-11 19H28Z" fill={fill} opacity="0.3" />
+        <path d="M28 22h25l13 18-11 19H28Z" fill="none" stroke={stroke} strokeWidth="4.5" strokeLinejoin="round" />
+        <path d="M40 34h12l7 10-6 10H40Z" fill={active ? '#f5a623' : '#8f8a84'} />
+      </svg>
+    )
+  }
+
+  if (modeId === 'racing') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M22 28 44 48 22 68" fill="none" stroke={stroke} strokeWidth="6" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M42 24 68 48 42 72" fill="none" stroke={stroke} strokeWidth="8" strokeLinecap="square" strokeLinejoin="miter" opacity="0.8" />
+        <path d="M72 56v10" fill="none" stroke={active ? '#f5a623' : '#8f8a84'} strokeWidth="6" strokeLinecap="square" />
+      </svg>
+    )
+  }
+
+  if (modeId === 'scenery') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <circle cx="29" cy="24" r="6" fill={stroke} opacity="0.9" />
+        <path d="M18 64 36 34 50 64Z" fill={stroke} opacity="0.92" />
+        <path d="M42 64 61 24 80 64Z" fill={active ? '#f5a623' : stroke} opacity={active ? '0.86' : '0.62'} />
+      </svg>
+    )
+  }
+
+  if (modeId === 'rts-rpg') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M28 26h18l-18 18Z" fill={stroke} opacity="0.9" />
+        <circle cx="56" cy="54" r="17" fill={active ? '#f5a623' : 'rgba(255,255,255,0.28)'} />
+        <path d="M34 70h20l12-12" fill="none" stroke={stroke} strokeWidth="6" strokeLinecap="square" />
+      </svg>
+    )
+  }
+
+  if (modeId === 'fps') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <circle cx="48" cy="48" r="24" fill="none" stroke={stroke} strokeWidth="5" opacity="0.9" />
+        <circle cx="48" cy="48" r="9" fill={active ? '#f5a623' : 'rgba(255,255,255,0.28)'} />
+        <path d="M48 20v12M48 64v12M20 48h12M64 48h12" fill="none" stroke={stroke} strokeWidth="5" strokeLinecap="square" />
+      </svg>
+    )
+  }
+
+  if (modeId === 'cinema') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M24 36h48v28H24Z" fill={stroke} opacity="0.28" />
+        <path d="M24 36h48v28H24Z" fill="none" stroke={stroke} strokeWidth="4.5" />
+        <path d="M24 36 40 28M48 36l16-8M24 64l16-8M48 64l16-8" fill="none" stroke={active ? '#f5a623' : stroke} strokeWidth="4.5" strokeLinecap="square" opacity="0.85" />
+      </svg>
+    )
+  }
+
+  if (modeId === 'eyecare') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M18 48c9-14 18-21 30-21s21 7 30 21c-9 14-18 21-30 21S27 62 18 48Z" fill="none" stroke={stroke} strokeWidth="5" strokeLinejoin="round" />
+        <circle cx="48" cy="48" r="10" fill={active ? '#f5a623' : 'rgba(255,255,255,0.28)'} />
+      </svg>
+    )
+  }
+
+  if (modeId === 'vivid') {
+    return (
+      <svg viewBox="0 0 96 96" role="img">
+        <path d="M20 24 36 72h9l10-28 10 28h9l16-48" fill="none" stroke={stroke} strokeWidth="7" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M48 35 54 52" fill="none" stroke={active ? '#f5a623' : '#8f8a84'} strokeWidth="7" strokeLinecap="square" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 96 96" role="img">
+      <path d="M48 22a26 26 0 1 1 0 52V22Z" fill={stroke} opacity="0.85" />
+      <path d="M48 22a26 26 0 1 1 0 52V22Z" fill="none" stroke={stroke} strokeWidth="4.5" />
+      <path d="M48 28V68" fill="none" stroke={active ? '#f5a623' : '#8f8a84'} strokeWidth="5" strokeLinecap="square" />
+    </svg>
+  )
+}
+
 function ScenarioBroomIcon() {
   return (
     <svg viewBox="0 0 38 30" className="armoury-crate-scenario-row-icon">
@@ -3802,6 +4344,122 @@ function formatProcessCpu(value) {
 
 function formatProcessMemory(value) {
   return `${Math.max(0, Math.round(value || 0))} MB`
+}
+
+function getDisplayPresetTitle(presetId) {
+  return DISPLAY_VISUAL_PRESETS.find((preset) => preset.id === presetId)?.title || 'Default'
+}
+
+function getGpuModeTitle(gpuState) {
+  return gpuState?.modes?.find((mode) => mode.id === gpuState.mode)?.title || 'Eco Mode'
+}
+
+function getDisplayTemperatureKelvin(value) {
+  const safeValue = clampValue(Number(value) || 0, 0, 100)
+  if (safeValue <= 50) {
+    return Math.round(3900 + (safeValue / 50) * 2600)
+  }
+
+  return Math.round(6500 + ((safeValue - 50) / 50) * 2100)
+}
+
+function getDisplayTemperatureLabel(value) {
+  const safeValue = clampValue(Number(value) || 0, 0, 100)
+  if (safeValue <= 28) return 'Warm'
+  if (safeValue >= 72) return 'Cool'
+  return 'Neutral'
+}
+
+function getDisplayTemperatureTint(value) {
+  const safeValue = clampValue(Number(value) || 0, 0, 100)
+  if (safeValue <= 40) return '#ff9f4a'
+  if (safeValue >= 60) return '#8fdcf9'
+  return '#efe9de'
+}
+
+function formatArmouryTime(timestamp) {
+  if (!timestamp) return 'Waiting for sync'
+
+  try {
+    return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  } catch (error) {
+    return 'Waiting for sync'
+  }
+}
+
+function deriveDisplayRecommendation({ activeMode, systemStats, gpuState, runningProcesses }) {
+  const cpuUsage = Number(systemStats?.cpuUsage) || 0
+  const memoryUsagePercent = Number(systemStats?.memoryUsagePercent) || 0
+  const processCount = Number(systemStats?.processCount) || runningProcesses.length
+  const gpuMode = gpuState?.mode || 'eco'
+  const hasDesktopWorkload = runningProcesses.some((process) => ['Web Browser', 'Files', 'Local Files', 'Notes'].includes(process.app))
+
+  if (gpuMode === 'eco' && cpuUsage < 18 && processCount <= 5) {
+    return {
+      id: 'e-reading',
+      reason: 'Eco GPU routing and a light workload favor a softer reading profile.'
+    }
+  }
+
+  if (activeMode === 'silent' && cpuUsage < 28) {
+    return {
+      id: 'eyecare',
+      reason: 'Lower thermals and quiet mode fit longer reading or study sessions.'
+    }
+  }
+
+  if (activeMode === 'turbo' || cpuUsage >= 72) {
+    return {
+      id: 'fps',
+      reason: 'High activity matches stronger dark-scene contrast for faster response.'
+    }
+  }
+
+  if (gpuMode === 'standard' && cpuUsage >= 50) {
+    return {
+      id: 'racing',
+      reason: 'Discrete GPU availability and rising load fit motion-focused tuning.'
+    }
+  }
+
+  if (memoryUsagePercent >= 65 || processCount >= 12) {
+    return {
+      id: 'rts-rpg',
+      reason: 'Heavier multitasking benefits from sharper UI edges and stronger separation.'
+    }
+  }
+
+  if (gpuMode === 'optimized' && cpuUsage >= 34) {
+    return {
+      id: 'vivid',
+      reason: 'Balanced GPU routing supports extra saturation without overcommitting thermals.'
+    }
+  }
+
+  if (hasDesktopWorkload) {
+    return {
+      id: 'default',
+      reason: 'The current app mix looks closer to browsing and desktop use than gaming.'
+    }
+  }
+
+  return {
+    id: 'scenery',
+    reason: 'Moderate system activity leaves room for a brighter, more vibrant image profile.'
+  }
+}
+
+function mapScenarioGameVisualToDisplayPreset(value) {
+  const normalizedValue = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+
+  const exactMatch = DISPLAY_VISUAL_PRESETS.find((preset) => preset.id === normalizedValue)
+  if (exactMatch) return exactMatch.id
+
+  const titleMatch = DISPLAY_VISUAL_PRESETS.find((preset) => preset.title.toLowerCase() === String(value || '').trim().toLowerCase())
+  return titleMatch?.id || DEFAULT_DISPLAY_SETTINGS_STATE.selectedPreset
 }
 
 function loadArmouryDeviceSettings() {
@@ -3906,6 +4564,23 @@ function loadArmouryScenarioProfileState() {
       ...DEFAULT_SCENARIO_PROFILE_STATE,
       lastSavedDraft: createScenarioProfileDraft(DEFAULT_SCENARIO_PROFILE_STATE)
     }
+  }
+}
+
+function loadArmouryDisplaySettingsState() {
+  try {
+    const savedState = localStorage.getItem(ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY)
+    if (!savedState) return DEFAULT_DISPLAY_SETTINGS_STATE
+
+    const parsed = JSON.parse(savedState)
+    return {
+      ...DEFAULT_DISPLAY_SETTINGS_STATE,
+      ...parsed,
+      selectedPreset: mapScenarioGameVisualToDisplayPreset(parsed.selectedPreset)
+    }
+  } catch (error) {
+    console.warn('Failed to load Armoury Crate display settings state:', error)
+    return DEFAULT_DISPLAY_SETTINGS_STATE
   }
 }
 

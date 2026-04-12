@@ -1,7 +1,26 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Lock, LogOut, Moon, UserCircle, Bell, Wifi, Volume2, Settings, Battery, Zap } from 'lucide-react'
+import { Accessibility, Battery, Bell, ChevronUp, Lock, LogOut, Moon, Search, SunMedium, Volume2, Wifi, Zap } from 'lucide-react'
 
-export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user, onLogout, onLock, onSleep, onStartClick, onNotificationClick, onActionCenterClick, onCalendarClick, pinnedApps, onTogglePin, onLaunchPinned, isPinned, searchQuery, onSearchChange, isSleeping = false }) {
+export default function Taskbar({
+  windows,
+  onToggleMinimize,
+  onFocusWindow,
+  user,
+  onLogout,
+  onLock,
+  onSleep,
+  onStartClick,
+  onNotificationClick,
+  onActionCenterClick,
+  onCalendarClick,
+  pinnedApps,
+  onTogglePin,
+  onLaunchPinned,
+  isPinned,
+  searchQuery,
+  onSearchChange,
+  isSleeping = false
+}) {
   const [time, setTime] = useState(new Date())
   const [timeFormat, setTimeFormat] = useState(localStorage.getItem('jezos_time_format') || '12h')
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -10,13 +29,12 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
   const [volume, setVolume] = useState(() => {
     try {
       const saved = localStorage.getItem('jez_os_volume')
-      return saved ? parseInt(saved) : 75
+      return saved ? parseInt(saved, 10) : 75
     } catch {
       return 75
     }
   })
   const [showVolumeControl, setShowVolumeControl] = useState(false)
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [batterySupported, setBatterySupported] = useState(true)
 
   const normalizeBatteryState = (value, fallbackLevel = 80) => {
@@ -37,18 +55,17 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
     return () => clearInterval(interval)
   }, [isSleeping])
 
-  // Listen for time format changes
   useEffect(() => {
     const handleSettingsUpdate = (event) => {
       if (event.detail?.key === 'timeFormat') {
         setTimeFormat(event.detail.value)
       }
     }
+
     window.addEventListener('jezos_settings_updated', handleSettingsUpdate)
     return () => window.removeEventListener('jezos_settings_updated', handleSettingsUpdate)
   }, [])
 
-  // Sync battery state from ActionCenter via custom event and localStorage
   useEffect(() => {
     const loadBattery = () => {
       try {
@@ -61,29 +78,22 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
       }
     }
 
-    loadBattery()
-    
-    // Listen for custom battery update events from ActionCenter (same tab)
     const handleBatteryUpdate = (event) => {
       if (event.detail) {
         setBattery(normalizeBatteryState(event.detail))
       }
     }
-    
-    // Also listen for storage changes from other tabs
-    const handleStorageChange = () => {
-      loadBattery()
-    }
-    
+
+    loadBattery()
     window.addEventListener('batteryUpdate', handleBatteryUpdate)
-    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('storage', loadBattery)
+
     return () => {
       window.removeEventListener('batteryUpdate', handleBatteryUpdate)
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', loadBattery)
     }
   }, [])
 
-  // Keep taskbar battery aligned with real device battery when available.
   useEffect(() => {
     let batteryObj = null
     let updateBattery = null
@@ -125,7 +135,6 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
 
   const displayBattery = normalizeBatteryState(battery, 80)
 
-  // Save volume to localStorage when changed
   useEffect(() => {
     try {
       localStorage.setItem('jez_os_volume', volume.toString())
@@ -134,30 +143,25 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
     }
   }, [volume])
 
-  // Detect Wi-Fi signal strength
   useEffect(() => {
     if (isSleeping) return undefined
+
     const updateWiFi = async () => {
       try {
-        // Check if online first
         if (!navigator.onLine) {
           setWifiSignal(0)
           return
         }
 
-        // Try to get connection info from navigator
         if (navigator.connection) {
           const effectiveType = navigator.connection.effectiveType
-          
-          // Map connection type to signal strength
           let signal = 3
           if (effectiveType === '4g') signal = 4
           else if (effectiveType === '3g') signal = 3
           else if (effectiveType === '2g') signal = 2
           else if (effectiveType === 'slow-2g') signal = 1
-          
           setWifiSignal(signal)
-        } else if (navigator.onLine) {
+        } else {
           setWifiSignal(3)
         }
       } catch (error) {
@@ -165,19 +169,11 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
       }
     }
 
+    const handleOnline = () => setWifiSignal(3)
+    const handleOffline = () => setWifiSignal(0)
+
     updateWiFi()
     const interval = setInterval(updateWiFi, 5000)
-    
-    const handleOnline = () => {
-      setIsOnline(true)
-      setWifiSignal(3)
-    }
-    
-    const handleOffline = () => {
-      setIsOnline(false)
-      setWifiSignal(0)
-    }
-
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
@@ -189,14 +185,12 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
   }, [isSleeping])
 
   const handleWindowPreviewClick = (windowId) => {
-    // Focus the window (brings it to front)
     if (onFocusWindow) {
       onFocusWindow(windowId)
     }
-    
-    // If the window is minimized, restore it
-    const window = windows.find(w => w.id === windowId)
-    if (window && window.minimized) {
+
+    const windowEntry = windows.find((entry) => entry.id === windowId)
+    if (windowEntry?.minimized) {
       onToggleMinimize(windowId)
     }
   }
@@ -217,229 +211,272 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
     return entry.icon ? <entry.icon size={16} /> : null
   }
 
+  const weatherSnapshot = getTaskbarWeatherSnapshot(time)
+  const WeatherIcon = weatherSnapshot.icon
+  const userInitials = getUserInitials(user?.username)
+
   return (
     <div className="taskbar">
-      <div className="taskbar-start-area">
-        <button type="button" className="taskbar-left" onClick={(e) => {
-          e.stopPropagation()
-          onStartClick()
-        }}>
-          <LayoutGrid className="taskbar-start-icon" />
-        </button>
-        <div className="taskbar-search">
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            aria-label="Search"
-          />
-        </div>
-        <div className="taskbar-apps">
-          {/* Show pinned apps and merge with running windows */}
-          {pinnedApps.map((app) => {
-            const appWindows = windows.filter(w => w.appId === app.id)
-            const hasWindows = appWindows.length > 0
-            const hasMinimized = appWindows.some(w => w.minimized)
-            
-            return (
-              <div key={app.id} className="taskbar-app-group">
-                <button
-                  type="button"
-                  className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
-                  data-app={app.id}
-                  title={!hasWindows ? `Open ${app.title}` : undefined}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (hasWindows) {
-                      // If only one window, toggle minimize
-                      if (appWindows.length === 1) {
-                        onToggleMinimize(appWindows[0].id)
-                      } else {
-                        // If multiple windows, just focus the first one
-                        handleWindowPreviewClick(appWindows[0].id)
-                      }
-                    } else {
-                      onLaunchPinned(app.id)
-                    }
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    onTogglePin(app.id)
-                  }}
-                >
-                  {renderTaskbarIcon(app)}
-                  {hasWindows && appWindows.length > 1 && (
-                    <span className="taskbar-app-badge">{appWindows.length}</span>
-                  )}
-                </button>
-                {/* Show window previews on hover - only if there are windows */}
-                {hasWindows && (
-                  <div className="taskbar-window-previews">
-                    {appWindows.map((win, index) => (
-                      <button
-                        key={win.id}
-                        className={`taskbar-preview-item ${win.minimized ? 'minimized' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleWindowPreviewClick(win.id)
-                        }}
-                      >
-                        {renderPreviewIcon(win)}
-                        <span>{win.title} ({index + 1})</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-          
-          {/* Show unpinned running apps */}
-          {(() => {
-            // Group windows by appId
-            const windowsByApp = {}
-            windows.forEach(win => {
-              if (win.appId && !isPinned(win.appId)) {
-                if (!windowsByApp[win.appId]) {
-                  windowsByApp[win.appId] = []
-                }
-                windowsByApp[win.appId].push(win)
-              }
-            })
-            
-            return Object.entries(windowsByApp).map(([appId, appWindows]) => {
-              const firstWindow = appWindows[0]
-              const hasMinimized = appWindows.some(w => w.minimized)
-              
+      <div className="taskbar-weather" title="Desktop weather simulation">
+        <span className={`taskbar-weather-badge ${weatherSnapshot.tone}`}>
+          <WeatherIcon className="taskbar-weather-icon" />
+        </span>
+        <span className="taskbar-weather-copy">
+          <strong>{formatTaskbarTemperature(weatherSnapshot.temperature)}</strong>
+          <small>{weatherSnapshot.label}</small>
+        </span>
+      </div>
+
+      <div className="taskbar-center">
+        <div className="taskbar-center-shell">
+          <button
+            type="button"
+            className="taskbar-left"
+            onClick={(event) => {
+              event.stopPropagation()
+              onStartClick()
+            }}
+          >
+            <WindowsStartIcon className="taskbar-start-icon" />
+          </button>
+
+          <div className="taskbar-search">
+            <Search className="taskbar-search-icon" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(event) => onSearchChange?.(event.target.value)}
+              aria-label="Search"
+            />
+          </div>
+
+          <div className="taskbar-apps">
+            {pinnedApps.map((app) => {
+              const appWindows = windows.filter((entry) => entry.appId === app.id)
+              const hasWindows = appWindows.length > 0
+              const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+              const hasMinimized = appWindows.some((entry) => entry.minimized)
+
               return (
-                <div key={appId} className="taskbar-app-group">
+                <div key={app.id} className="taskbar-app-group">
                   <button
                     type="button"
-                    className={`taskbar-app running ${hasMinimized ? 'has-minimized' : ''}`}
-                    data-app={appId}
-                    title={undefined}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (appWindows.length === 1) {
-                        onToggleMinimize(firstWindow.id)
+                    className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                    data-app={app.id}
+                    title={!hasWindows ? `Open ${app.title}` : undefined}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      if (hasWindows) {
+                        if (appWindows.length === 1) {
+                          onToggleMinimize(appWindows[0].id)
+                        } else {
+                          handleWindowPreviewClick(appWindows[0].id)
+                        }
                       } else {
-                        handleWindowPreviewClick(firstWindow.id)
+                        onLaunchPinned(app.id)
                       }
                     }}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      onTogglePin(appId)
+                    onContextMenu={(event) => {
+                      event.preventDefault()
+                      onTogglePin(app.id)
                     }}
                   >
-                    {renderTaskbarIcon(firstWindow)}
-                    {appWindows.length > 1 && (
+                    {renderTaskbarIcon(app)}
+                    {hasWindows && appWindows.length > 1 ? (
                       <span className="taskbar-app-badge">{appWindows.length}</span>
-                    )}
+                    ) : null}
                   </button>
-                  {/* Show window previews on hover */}
-                  <div className="taskbar-window-previews">
-                    {appWindows.map((win, index) => (
-                      <button
-                        key={win.id}
-                        className={`taskbar-preview-item ${win.minimized ? 'minimized' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleWindowPreviewClick(win.id)
-                        }}
-                      >
-                        {renderPreviewIcon(win)}
-                        <span>{win.title} ({index + 1})</span>
-                      </button>
-                    ))}
-                  </div>
+
+                  {hasWindows ? (
+                    <div className="taskbar-window-previews">
+                      {appWindows.map((win, index) => (
+                        <button
+                          key={win.id}
+                          className={`taskbar-preview-item ${win.minimized ? 'minimized' : ''}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleWindowPreviewClick(win.id)
+                          }}
+                        >
+                          {renderPreviewIcon(win)}
+                          <span>{win.title} ({index + 1})</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               )
-            })
-          })()}
+            })}
+
+            {(() => {
+              const windowsByApp = {}
+              windows.forEach((win) => {
+                if (win.appId && !isPinned(win.appId)) {
+                  if (!windowsByApp[win.appId]) {
+                    windowsByApp[win.appId] = []
+                  }
+                  windowsByApp[win.appId].push(win)
+                }
+              })
+
+              return Object.entries(windowsByApp).map(([appId, appWindows]) => {
+                const firstWindow = appWindows[0]
+                const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+                const hasMinimized = appWindows.some((entry) => entry.minimized)
+
+                return (
+                  <div key={appId} className="taskbar-app-group">
+                    <button
+                      type="button"
+                      className={`taskbar-app running ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                      data-app={appId}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        if (appWindows.length === 1) {
+                          onToggleMinimize(firstWindow.id)
+                        } else {
+                          handleWindowPreviewClick(firstWindow.id)
+                        }
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault()
+                        onTogglePin(appId)
+                      }}
+                    >
+                      {renderTaskbarIcon(firstWindow)}
+                      {appWindows.length > 1 ? (
+                        <span className="taskbar-app-badge">{appWindows.length}</span>
+                      ) : null}
+                    </button>
+
+                    <div className="taskbar-window-previews">
+                      {appWindows.map((win, index) => (
+                        <button
+                          key={win.id}
+                          className={`taskbar-preview-item ${win.minimized ? 'minimized' : ''}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleWindowPreviewClick(win.id)
+                          }}
+                        >
+                          {renderPreviewIcon(win)}
+                          <span>{win.title} ({index + 1})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
+          </div>
         </div>
       </div>
-      <div className="taskbar-center" />
+
       <div className="taskbar-right">
         <div className="taskbar-systray">
-          <button 
-            type="button" 
+          <button
+            type="button"
+            className="taskbar-systray-item"
+            title="Hidden icons"
+          >
+            <ChevronUp className="taskbar-systray-icon" />
+          </button>
+
+          <button
+            type="button"
             className="taskbar-systray-item"
             title={`Wi-Fi Signal: ${wifiSignal}/4`}
           >
             <Wifi className={`taskbar-systray-icon wifi-signal-${wifiSignal}`} />
           </button>
-          
+
           <div className="taskbar-systray-item volume-control">
-            <button 
+            <button
               type="button"
               className="taskbar-systray-button"
-              onClick={(e) => {
-                e.stopPropagation()
+              onClick={(event) => {
+                event.stopPropagation()
                 setShowVolumeControl(!showVolumeControl)
               }}
               title={`Volume: ${volume}%`}
             >
-              <Volume2 className="taskbar-systray-icon volume-icon" style={{ color: '#8b5cf6' }} />
+              <Volume2 className="taskbar-systray-icon volume-icon" />
             </button>
-            {showVolumeControl && (
+
+            {showVolumeControl ? (
               <div className="volume-slider-container">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={volume} 
-                  onChange={(e) => setVolume(Number(e.target.value))}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(event) => setVolume(Number(event.target.value))}
                   className="volume-slider"
                 />
                 <span className="volume-value">{volume}%</span>
               </div>
-            )}
+            ) : null}
           </div>
 
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="taskbar-systray-item"
             title={batterySupported ? `Battery: ${displayBattery.level}%${displayBattery.charging ? ' (Charging)' : ''}` : 'Battery: Not available on this browser/device'}
           >
-            <div style={{ position: 'relative', display: 'inline-flex' }}>
-              <Battery 
-                className={`taskbar-systray-icon battery-icon ${displayBattery.charging ? 'charging' : ''} ${displayBattery.level <= 20 ? 'low' : ''}`} 
-                style={{ color: batterySupported ? (displayBattery.charging ? '#fbbf24' : displayBattery.level <= 20 ? '#ef4444' : '#10b981') : '#94a3b8' }}
+            <span className="taskbar-battery-shell">
+              <Battery
+                className={`taskbar-systray-icon battery-icon ${displayBattery.charging ? 'charging' : ''} ${displayBattery.level <= 20 ? 'low' : ''}`}
+                style={{ color: batterySupported ? (displayBattery.charging ? '#fbbf24' : displayBattery.level <= 20 ? '#ef4444' : 'currentColor') : '#94a3b8' }}
               />
-              {displayBattery.charging && (
-                <Zap 
-                  size={12} 
-                  style={{ 
-                    position: 'absolute', 
-                    bottom: 0, 
-                    right: -2,
-                    color: '#3b82f6',
-                    fill: '#3b82f6'
-                  }} 
-                />
-              )}
-            </div>
+              {displayBattery.charging ? (
+                <Zap className="taskbar-battery-bolt" />
+              ) : null}
+            </span>
           </button>
         </div>
-        
-        <button 
-          type="button" 
+
+        <div className="taskbar-locale" title="Keyboard layout">
+          <span>ENG</span>
+          <small>US</small>
+        </div>
+
+        <button
+          type="button"
+          className="taskbar-clock"
+          onClick={(event) => {
+            event.stopPropagation()
+            onCalendarClick()
+          }}
+          title={time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        >
+          <div className="taskbar-time">
+            {timeFormat === '24h'
+              ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+              : time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+          </div>
+          <div className="taskbar-date">
+            {time.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })}
+          </div>
+        </button>
+
+        <button
+          type="button"
           className="taskbar-action-center"
-          onClick={(e) => {
-            e.stopPropagation()
+          onClick={(event) => {
+            event.stopPropagation()
             onActionCenterClick()
           }}
-          title="Action Center"
+          title="Accessibility and quick settings"
         >
-          <Settings className="taskbar-action-center-icon" />
+          <Accessibility className="taskbar-action-center-icon" />
         </button>
-        
-        <button 
-          type="button" 
+
+        <button
+          type="button"
           className="taskbar-notification"
-          onClick={(e) => {
-            e.stopPropagation()
+          onClick={(event) => {
+            event.stopPropagation()
             onNotificationClick()
           }}
           title="Notifications"
@@ -449,44 +486,28 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
 
         <button
           type="button"
-          className="taskbar-clock"
-          onClick={(e) => {
-            e.stopPropagation()
-            onCalendarClick()
-          }}
-          title={time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-        >
-          <div className="taskbar-time">
-            {timeFormat === '24h'
-              ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-              : time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-            }
-          </div>
-          <div className="taskbar-date">{time.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' })}</div>
-        </button>
-        
-        <button 
-          type="button" 
           className="taskbar-user"
-          onClick={(e) => {
-            e.stopPropagation()
+          title={user.username}
+          onClick={(event) => {
+            event.stopPropagation()
             setShowUserMenu(!showUserMenu)
           }}
         >
-          <UserCircle className="taskbar-user-icon" />
-          {user.username}
+          <span className="taskbar-user-avatar" aria-hidden="true">{userInitials}</span>
+          <span className="taskbar-user-label">{user.username}</span>
         </button>
+
         {showUserMenu ? (
           <div className="taskbar-user-menu">
-            <button type="button" className="taskbar-user-menu-item" onClick={() => { onLock(); setShowUserMenu(false); }}>
+            <button type="button" className="taskbar-user-menu-item" onClick={() => { onLock(); setShowUserMenu(false) }}>
               <Lock className="taskbar-menu-icon" />
               Lock
             </button>
-            <button type="button" className="taskbar-user-menu-item" onClick={() => { onSleep?.(); setShowUserMenu(false); }}>
+            <button type="button" className="taskbar-user-menu-item" onClick={() => { onSleep?.(); setShowUserMenu(false) }}>
               <Moon className="taskbar-menu-icon" />
               Sleep
             </button>
-            <button type="button" className="taskbar-user-menu-item" onClick={() => { onLogout(); setShowUserMenu(false); }}>
+            <button type="button" className="taskbar-user-menu-item" onClick={() => { onLogout(); setShowUserMenu(false) }}>
               <LogOut className="taskbar-menu-icon" />
               Sign out
             </button>
@@ -494,5 +515,34 @@ export default function Taskbar({ windows, onToggleMinimize, onFocusWindow, user
         ) : null}
       </div>
     </div>
+  )
+}
+
+function getTaskbarWeatherSnapshot(time) {
+  const hour = time.getHours()
+  if (hour >= 6 && hour < 17) {
+    return { icon: SunMedium, temperature: 29, label: 'Partly cloudy', tone: 'day' }
+  }
+
+  return { icon: Moon, temperature: 24, label: 'Clear', tone: 'night' }
+}
+
+function formatTaskbarTemperature(value) {
+  return `${value}\u00B0C`
+}
+
+function getUserInitials(username) {
+  if (!username) return 'U'
+  return username.trim().slice(0, 1).toUpperCase()
+}
+
+function WindowsStartIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path d="M3 4.25C3 3.56 3.56 3 4.25 3h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 11.6 3 11.04 3 10.35v-6.1Z" fill="currentColor" />
+      <path d="M12.4 4.25C12.4 3.56 12.96 3 13.65 3h6.1C20.44 3 21 3.56 21 4.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill="currentColor" />
+      <path d="M3 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 21 3 20.44 3 19.75v-6.1Z" fill="currentColor" />
+      <path d="M12.4 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill="currentColor" />
+    </svg>
   )
 }

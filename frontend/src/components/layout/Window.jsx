@@ -21,6 +21,7 @@ export default function Window({
   onMove,
   onResize = () => {},
   onSnap,
+  keepMountedWhenMinimized = false,
   touchpadEnabled = true,
   children
 }) {
@@ -138,7 +139,7 @@ export default function Window({
     onFocus(id)
   }
 
-  if (minimized) return null
+  if (minimized && !keepMountedWhenMinimized) return null
 
   return (
     <>
@@ -160,7 +161,7 @@ export default function Window({
       )}
       <div
         ref={windowRef}
-        className={`os-window ${isActive ? 'active' : ''} ${isMaximized ? 'maximized' : ''} ${isClosing ? 'closing' : ''}`}
+        className={`os-window ${minimized ? 'minimized' : ''} ${isActive ? 'active' : ''} ${isMaximized ? 'maximized' : ''} ${isClosing ? 'closing' : ''}`}
         style={{
           width,
           height,

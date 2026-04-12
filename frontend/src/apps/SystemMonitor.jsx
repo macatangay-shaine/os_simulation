@@ -1,18 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 
 import PrintingSimulation from '../components/PrintingSimulation'
+import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import { readPrintJobs, updatePrintJobStatus, enqueuePrintJob } from '../utils/printJobs'
 
 export default function SystemMonitor() {
   const [activeTab, setActiveTab] = useState('processes')
-  const [processes, setProcesses] = useState([])
-  const [systemStats, setSystemStats] = useState({
-    totalMemory: 512,
-    usedMemory: 0,
-    cpuUsage: 0,
-    processCount: 0
-  })
-  const [performanceHistory, setPerformanceHistory] = useState([])
   const [startupProcesses, setStartupProcesses] = useState([])
   const [sortBy, setSortBy] = useState('pid')
   const [sortOrder, setSortOrder] = useState('asc')
@@ -33,11 +26,16 @@ export default function SystemMonitor() {
   const [activePrintJobs, setActivePrintJobs] = useState([])
   
   const canvasRef = useRef(null)
+  const {
+    processes,
+    systemStats,
+    performanceHistory,
+    refresh: refreshSystemMonitorData
+  } = useSharedSystemMonitorData({ enabled: true, intervalMs: 2000 })
 
   useEffect(() => {
     loadAllData()
     const interval = setInterval(() => {
-      loadSystemData()
       if (activeTab === 'disk') loadDiskData()
     }, 2000)
     return () => clearInterval(interval)
@@ -93,40 +91,13 @@ export default function SystemMonitor() {
 
   const loadAllData = async () => {
     await Promise.all([
-      loadSystemData(),
+      refreshSystemMonitorData(),
       loadStartupProcesses(),
       loadDiskData(),
       loadUsers(),
       loadServices(),
       loadAppHistory()
     ])
-  }
-
-  const loadSystemData = async () => {
-    try {
-      const [procResponse, resourcesResponse, historyResponse] = await Promise.all([
-        fetch('http://localhost:8000/process/list'),
-        fetch('http://localhost:8000/system/resources'),
-        fetch('http://localhost:8000/system/performance-history')
-      ])
-      
-      if (procResponse.ok && resourcesResponse.ok && historyResponse.ok) {
-        const procData = await procResponse.json()
-        const resourcesData = await resourcesResponse.json()
-        const historyData = await historyResponse.json()
-        
-        setProcesses(procData)
-        setSystemStats({
-          totalMemory: resourcesData.maxMemory,
-          usedMemory: resourcesData.usedMemory,
-          cpuUsage: resourcesData.cpuUsage,
-          processCount: resourcesData.processCount
-        })
-        setPerformanceHistory(historyData.history || [])
-      }
-    } catch (error) {
-      console.error('Failed to load system data:', error)
-    }
   }
 
   const loadStartupProcesses = async () => {
@@ -195,7 +166,7 @@ export default function SystemMonitor() {
       if (response.ok) {
         window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
       }
-      loadSystemData()
+      refreshSystemMonitorData()
     } catch (error) {
       console.error('Failed to kill process:', error)
     }
@@ -208,7 +179,7 @@ export default function SystemMonitor() {
         if (response.ok) {
           window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
         }
-        loadSystemData()
+        refreshSystemMonitorData()
       } catch (error) {
         console.error('Failed to force kill process:', error)
       }

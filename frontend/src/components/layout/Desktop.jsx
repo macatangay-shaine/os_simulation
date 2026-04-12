@@ -29,10 +29,19 @@ import ArmouryCrateApp from '../../apps/ArmouryCrateApp.jsx'
 
 const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
 const ARMOURY_DEVICE_SETTINGS_STORAGE_KEY = 'jezos_armoury_device_settings'
+const ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY = 'jezos_armoury_display_settings_state'
 const RECYCLE_BIN_DESKTOP_ITEM = {
   path: RECYCLE_BIN_PATH,
   type: 'dir',
   synthetic: true
+}
+
+const DEFAULT_ARMOURY_DISPLAY_SETTINGS = {
+  gameVisualEnabled: true,
+  selectedPreset: 'default',
+  colorTemperature: 50,
+  osdEnabled: true,
+  lastUserSelectionAt: null
 }
 
 // Component mapping for built-in apps
@@ -100,6 +109,10 @@ const MAXIMIZED_BY_DEFAULT_APP_IDS = new Set([
   'armourycrate'
 ])
 
+const SESSION_PERSISTENT_APP_IDS = new Set([
+  'armourycrate'
+])
+
 export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown, onSleep, isSleeping = false }) {
   const [appRegistry, setAppRegistry] = useState([])
   const [desktopFiles, setDesktopFiles] = useState([])
@@ -120,6 +133,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const [taskbarSearchQuery, setTaskbarSearchQuery] = useState('')
   const [updateStatus, setUpdateStatus] = useState(null)
   const [armouryDeviceSettings, setArmouryDeviceSettings] = useState(() => loadArmouryDeviceSettings())
+  const [armouryDisplaySettings, setArmouryDisplaySettings] = useState(() => loadArmouryDisplaySettings())
   const [pinnedAppIds, setPinnedAppIds] = useState(() => {
     try {
       const saved = localStorage.getItem('jez_os_pinned_apps')
@@ -301,6 +315,25 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
     window.addEventListener('jezos_armoury_device_settings_updated', syncArmouryDeviceSettings)
     return () => window.removeEventListener('jezos_armoury_device_settings_updated', syncArmouryDeviceSettings)
+  }, [])
+
+  useEffect(() => {
+    const syncArmouryDisplaySettings = (event) => {
+      if (event?.detail) {
+        setArmouryDisplaySettings(normalizeArmouryDisplaySettings(event.detail))
+        return
+      }
+
+      setArmouryDisplaySettings(loadArmouryDisplaySettings())
+    }
+
+    window.addEventListener('jezos_armoury_display_settings_updated', syncArmouryDisplaySettings)
+    window.addEventListener('storage', syncArmouryDisplaySettings)
+
+    return () => {
+      window.removeEventListener('jezos_armoury_display_settings_updated', syncArmouryDisplaySettings)
+      window.removeEventListener('storage', syncArmouryDisplaySettings)
+    }
   }, [])
 
   useEffect(() => {
@@ -612,6 +645,22 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   }
 
+  const restoreWindowFromSession = (pid) => {
+    setActiveWindowId(pid)
+    setWindows((prev) =>
+      prev.map((win) =>
+        win.id === pid
+          ? {
+              ...win,
+              minimized: false,
+              zIndex: zCounter
+            }
+          : win
+      )
+    )
+    setZCounter((prev) => prev + 1)
+  }
+
   const showToast = (title, message, type = 'info', duration = 5000) => {
     const id = Date.now()
     const notification = { title, message, type, duration }
@@ -677,6 +726,16 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }
 
   const launchApp = async (app, options = {}) => {
+    const shouldReuseSessionWindow = SESSION_PERSISTENT_APP_IDS.has(app.id)
+    const existingWindow = shouldReuseSessionWindow
+      ? windows.find((win) => win.appId === app.id)
+      : null
+
+    if (existingWindow) {
+      restoreWindowFromSession(existingWindow.id)
+      return
+    }
+
     const memory = Math.floor(Math.random() * 20) + 8
     let pid = Date.now()
     
@@ -758,6 +817,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       windowEntry
     ]
     })
+    setActiveWindowId(pid)
     setZCounter((prev) => prev + 1)
 
     // Track recent apps (keep last 5)
@@ -912,6 +972,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       })),
     [appRegistry, zCounter]
   )
+  const desktopScreenStyle = useMemo(() => getDesktopScreenStyle(armouryDisplaySettings), [armouryDisplaySettings])
 
   const handleContextMenu = (event) => {
     event.preventDefault()
@@ -977,127 +1038,131 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
   return (
     <div className="desktop" onContextMenu={handleContextMenu} onClick={handleDesktopClick}>
-      <div className="desktop-wallpaper" />
-      <div className="desktop-content">
-        <AppLauncher 
-          apps={appRegistry} 
-          desktopFiles={desktopFiles}
-          onLaunch={launchApp}
-          iconPositions={iconPositions}
-          onIconMove={handleIconMove}
-          onAppContextMenu={handleAppContextMenu}
-          touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
-        />
-      </div>
-
-      {windows.map((win) => {
-        const AppComponent = appRegistry.find((app) => app.id === win.appId)?.component
-        return (
-          <Window
-            key={win.id}
-            windowData={{ ...win, isActive: win.id === activeWindowId }}
-            onClose={closeWindow}
-            onMinimize={toggleMinimize}
-            onMaximize={maximizeWindow}
-            onFocus={focusWindow}
-            onMove={moveWindow}
-            onResize={resizeWindow}
-            onSnap={snapWindow}
+      <div className="desktop-screen" style={desktopScreenStyle}>
+        <div className="desktop-wallpaper" />
+        <div className="desktop-display-overlay" aria-hidden="true" />
+        <div className="desktop-content">
+          <AppLauncher 
+            apps={appRegistry} 
+            desktopFiles={desktopFiles}
+            onLaunch={launchApp}
+            iconPositions={iconPositions}
+            onIconMove={handleIconMove}
+            onAppContextMenu={handleAppContextMenu}
             touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
-          >
-            {AppComponent ? <AppComponent onWindowTitleChange={(title) => updateWindowTitle(win.id, title)} /> : (
-              <div className="window-placeholder">
-                <div className="window-placeholder-title">{win.title}</div>
-                <div className="window-placeholder-body">
-                  App content for {win.title} will go here.
-                </div>
-              </div>
-            )}
-          </Window>
-        )
-      })}
-
-      <ContextMenu
-        visible={contextMenu.visible}
-        x={contextMenu.x}
-        y={contextMenu.y}
-        items={contextMenuItems.length ? contextMenuItems : desktopContextItems}
-        onClose={closeContextMenu}
-      />
-
-      <StartMenu
-        visible={showStartMenu}
-        onClose={closeStartMenu}
-        apps={appRegistry}
-        onLaunch={launchApp}
-        onLock={onLock}
-        onLogout={onLogout}
-        onRestart={onRestart}
-        onShutdown={onShutdown}
-        onSleep={onSleep}
-        updateStatus={updateStatus}
-        recentApps={recentApps}
-        searchQuery={taskbarSearchQuery}
-        onSearchQueryChange={handleTaskbarSearchChange}
-      />
-
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
-            notification={toast}
-            onClose={closeToast}
           />
-        ))}
-      </div>
+        </div>
 
-      {showNotificationCenter && (
-        <NotificationCenter onClose={() => setShowNotificationCenter(false)} />
-      )}
+        {windows.map((win) => {
+          const AppComponent = appRegistry.find((app) => app.id === win.appId)?.component
+          return (
+            <Window
+              key={win.id}
+              windowData={{ ...win, isActive: win.id === activeWindowId }}
+              onClose={closeWindow}
+              onMinimize={toggleMinimize}
+              onMaximize={maximizeWindow}
+              onFocus={focusWindow}
+              onMove={moveWindow}
+              onResize={resizeWindow}
+              onSnap={snapWindow}
+              keepMountedWhenMinimized={SESSION_PERSISTENT_APP_IDS.has(win.appId)}
+              touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
+            >
+              {AppComponent ? <AppComponent onWindowTitleChange={(title) => updateWindowTitle(win.id, title)} /> : (
+                <div className="window-placeholder">
+                  <div className="window-placeholder-title">{win.title}</div>
+                  <div className="window-placeholder-body">
+                    App content for {win.title} will go here.
+                  </div>
+                </div>
+              )}
+            </Window>
+          )
+        })}
 
-      {showCalendar && (
-        <Calendar onClose={() => setShowCalendar(false)} />
-      )}
-
-      {showActionCenter && (
-        <ActionCenter onClose={() => setShowActionCenter(false)} />
-      )}
-
-      {showAppSwitcher && (
-        <AppSwitcher
-          windows={windows.filter(w => !w.minimized)}
-          selectedIndex={appSwitcherIndex}
-          onSelect={(index) => {
-            const visibleWindows = windows.filter(w => !w.minimized)
-            if (index < visibleWindows.length) {
-              setAppSwitcherIndex(index)
-            }
-          }}
-          onClose={() => setShowAppSwitcher(false)}
+        <ContextMenu
+          visible={contextMenu.visible}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems.length ? contextMenuItems : desktopContextItems}
+          onClose={closeContextMenu}
         />
-      )}
 
-      <Taskbar 
-        windows={windows} 
-        onToggleMinimize={toggleMinimize}
-        onFocusWindow={focusWindow}
-        user={user}
-        onLogout={onLogout}
-        onLock={onLock}
-        onSleep={onSleep}
-        onStartClick={toggleStartMenu}
-        onNotificationClick={() => setShowNotificationCenter(!showNotificationCenter)}
-        onActionCenterClick={() => setShowActionCenter(!showActionCenter)}
-        onCalendarClick={() => setShowCalendar(!showCalendar)}
-        pinnedApps={appRegistry.filter((app) => pinnedAppIds.includes(app.id))}
-        onTogglePin={handleTogglePin}
-        onLaunchPinned={handleLaunchPinned}
-        isPinned={(appId) => pinnedAppIds.includes(appId)}
-        searchQuery={taskbarSearchQuery}
-        onSearchChange={handleTaskbarSearchChange}
-        isSleeping={isSleeping}
-      />
+        <StartMenu
+          visible={showStartMenu}
+          onClose={closeStartMenu}
+          apps={appRegistry}
+          onLaunch={launchApp}
+          onLock={onLock}
+          onLogout={onLogout}
+          onRestart={onRestart}
+          onShutdown={onShutdown}
+          onSleep={onSleep}
+          updateStatus={updateStatus}
+          recentApps={recentApps}
+          searchQuery={taskbarSearchQuery}
+          onSearchQueryChange={handleTaskbarSearchChange}
+        />
+
+        <div className="toast-container">
+          {toasts.map((toast) => (
+            <Toast
+              key={toast.id}
+              id={toast.id}
+              notification={toast}
+              onClose={closeToast}
+            />
+          ))}
+        </div>
+
+        {showNotificationCenter && (
+          <NotificationCenter onClose={() => setShowNotificationCenter(false)} />
+        )}
+
+        {showCalendar && (
+          <Calendar onClose={() => setShowCalendar(false)} />
+        )}
+
+        {showActionCenter && (
+          <ActionCenter onClose={() => setShowActionCenter(false)} />
+        )}
+
+        {showAppSwitcher && (
+          <AppSwitcher
+            windows={windows.filter(w => !w.minimized)}
+            selectedIndex={appSwitcherIndex}
+            onSelect={(index) => {
+              const visibleWindows = windows.filter(w => !w.minimized)
+              if (index < visibleWindows.length) {
+                setAppSwitcherIndex(index)
+              }
+            }}
+            onClose={() => setShowAppSwitcher(false)}
+          />
+        )}
+
+        <Taskbar 
+          windows={windows} 
+          onToggleMinimize={toggleMinimize}
+          onFocusWindow={focusWindow}
+          user={user}
+          onLogout={onLogout}
+          onLock={onLock}
+          onSleep={onSleep}
+          onStartClick={toggleStartMenu}
+          onNotificationClick={() => setShowNotificationCenter(!showNotificationCenter)}
+          onActionCenterClick={() => setShowActionCenter(!showActionCenter)}
+          onCalendarClick={() => setShowCalendar(!showCalendar)}
+          pinnedApps={appRegistry.filter((app) => pinnedAppIds.includes(app.id))}
+          onTogglePin={handleTogglePin}
+          onLaunchPinned={handleLaunchPinned}
+          isPinned={(appId) => pinnedAppIds.includes(appId)}
+          searchQuery={taskbarSearchQuery}
+          onSearchChange={handleTaskbarSearchChange}
+          isSleeping={isSleeping}
+        />
+      </div>
     </div>
   )
 }
@@ -1117,4 +1182,91 @@ function loadArmouryDeviceSettings() {
     console.warn('Failed to load Armoury Crate device settings in Desktop:', error)
     return { 'touch-pad': true, 'win-key': true }
   }
+}
+
+function loadArmouryDisplaySettings() {
+  try {
+    const savedSettings = localStorage.getItem(ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY)
+    if (!savedSettings) return DEFAULT_ARMOURY_DISPLAY_SETTINGS
+
+    return normalizeArmouryDisplaySettings(JSON.parse(savedSettings))
+  } catch (error) {
+    console.warn('Failed to load Armoury Crate display settings in Desktop:', error)
+    return DEFAULT_ARMOURY_DISPLAY_SETTINGS
+  }
+}
+
+function normalizeArmouryDisplaySettings(value) {
+  const selectedPreset = normalizeArmouryDisplayPreset(value?.selectedPreset)
+
+  const colorTemperature = Number(value?.colorTemperature)
+
+  return {
+    ...DEFAULT_ARMOURY_DISPLAY_SETTINGS,
+    ...value,
+    selectedPreset,
+    colorTemperature: Number.isFinite(colorTemperature) ? Math.min(100, Math.max(0, colorTemperature)) : DEFAULT_ARMOURY_DISPLAY_SETTINGS.colorTemperature,
+    gameVisualEnabled: value?.gameVisualEnabled ?? DEFAULT_ARMOURY_DISPLAY_SETTINGS.gameVisualEnabled
+  }
+}
+
+function normalizeArmouryDisplayPreset(value) {
+  const normalizedValue = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+  const presetMap = {
+    default: 'default',
+    racing: 'racing',
+    scenery: 'scenery',
+    'rts-rpg': 'rts-rpg',
+    'rts/rpg': 'rts-rpg',
+    fps: 'fps',
+    cinema: 'cinema',
+    eyecare: 'eyecare',
+    'eye-care': 'eyecare',
+    vivid: 'vivid',
+    'e-reading': 'e-reading',
+    ereading: 'e-reading'
+  }
+
+  return presetMap[normalizedValue] || DEFAULT_ARMOURY_DISPLAY_SETTINGS.selectedPreset
+}
+
+function getDesktopScreenStyle(displaySettings) {
+  const presetId = displaySettings.gameVisualEnabled ? displaySettings.selectedPreset : 'default'
+  const presetFilterMap = {
+    default: 'none',
+    racing: 'brightness(1.05) contrast(1.08) saturate(0.94)',
+    scenery: 'brightness(1.08) contrast(1.04) saturate(1.2)',
+    'rts-rpg': 'brightness(1.03) contrast(1.12) saturate(0.98)',
+    fps: 'brightness(1.1) contrast(1.18) saturate(0.9)',
+    cinema: 'brightness(0.99) contrast(1.16) saturate(1.18)',
+    eyecare: 'brightness(1.02) contrast(0.97) saturate(0.88) sepia(0.12)',
+    vivid: 'brightness(1.1) contrast(1.08) saturate(1.34)',
+    'e-reading': 'brightness(1.03) contrast(0.94) saturate(0.78) sepia(0.22)'
+  }
+  const safeColorTemperature = Number.isFinite(Number(displaySettings.colorTemperature))
+    ? Math.min(100, Math.max(0, Number(displaySettings.colorTemperature)))
+    : DEFAULT_ARMOURY_DISPLAY_SETTINGS.colorTemperature
+  const temperatureDelta = (safeColorTemperature - 50) / 50
+  const tintColor = getDisplayTemperatureTint(displaySettings.colorTemperature)
+  const tintStrength = Math.abs(temperatureDelta) * 0.34
+  const wallpaperTemperatureFilter =
+    temperatureDelta < 0
+      ? `sepia(${(Math.abs(temperatureDelta) * 0.32).toFixed(3)}) saturate(${(1 + Math.abs(temperatureDelta) * 0.18).toFixed(3)})`
+      : `brightness(${(1 + Math.abs(temperatureDelta) * 0.04).toFixed(3)}) saturate(${(1 - Math.abs(temperatureDelta) * 0.1).toFixed(3)}) hue-rotate(${(temperatureDelta * 8).toFixed(2)}deg)`
+
+  return {
+    '--desktop-screen-filter': presetFilterMap[presetId] || presetFilterMap.default,
+    '--desktop-screen-tint': tintColor,
+    '--desktop-screen-tint-opacity': tintStrength.toFixed(3),
+    '--desktop-wallpaper-temperature-filter': wallpaperTemperatureFilter
+  }
+}
+
+function getDisplayTemperatureTint(value) {
+  if (value <= 40) return '#ff9f4a'
+  if (value >= 60) return '#8fdcf9'
+  return '#efe9de'
 }
