@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   AudioLines,
@@ -22,8 +22,23 @@ import {
   Volume2
 } from 'lucide-react'
 import ContentPlatformPage from './armoury-crate/content-platform/ContentPlatformPage.jsx'
+import FeatureLibraryPage from './armoury-crate/feature-library/FeatureLibraryPage.jsx'
+import {
+  ARMOURY_FEATURE_LIBRARY_STORAGE_KEY,
+  isArmouryNavVisible,
+  loadArmouryFeatureLibraryState
+} from './armoury-crate/feature-library/featureLibraryData.js'
 import GameLibraryPage from './armoury-crate/game-library/GameLibraryPage.jsx'
 import MacrosPage from './armoury-crate/macros/MacrosPage.jsx'
+import PromotionPage from './armoury-crate/promotion/PromotionPage.jsx'
+import SettingsPage from './armoury-crate/settings/SettingsPage.jsx'
+import {
+  ARMOURY_APP_SETTINGS_STORAGE_KEY,
+  getInitialArmouryLaunchPage,
+  getResolvedArmouryThemeId,
+  loadArmouryAppSettingsState
+} from './armoury-crate/settings/settingsData.js'
+import UserCenterPage from './armoury-crate/user-center/UserCenterPage.jsx'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import '../styles/apps/armoury-crate.css'
 
@@ -627,7 +642,7 @@ function createResourceMonitorSeries(history, maxValue = 14, amplitudePercent = 
 }
 
 export default function ArmouryCrateApp({ onWindowTitleChange }) {
-  const [activeNav, setActiveNav] = useState('home')
+  const [activeNav, setActiveNav] = useState(() => getInitialArmouryLaunchPage())
   const [activeMode, setActiveMode] = useState('silent')
   const [startupStage, setStartupStage] = useState('trace')
   const [telemetry, setTelemetry] = useState(() => createTelemetrySnapshot('silent'))
@@ -644,6 +659,9 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   const [lightingState, setLightingState] = useState(() => loadArmouryLightingState())
   const [audioState, setAudioState] = useState(() => loadArmouryAudioState())
   const [resourceMonitorState, setResourceMonitorState] = useState(() => loadArmouryResourceMonitorState())
+  const [featureLibraryState, setFeatureLibraryState] = useState(() => loadArmouryFeatureLibraryState())
+  const [featureLibraryOperations, setFeatureLibraryOperations] = useState({})
+  const [appSettingsState, setAppSettingsState] = useState(() => loadArmouryAppSettingsState())
   const [auraSyncState, setAuraSyncState] = useState(() => loadArmouryAuraSyncState())
   const [scenarioProfileState, setScenarioProfileState] = useState(() => loadArmouryScenarioProfileState())
   const [displaySettingsState, setDisplaySettingsState] = useState(() => loadArmouryDisplaySettingsState())
@@ -651,6 +669,13 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   const [isScenarioAppsLoading, setIsScenarioAppsLoading] = useState(false)
   const [isScenarioSaving, setIsScenarioSaving] = useState(false)
   const [resourceMonitorRuntime, setResourceMonitorRuntime] = useState(DEFAULT_RESOURCE_MONITOR_RUNTIME)
+  const featureLibraryTimeoutsRef = useRef(new Map())
+  const visibleSidebarSections = SIDEBAR_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => isArmouryNavVisible(item.id, featureLibraryState))
+    }))
+    .filter((section) => section.items.length > 0)
   const shouldUseSharedSystemData =
     activeNav === 'home' ||
     activeNav === 'game-library' ||
@@ -726,6 +751,16 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   }, [resourceMonitorState])
 
   useEffect(() => {
+    localStorage.setItem(ARMOURY_FEATURE_LIBRARY_STORAGE_KEY, JSON.stringify(featureLibraryState))
+    window.dispatchEvent(new CustomEvent('jezos_armoury_feature_library_updated', { detail: featureLibraryState }))
+  }, [featureLibraryState])
+
+  useEffect(() => {
+    localStorage.setItem(ARMOURY_APP_SETTINGS_STORAGE_KEY, JSON.stringify(appSettingsState))
+    window.dispatchEvent(new CustomEvent('jezos_armoury_app_settings_updated', { detail: appSettingsState }))
+  }, [appSettingsState])
+
+  useEffect(() => {
     localStorage.setItem(ARMOURY_AURA_SYNC_STATE_STORAGE_KEY, JSON.stringify(auraSyncState))
   }, [auraSyncState])
 
@@ -743,6 +778,19 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
       previous.filter((pid) => runningProcesses.some((process) => process.pid === pid))
     )
   }, [sharedProcesses])
+
+  useEffect(
+    () => () => {
+      featureLibraryTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
+      featureLibraryTimeoutsRef.current.clear()
+    },
+    []
+  )
+
+  useEffect(() => {
+    if (isArmouryNavVisible(activeNav, featureLibraryState)) return
+    setActiveNav('feature-library')
+  }, [activeNav, featureLibraryState])
 
   useEffect(() => {
     if (activeNav !== 'home') return undefined
@@ -928,8 +976,68 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   }, [activeNav])
 
   function handleNavSelect(itemId) {
+    if (!isArmouryNavVisible(itemId, featureLibraryState)) return
     setActiveNav(itemId)
     if (itemId === 'devices') setActiveDeviceTab(DEVICE_TAB_DEFAULT)
+  }
+
+  function toggleFeatureLibraryModule(moduleId) {
+    if (featureLibraryOperations[moduleId]) return
+    if (moduleId === 'aura-wallpaper' && featureLibraryState.modules['playground-core'] !== 'installed') return
+
+    const isInstalling = featureLibraryState.modules[moduleId] !== 'installed'
+    const nextOperations = {
+      [moduleId]: isInstalling ? 'installing' : 'removing'
+    }
+
+    if (!isInstalling && moduleId === 'playground-core' && featureLibraryState.modules['aura-wallpaper'] === 'installed') {
+      nextOperations['aura-wallpaper'] = 'removing'
+    }
+
+    setFeatureLibraryOperations((previous) => ({
+      ...previous,
+      ...nextOperations
+    }))
+
+    const timeoutId = window.setTimeout(() => {
+      setFeatureLibraryState((previous) => {
+        const nextModules = { ...previous.modules }
+
+        if (isInstalling) {
+          nextModules[moduleId] = 'installed'
+        } else {
+          nextModules[moduleId] = 'available'
+
+          if (moduleId === 'playground-core') {
+            nextModules['aura-wallpaper'] = 'available'
+          }
+        }
+
+        return {
+          ...previous,
+          modules: nextModules
+        }
+      })
+
+      setFeatureLibraryOperations((previous) => {
+        const nextState = { ...previous }
+        Object.keys(nextOperations).forEach((operationKey) => {
+          delete nextState[operationKey]
+        })
+        return nextState
+      })
+
+      featureLibraryTimeoutsRef.current.delete(moduleId)
+    }, isInstalling ? 1180 : 980)
+
+    featureLibraryTimeoutsRef.current.set(moduleId, timeoutId)
+  }
+
+  function updateAppSettingsState(updater) {
+    setAppSettingsState((previous) => ({
+      ...previous,
+      ...(typeof updater === 'function' ? updater(previous) : updater)
+    }))
   }
 
   async function refreshMemoryProcesses() {
@@ -1189,7 +1297,9 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
   }
 
   return (
-    <div className={`armoury-crate-app ${startupStage !== 'done' ? 'startup-active' : ''}`}>
+    <div
+      className={`armoury-crate-app ${startupStage !== 'done' ? 'startup-active' : ''} armoury-theme-${getResolvedArmouryThemeId(appSettingsState.themeId)}`}
+    >
       <aside className="armoury-crate-sidebar">
         <div className="armoury-crate-sidebar-top">
           <div className="armoury-crate-brand">
@@ -1205,7 +1315,7 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
         </div>
 
         <nav className="armoury-crate-nav" aria-label="Armoury Crate navigation">
-          {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
+          {visibleSidebarSections.map((section, sectionIndex) => (
             <div key={`section-${sectionIndex}`} className={`armoury-crate-nav-section ${section.footer ? 'footer-section' : ''}`}>
               {section.label ? <div className="armoury-crate-nav-label">{section.label}</div> : null}
               {section.items.map((item) => {
@@ -1284,6 +1394,20 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
               setActiveDeviceTab('lighting')
             }}
           />
+        ) : activeNav === 'feature-library' ? (
+          <FeatureLibraryPage
+            featureState={featureLibraryState}
+            operations={featureLibraryOperations}
+            onToggleModule={toggleFeatureLibraryModule}
+          />
+        ) : activeNav === 'user-center' ? (
+          <UserCenterPage />
+        ) : activeNav === 'settings' ? (
+          <SettingsPage
+            settingsState={appSettingsState}
+            featureLibraryState={featureLibraryState}
+            onChange={updateAppSettingsState}
+          />
         ) : activeNav === 'macros' ? (
           <MacrosPage />
         ) : activeNav === 'scenario-profiles' ? (
@@ -1311,15 +1435,18 @@ export default function ArmouryCrateApp({ onWindowTitleChange }) {
           <GameLibraryPage
             runningProcesses={runningProcesses}
             onRefreshProcesses={refreshSharedSystemData}
-            onOpenGameDeals={() => setActiveNav('content-platform')}
+            onOpenGameDeals={() => setActiveNav(isArmouryNavVisible('promotion', featureLibraryState) ? 'promotion' : 'feature-library')}
           />
         ) : activeNav === 'content-platform' ? (
           <ContentPlatformPage />
+        ) : activeNav === 'promotion' ? (
+          <PromotionPage />
         ) : (
           <ArmouryCrateHomePage
             telemetry={telemetry}
             activeMode={activeMode}
             onModeChange={setActiveMode}
+            appSettingsState={appSettingsState}
             systemStats={systemStats}
             performanceHistory={performanceHistory}
             runningProcesses={runningProcesses}
@@ -1472,6 +1599,7 @@ function ArmouryCrateHomePage({
   telemetry,
   activeMode,
   onModeChange,
+  appSettingsState,
   systemStats,
   performanceHistory,
   runningProcesses,
@@ -1502,7 +1630,10 @@ function ArmouryCrateHomePage({
       <div className="armoury-crate-home-grid">
         <div className="armoury-crate-left-column">
           <div className="armoury-crate-hero">
-            <LaptopHero />
+            <LaptopHero
+              deviceImageStyle={appSettingsState.deviceImageStyle}
+              reloadToken={appSettingsState.deviceImageReloadToken}
+            />
             <div className="armoury-crate-device-name">ASUS TUF GAMING F15</div>
             <div className="armoury-crate-device-spec">11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz</div>
           </div>
@@ -4698,11 +4829,16 @@ function TelemetryPanel({ title, rows }) {
   )
 }
 
-function LaptopHero() {
+function LaptopHero({ deviceImageStyle = 'photographic', reloadToken = 0 }) {
   const [usePhoto, setUsePhoto] = useState(true)
+
+  useEffect(() => {
+    setUsePhoto(true)
+  }, [reloadToken, deviceImageStyle])
+
   return (
     <div className="armoury-crate-laptop-shell" aria-label="Laptop preview illustration">
-      {usePhoto ? (
+      {deviceImageStyle !== 'sketch' && usePhoto ? (
         <img
           src={HERO_IMAGE_PUBLIC_PATH}
           alt="ASUS TUF Gaming F15 laptop"
