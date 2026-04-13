@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Accessibility, Battery, Bell, ChevronUp, Lock, LogOut, Moon, Search, SunMedium, Volume2, Wifi, Zap } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
+import { Battery, ChevronUp, Lock, LogOut, Moon, Search, SunMedium, Volume2, Wifi, Zap } from 'lucide-react'
 
 export default function Taskbar({
   windows,
@@ -26,6 +26,7 @@ export default function Taskbar({
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [wifiSignal, setWifiSignal] = useState(3)
   const [battery, setBattery] = useState({ level: 80, charging: false })
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const [volume, setVolume] = useState(() => {
     try {
       const saved = localStorage.getItem('jez_os_volume')
@@ -34,7 +35,6 @@ export default function Taskbar({
       return 75
     }
   })
-  const [showVolumeControl, setShowVolumeControl] = useState(false)
   const [batterySupported, setBatterySupported] = useState(true)
 
   const normalizeBatteryState = (value, fallbackLevel = 80) => {
@@ -134,6 +134,7 @@ export default function Taskbar({
   }, [])
 
   const displayBattery = normalizeBatteryState(battery, 80)
+  const batteryIconSrc = getTaskbarBatteryIconSrc(displayBattery, batterySupported)
 
   useEffect(() => {
     try {
@@ -142,6 +143,36 @@ export default function Taskbar({
       console.warn('Failed to save volume:', error)
     }
   }, [volume])
+
+  useEffect(() => {
+    if (isSleeping) return undefined
+
+    let cancelled = false
+
+    const loadNotificationCount = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/notification/list')
+        if (!response.ok) return
+
+        const items = await response.json()
+        if (!cancelled && Array.isArray(items)) {
+          setUnreadNotificationCount(items.filter((item) => !item.read).length)
+        }
+      } catch {
+        if (!cancelled) {
+          setUnreadNotificationCount(0)
+        }
+      }
+    }
+
+    loadNotificationCount()
+    const interval = setInterval(loadNotificationCount, 5000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [isSleeping])
 
   useEffect(() => {
     if (isSleeping) return undefined
@@ -196,16 +227,20 @@ export default function Taskbar({
   }
 
   const renderTaskbarIcon = (entry, imageClassName = 'taskbar-app-image') => {
-    if (entry.iconSrc) {
-      return <img src={entry.iconSrc} alt="" className={imageClassName} />
+    const iconSrc = entry.iconSrc || entry.desktopIconSrc
+
+    if (iconSrc) {
+      return <img src={iconSrc} alt="" className={imageClassName} />
     }
 
     return entry.icon ? <entry.icon className="taskbar-app-icon" /> : null
   }
 
   const renderPreviewIcon = (entry) => {
-    if (entry.iconSrc) {
-      return <img src={entry.iconSrc} alt="" className="taskbar-preview-image" />
+    const iconSrc = entry.iconSrc || entry.desktopIconSrc
+
+    if (iconSrc) {
+      return <img src={iconSrc} alt="" className="taskbar-preview-image" />
     }
 
     return entry.icon ? <entry.icon size={16} /> : null
@@ -213,19 +248,37 @@ export default function Taskbar({
 
   const weatherSnapshot = getTaskbarWeatherSnapshot(time)
   const WeatherIcon = weatherSnapshot.icon
-  const userInitials = getUserInitials(user?.username)
-
+  const weatherIconSrc = weatherSnapshot.iconSrc || null
   return (
     <div className="taskbar">
-      <div className="taskbar-weather" title="Desktop weather simulation">
-        <span className={`taskbar-weather-badge ${weatherSnapshot.tone}`}>
-          <WeatherIcon className="taskbar-weather-icon" />
+      <button
+        type="button"
+        className="taskbar-weather"
+        title={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount} unread)` : 'Desktop weather and notifications'}
+        onClick={(event) => {
+          event.stopPropagation()
+          onNotificationClick?.()
+        }}
+      >
+        <span className="taskbar-weather-badge-shell">
+          <span className={`taskbar-weather-badge ${weatherSnapshot.tone} ${weatherIconSrc ? 'image' : ''}`}>
+            {weatherIconSrc ? (
+              <img src={weatherIconSrc} alt="" className="taskbar-weather-image" />
+            ) : (
+              <WeatherIcon className="taskbar-weather-icon" />
+            )}
+          </span>
+          {unreadNotificationCount > 0 ? (
+            <span className="taskbar-weather-alert" aria-label={`${unreadNotificationCount} unread notifications`}>
+              {Math.min(unreadNotificationCount, 9)}
+            </span>
+          ) : null}
         </span>
         <span className="taskbar-weather-copy">
           <strong>{formatTaskbarTemperature(weatherSnapshot.temperature)}</strong>
           <small>{weatherSnapshot.label}</small>
         </span>
-      </div>
+      </button>
 
       <div className="taskbar-center">
         <div className="taskbar-center-shell">
@@ -374,72 +427,46 @@ export default function Taskbar({
       </div>
 
       <div className="taskbar-right">
-        <div className="taskbar-systray">
-          <button
-            type="button"
-            className="taskbar-systray-item"
-            title="Hidden icons"
-          >
-            <ChevronUp className="taskbar-systray-icon" />
-          </button>
-
-          <button
-            type="button"
-            className="taskbar-systray-item"
-            title={`Wi-Fi Signal: ${wifiSignal}/4`}
-          >
-            <Wifi className={`taskbar-systray-icon wifi-signal-${wifiSignal}`} />
-          </button>
-
-          <div className="taskbar-systray-item volume-control">
-            <button
-              type="button"
-              className="taskbar-systray-button"
-              onClick={(event) => {
-                event.stopPropagation()
-                setShowVolumeControl(!showVolumeControl)
-              }}
-              title={`Volume: ${volume}%`}
-            >
-              <Volume2 className="taskbar-systray-icon volume-icon" />
-            </button>
-
-            {showVolumeControl ? (
-              <div className="volume-slider-container">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(event) => setVolume(Number(event.target.value))}
-                  className="volume-slider"
-                />
-                <span className="volume-value">{volume}%</span>
-              </div>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            className="taskbar-systray-item"
-            title={batterySupported ? `Battery: ${displayBattery.level}%${displayBattery.charging ? ' (Charging)' : ''}` : 'Battery: Not available on this browser/device'}
-          >
-            <span className="taskbar-battery-shell">
-              <Battery
-                className={`taskbar-systray-icon battery-icon ${displayBattery.charging ? 'charging' : ''} ${displayBattery.level <= 20 ? 'low' : ''}`}
-                style={{ color: batterySupported ? (displayBattery.charging ? '#fbbf24' : displayBattery.level <= 20 ? '#ef4444' : 'currentColor') : '#94a3b8' }}
-              />
-              {displayBattery.charging ? (
-                <Zap className="taskbar-battery-bolt" />
-              ) : null}
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          className="taskbar-systray-item taskbar-tray-chevron"
+          title="Hidden icons"
+        >
+          <ChevronUp className="taskbar-systray-icon" />
+        </button>
 
         <div className="taskbar-locale" title="Keyboard layout">
           <span>ENG</span>
           <small>US</small>
         </div>
+
+        <button
+          type="button"
+          className="taskbar-quick-settings"
+          onClick={(event) => {
+            event.stopPropagation()
+            onActionCenterClick()
+          }}
+          title={`Quick settings · Wi-Fi ${wifiSignal}/4 · Volume ${volume}%${batterySupported ? ` · Battery ${displayBattery.level}%` : ''}`}
+        >
+          <Wifi className={`taskbar-systray-icon wifi-signal-${wifiSignal}`} />
+          <Volume2 className="taskbar-systray-icon volume-icon" />
+          <span className="taskbar-battery-shell">
+            {batteryIconSrc ? (
+              <img src={batteryIconSrc} alt="" className="taskbar-battery-image" />
+            ) : (
+              <>
+                <Battery
+                  className={`taskbar-systray-icon battery-icon ${displayBattery.charging ? 'charging' : ''} ${displayBattery.level <= 20 ? 'low' : ''}`}
+                  style={{ color: batterySupported ? (displayBattery.charging ? '#fbbf24' : displayBattery.level <= 20 ? '#ef4444' : 'currentColor') : '#94a3b8' }}
+                />
+                {displayBattery.charging ? (
+                  <Zap className="taskbar-battery-bolt" />
+                ) : null}
+              </>
+            )}
+          </span>
+        </button>
 
         <button
           type="button"
@@ -462,39 +489,20 @@ export default function Taskbar({
 
         <button
           type="button"
-          className="taskbar-action-center"
-          onClick={(event) => {
-            event.stopPropagation()
-            onActionCenterClick()
-          }}
-          title="Accessibility and quick settings"
-        >
-          <Accessibility className="taskbar-action-center-icon" />
-        </button>
-
-        <button
-          type="button"
-          className="taskbar-notification"
-          onClick={(event) => {
-            event.stopPropagation()
-            onNotificationClick()
-          }}
-          title="Notifications"
-        >
-          <Bell className="taskbar-notification-icon" />
-        </button>
-
-        <button
-          type="button"
-          className="taskbar-user"
-          title={user.username}
+          className={`taskbar-user ${showUserMenu ? 'open' : ''}`}
+          title={user?.username || 'Account'}
+          aria-label={user?.username || 'Account'}
+          aria-haspopup="menu"
+          aria-expanded={showUserMenu}
           onClick={(event) => {
             event.stopPropagation()
             setShowUserMenu(!showUserMenu)
           }}
         >
-          <span className="taskbar-user-avatar" aria-hidden="true">{userInitials}</span>
-          <span className="taskbar-user-label">{user.username}</span>
+          <span className="taskbar-user-avatar" aria-hidden="true">
+            <img src="/taskbar-icons/profile-person-regular.svg" alt="" className="taskbar-user-avatar-image" />
+          </span>
+          <span className="taskbar-user-label">{user?.username || 'Account'}</span>
         </button>
 
         {showUserMenu ? (
@@ -521,28 +529,68 @@ export default function Taskbar({
 function getTaskbarWeatherSnapshot(time) {
   const hour = time.getHours()
   if (hour >= 6 && hour < 17) {
-    return { icon: SunMedium, temperature: 29, label: 'Partly cloudy', tone: 'day' }
+    return {
+      icon: SunMedium,
+      iconSrc: '/weather-icons/sun-behind-cloud.png',
+      temperature: 25,
+      label: 'Mostly cloudy',
+      tone: 'day'
+    }
   }
 
-  return { icon: Moon, temperature: 24, label: 'Clear', tone: 'night' }
+  return {
+    icon: Moon,
+    iconSrc: '/weather-icons/crescent-moon.png',
+    temperature: 24,
+    label: 'Clear',
+    tone: 'night'
+  }
 }
 
 function formatTaskbarTemperature(value) {
   return `${value}\u00B0C`
 }
 
-function getUserInitials(username) {
-  if (!username) return 'U'
-  return username.trim().slice(0, 1).toUpperCase()
+function getTaskbarBatteryIconSrc(batteryState, isSupported) {
+  if (!isSupported) return null
+  if (batteryState.level <= 20) return null
+
+  return batteryState.charging
+    ? '/taskbar-icons/battery-charging-good.svg'
+    : '/taskbar-icons/battery-not-charging.svg'
 }
 
 function WindowsStartIcon({ className }) {
+  const iconId = useId()
+
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <path d="M3 4.25C3 3.56 3.56 3 4.25 3h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 11.6 3 11.04 3 10.35v-6.1Z" fill="currentColor" />
-      <path d="M12.4 4.25C12.4 3.56 12.96 3 13.65 3h6.1C20.44 3 21 3.56 21 4.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill="currentColor" />
-      <path d="M3 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 21 3 20.44 3 19.75v-6.1Z" fill="currentColor" />
-      <path d="M12.4 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill="currentColor" />
+      <defs>
+        <linearGradient id={`${iconId}-pane-tl`} x1="3" y1="3" x2="11.6" y2="11.6" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#8BE3FF" />
+          <stop offset="0.42" stopColor="#4DBFFF" />
+          <stop offset="1" stopColor="#117DEE" />
+        </linearGradient>
+        <linearGradient id={`${iconId}-pane-tr`} x1="12.4" y1="3" x2="21" y2="11.6" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#7AD9FF" />
+          <stop offset="0.48" stopColor="#34AFFF" />
+          <stop offset="1" stopColor="#0A6FE3" />
+        </linearGradient>
+        <linearGradient id={`${iconId}-pane-bl`} x1="3" y1="12.4" x2="11.6" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#59C7FF" />
+          <stop offset="0.46" stopColor="#2099FF" />
+          <stop offset="1" stopColor="#085FD5" />
+        </linearGradient>
+        <linearGradient id={`${iconId}-pane-br`} x1="12.4" y1="12.4" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#46BCFF" />
+          <stop offset="0.46" stopColor="#128CFA" />
+          <stop offset="1" stopColor="#0455C7" />
+        </linearGradient>
+      </defs>
+      <path d="M3 4.25C3 3.56 3.56 3 4.25 3h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 11.6 3 11.04 3 10.35v-6.1Z" fill={`url(#${iconId}-pane-tl)`} />
+      <path d="M12.4 4.25C12.4 3.56 12.96 3 13.65 3h6.1C20.44 3 21 3.56 21 4.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill={`url(#${iconId}-pane-tr)`} />
+      <path d="M3 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1C3.56 21 3 20.44 3 19.75v-6.1Z" fill={`url(#${iconId}-pane-bl)`} />
+      <path d="M12.4 13.65c0-.69.56-1.25 1.25-1.25h6.1c.69 0 1.25.56 1.25 1.25v6.1c0 .69-.56 1.25-1.25 1.25h-6.1c-.69 0-1.25-.56-1.25-1.25v-6.1Z" fill={`url(#${iconId}-pane-br)`} />
     </svg>
   )
 }

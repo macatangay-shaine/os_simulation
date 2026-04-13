@@ -135,8 +135,10 @@ export default function AppLauncher({
   }
 
   const renderAppIcon = (app) => {
-    if (app.iconSrc) {
-      return <img src={app.iconSrc} alt="" className="app-icon-image" />
+    const iconSrc = app.desktopIconSrc || app.iconSrc
+
+    if (iconSrc) {
+      return <img src={iconSrc} alt="" className="app-icon-image" />
     }
 
     return app.icon ? <app.icon className="app-icon-svg" /> : null
@@ -175,7 +177,7 @@ export default function AppLauncher({
             onClick={() => onLaunch(app)}
             onContextMenu={(e) => onAppContextMenu?.(e, app)}
           >
-            <div className="app-icon-badge">
+            <div className={`app-icon-badge ${(app.desktopIconSrc || app.iconSrc) ? 'app-icon-badge-image' : ''}`}>
               {renderAppIcon(app)}
             </div>
             <div className="app-icon-label">{app.title}</div>

@@ -88,6 +88,25 @@ const APP_ICON_SOURCES = {
   'armourycrate': '/armoury-crate-icon.png'
 }
 
+const APP_DESKTOP_ICON_SOURCES = {
+  'terminal': '/desktop-icons/terminal.png',
+  'files': '/desktop-icons/files.png',
+  'localfiles': '/desktop-icons/localfiles.png',
+  'notes': '/desktop-icons/notes.png',
+  'settings': '/desktop-icons/settings-exact.svg',
+  'monitor': '/desktop-icons/monitor.png',
+  'appstore': '/desktop-icons/appstore.png',
+  'eventviewer': '/desktop-icons/eventviewer.png',
+  'diagnostics': '/desktop-icons/diagnostics.png',
+  'calculator': '/desktop-icons/calculator.png',
+  'camera': '/desktop-icons/camera.png',
+  'clock': '/desktop-icons/clock.png',
+  'calendar': '/desktop-icons/calendar.png',
+  'tips': '/desktop-icons/tips.png',
+  'webbrowser': '/desktop-icons/webbrowser.png',
+  'armourycrate': '/desktop-icons/armourycrate.png'
+}
+
 const WINDOW_DEFAULTS = {
   width: 420,
   height: 280,
@@ -189,17 +208,24 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const loadApps = async () => {
       const defaultRegistry = [
-        { id: 'terminal', title: 'Terminal', icon: Terminal, component: TerminalApp },
-        { id: 'files', title: 'Files', icon: Folder, component: FileExplorer },
-        { id: 'localfiles', title: 'Local Files', icon: HardDrive, component: LocalFilesApp },
-        { id: 'notes', title: 'Notes', icon: FileText, component: NotesApp },
-        { id: 'settings', title: 'Settings', icon: Settings, component: SettingsApp },
-        { id: 'monitor', title: 'System Monitor', icon: Activity, component: SystemMonitor },
-        { id: 'webbrowser', title: 'Web Browser', icon: Package, component: WebBrowserApp },
-        { id: 'appstore', title: 'App Store', icon: Package, component: AppStore },
-        { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, component: EventViewer },
-        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics },
-        { id: 'armourycrate', title: 'Armoury Crate', icon: Shield, iconSrc: APP_ICON_SOURCES.armourycrate, component: ArmouryCrateApp }
+        { id: 'terminal', title: 'Terminal', icon: Terminal, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.terminal, component: TerminalApp },
+        { id: 'files', title: 'Files', icon: Folder, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.files, component: FileExplorer },
+        { id: 'localfiles', title: 'Local Files', icon: HardDrive, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.localfiles, component: LocalFilesApp },
+        { id: 'notes', title: 'Notes', icon: FileText, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.notes, component: NotesApp },
+        { id: 'settings', title: 'Settings', icon: Settings, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.settings, component: SettingsApp },
+        { id: 'monitor', title: 'System Monitor', icon: Activity, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.monitor, component: SystemMonitor },
+        { id: 'webbrowser', title: 'Web Browser', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.webbrowser, component: WebBrowserApp },
+        { id: 'appstore', title: 'App Store', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.appstore, component: AppStore },
+        { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.eventviewer, component: EventViewer },
+        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.diagnostics, component: SystemDiagnostics },
+        {
+          id: 'armourycrate',
+          title: 'Armoury Crate',
+          icon: Shield,
+          iconSrc: APP_ICON_SOURCES.armourycrate,
+          desktopIconSrc: APP_DESKTOP_ICON_SOURCES.armourycrate,
+          component: ArmouryCrateApp
+        }
       ]
 
       try {
@@ -231,6 +257,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           title: app.name,
           icon: APP_ICONS[app.id] || Package,
           iconSrc: APP_ICON_SOURCES[app.id] || null,
+          desktopIconSrc: APP_DESKTOP_ICON_SOURCES[app.id] || APP_ICON_SOURCES[app.id] || null,
           component: APP_COMPONENTS[app.id] || AppStore,
           installed: app.installed
         }))
@@ -239,28 +266,57 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         if (!registry.some((app) => app.id === 'appstore')) {
           registry = [
             ...registry,
-            { id: 'appstore', title: 'App Store', icon: Package, component: AppStore, installed: 1 }
+            {
+              id: 'appstore',
+              title: 'App Store',
+              icon: Package,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.appstore,
+              component: AppStore,
+              installed: 1
+            }
           ]
         }
         
         if (!registry.some((app) => app.id === 'eventviewer')) {
           registry = [
             ...registry,
-            { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, component: EventViewer, installed: 1 }
+            {
+              id: 'eventviewer',
+              title: 'Event Viewer',
+              icon: AlertCircle,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.eventviewer,
+              component: EventViewer,
+              installed: 1
+            }
           ]
         }
 
         if (!registry.some((app) => app.id === 'diagnostics')) {
           registry = [
             ...registry,
-            { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, component: SystemDiagnostics, installed: 1 }
+            {
+              id: 'diagnostics',
+              title: 'System Diagnostics',
+              icon: Stethoscope,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.diagnostics,
+              component: SystemDiagnostics,
+              installed: 1
+            }
           ]
         }
 
         if (!registry.some((app) => app.id === 'armourycrate')) {
           registry = [
             ...registry,
-            { id: 'armourycrate', title: 'Armoury Crate', icon: Shield, iconSrc: APP_ICON_SOURCES.armourycrate, component: ArmouryCrateApp, installed: 1 }
+            {
+              id: 'armourycrate',
+              title: 'Armoury Crate',
+              icon: Shield,
+              iconSrc: APP_ICON_SOURCES.armourycrate,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.armourycrate,
+              component: ArmouryCrateApp,
+              installed: 1
+            }
           ]
         }
         
@@ -794,7 +850,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         appId: app.id,
         title: options.windowTitle || app.title,
         icon: app.icon,
-        iconSrc: app.iconSrc || null,
+        iconSrc: app.iconSrc || app.desktopIconSrc || null,
+        desktopIconSrc: app.desktopIconSrc || null,
         memory,
         minimized: false,
         isMaximized: shouldStartMaximized,
