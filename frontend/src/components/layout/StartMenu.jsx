@@ -44,9 +44,13 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
     handleClose()
   }
 
+  const getMenuIconSrc = (app) => app.desktopIconSrc || app.iconSrc || null
+
   const renderMenuIcon = (app) => {
-    if (app.iconSrc) {
-      return <img src={app.iconSrc} alt="" className="start-menu-icon-image" />
+    const iconSrc = getMenuIconSrc(app)
+
+    if (iconSrc) {
+      return <img src={iconSrc} alt="" className="start-menu-icon-image" />
     }
 
     return app.icon ? <app.icon className="start-menu-icon" /> : null
@@ -83,7 +87,7 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
                   data-app={app.id}
                   onClick={() => handleAppClick(app)}
                 >
-                  <span className="start-menu-recent-icon">
+                  <span className={`start-menu-recent-icon ${getMenuIconSrc(app) ? 'start-menu-icon-shell-image' : ''}`}>
                     {renderMenuIcon(app)}
                   </span>
                   <span className="start-menu-recent-name">{app.title}</span>
@@ -106,7 +110,7 @@ export default function StartMenu({ visible, onClose, apps, onLaunch, onLock, on
                 data-app={app.id}
                 onClick={() => handleAppClick(app)}
               >
-                <span className="start-menu-app-icon">
+                <span className={`start-menu-app-icon ${getMenuIconSrc(app) ? 'start-menu-icon-shell-image' : ''}`}>
                   {renderMenuIcon(app)}
                 </span>
                 <span className="start-menu-app-name">{app.title}</span>

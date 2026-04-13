@@ -9,6 +9,7 @@ import {
   SleepScreen,
   ErrorDialog
 } from '../components/index.jsx'
+import { loadResolvedUiSettings } from '../utils/personalization.js'
 
 export default function App() {
   // Initialize bootComplete from localStorage to skip boot on browser refresh
@@ -41,33 +42,20 @@ export default function App() {
     root.style.setProperty('--win-accent', values.accentColor)
     root.style.setProperty('--win-accent-soft', hexToRgba(values.accentColor, 0.16))
     root.style.setProperty('--desktop-wallpaper', values.wallpaper)
-  }
-
-  const loadUiSettings = () => {
-    const wallpaperId = localStorage.getItem('jezos_wallpaper') || 'default'
-    const wallpaperMap = {
-      default: 'radial-gradient(circle at 20% 20%, #dbeafe, #bfdbfe 35%, #93c5fd 65%, #60a5fa)',
-      'mountain-1': "url('/wallpapers/sleep-mountain-1.svg')",
-      'mountain-2': "url('/wallpapers/sleep-mountain-2.svg')",
-      'mountain-3': "url('/wallpapers/sleep-mountain-3.svg')"
-    }
-
-    return {
-      theme: localStorage.getItem('jezos_theme') || 'light',
-      accentColor: localStorage.getItem('jezos_accent') || '#2563eb',
-      fontSize: localStorage.getItem('jezos_font_size') || 'medium',
-      highContrast: localStorage.getItem('jezos_high_contrast') === 'true',
-      wallpaper: wallpaperMap[wallpaperId] || wallpaperMap.default
-    }
+    root.style.setProperty('--desktop-wallpaper-size', values.wallpaperSize || 'cover')
+    root.style.setProperty('--desktop-wallpaper-position', values.wallpaperPosition || 'center')
+    root.style.setProperty('--desktop-wallpaper-color', values.wallpaperColor || 'transparent')
   }
 
   useEffect(() => {
-    const applyFromStorage = () => applyUiSettings(loadUiSettings())
+    const applyFromStorage = () => applyUiSettings(loadResolvedUiSettings())
     applyFromStorage()
     window.addEventListener('jezos_settings_updated', applyFromStorage)
+    window.addEventListener('resize', applyFromStorage)
 
     return () => {
       window.removeEventListener('jezos_settings_updated', applyFromStorage)
+      window.removeEventListener('resize', applyFromStorage)
     }
   }, [])
 

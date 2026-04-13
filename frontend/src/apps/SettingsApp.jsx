@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Monitor, Palette, HardDrive, Shield, Info, Users, RefreshCw } from 'lucide-react'
+import {
+  BUILTIN_WALLPAPER_OPTIONS,
+  resolveWallpaperPresentation,
+  resolveWallpaperValue
+} from '../utils/personalization.js'
 
 const SECTIONS = [
   { id: 'system', label: 'System', icon: Monitor },
@@ -44,35 +49,13 @@ export default function SettingsApp() {
     loadPermissions()
     loadUpdateStatus()
     loadSecurityData()
-    applySettings(settings)
   }, [])
 
   useEffect(() => {
     applySettings(settings)
   }, [settings])
 
-  const wallpaperOptions = [
-    {
-      id: 'default',
-      label: 'Blue Glow',
-      value: 'radial-gradient(circle at 20% 20%, #dbeafe, #bfdbfe 35%, #93c5fd 65%, #60a5fa)'
-    },
-    {
-      id: 'mountain-1',
-      label: 'Mountain Dawn',
-      value: "url('/wallpapers/sleep-mountain-1.svg')"
-    },
-    {
-      id: 'mountain-2',
-      label: 'Midnight Peaks',
-      value: "url('/wallpapers/sleep-mountain-2.svg')"
-    },
-    {
-      id: 'mountain-3',
-      label: 'Blue Ridge',
-      value: "url('/wallpapers/sleep-mountain-3.svg')"
-    }
-  ]
+  const wallpaperOptions = BUILTIN_WALLPAPER_OPTIONS
 
   const hexToRgba = (hex, alpha) => {
     const sanitized = hex.replace('#', '')
@@ -83,19 +66,18 @@ export default function SettingsApp() {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`
   }
 
-  const getWallpaperValue = (id) => {
-    const match = wallpaperOptions.find((option) => option.id === id)
-    return match?.value || wallpaperOptions[0].value
-  }
-
   const applySettings = (next) => {
     const root = document.documentElement
+    const wallpaperPresentation = resolveWallpaperPresentation(next.wallpaper)
     root.setAttribute('data-theme', next.theme)
     root.setAttribute('data-font', next.fontSize)
     root.setAttribute('data-contrast', next.highContrast ? 'high' : 'normal')
     root.style.setProperty('--win-accent', next.accentColor)
     root.style.setProperty('--win-accent-soft', hexToRgba(next.accentColor, 0.16))
-    root.style.setProperty('--desktop-wallpaper', getWallpaperValue(next.wallpaper))
+    root.style.setProperty('--desktop-wallpaper', resolveWallpaperValue(next.wallpaper))
+    root.style.setProperty('--desktop-wallpaper-size', wallpaperPresentation.size)
+    root.style.setProperty('--desktop-wallpaper-position', wallpaperPresentation.position)
+    root.style.setProperty('--desktop-wallpaper-color', wallpaperPresentation.color)
   }
 
   const loadSystemInfo = async () => {
@@ -501,7 +483,16 @@ export default function SettingsApp() {
                   >
                     <div
                       className="settings-wallpaper-preview"
-                      style={{ backgroundImage: option.value.startsWith('url') ? option.value : 'none', background: option.value }}
+                      style={
+                        option.value.startsWith('url')
+                          ? {
+                              backgroundImage: option.value,
+                              backgroundSize: option.size || 'cover',
+                              backgroundPosition: option.position || 'center',
+                              backgroundColor: option.color || 'transparent'
+                            }
+                          : { background: option.value }
+                      }
                     />
                     <div className="settings-wallpaper-name">{option.label}</div>
                   </button>

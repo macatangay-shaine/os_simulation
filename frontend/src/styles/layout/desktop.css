@@ -50,8 +50,9 @@
   position: absolute;
   inset: 0;
   background: var(--desktop-wallpaper);
-  background-size: cover;
-  background-position: center;
+  background-color: var(--desktop-wallpaper-color, transparent);
+  background-size: var(--desktop-wallpaper-size, cover);
+  background-position: var(--desktop-wallpaper-position, center);
   background-repeat: no-repeat;
   filter: var(--desktop-wallpaper-temperature-filter, none);
   pointer-events: none;
@@ -207,6 +208,11 @@
   box-shadow: none;
 }
 
+.app-icon[data-app] .app-icon-badge.app-icon-badge-image {
+  background: transparent;
+  box-shadow: none;
+}
+
 .app-icon-svg {
   width: 24px;
   height: 24px;
@@ -219,6 +225,7 @@
   height: 48px;
   display: block;
   object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.22));
 }
 
 .app-icon-label {
