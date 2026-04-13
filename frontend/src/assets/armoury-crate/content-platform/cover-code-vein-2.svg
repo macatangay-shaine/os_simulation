@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">CODE VEIN II cover</title>
+  <desc id="desc">A painterly fantasy battlefield cover inspired by CODE VEIN II art.</desc>
+  <defs>
+    <linearGradient id="cvBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5efe4"/>
+      <stop offset="0.5" stop-color="#d8d1be"/>
+      <stop offset="1" stop-color="#84705f"/>
+    </linearGradient>
+    <radialGradient id="cvSun" cx="50%" cy="22%" r="34%">
+      <stop offset="0" stop-color="#fff8da" stop-opacity="1"/>
+      <stop offset="0.45" stop-color="#e8d07d" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#e8d07d" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cvMount" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d7d2c4"/>
+      <stop offset="1" stop-color="#9d9384"/>
+    </linearGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#cvBg)"/>
+  <rect width="740" height="384" fill="url(#cvSun)"/>
+  <path d="M0 190L82 142L140 180L212 126L292 176L356 132L444 184L540 118L628 176L740 134V0H0Z" fill="url(#cvMount)" opacity="0.82"/>
+  <path d="M0 248L76 196L144 228L224 176L300 230L360 196L442 234L518 172L620 224L740 184V114L628 176L540 118L444 184L356 132L292 176L212 126L140 180L82 142L0 190Z" fill="#c2b6a0" opacity="0.7"/>
+  <g fill="#3a271f" opacity="0.72">
+    <path d="M34 384L72 298L106 384Z"/>
+    <path d="M86 384L128 286L162 384Z"/>
+    <path d="M150 384L194 274L228 384Z"/>
+    <path d="M220 384L266 262L300 384Z"/>
+    <path d="M300 384L350 248L388 384Z"/>
+    <path d="M386 384L436 252L474 384Z"/>
+    <path d="M470 384L524 266L562 384Z"/>
+    <path d="M560 384L616 280L654 384Z"/>
+  </g>
+  <g opacity="0.96">
+    <path d="M348 300L370 214L392 214L410 300Z" fill="#342b2b"/>
+    <circle cx="380" cy="196" r="20" fill="#231c1c"/>
+    <path d="M322 318L346 232L360 236L346 318Z" fill="#735353"/>
+    <path d="M410 318L398 234L414 230L434 312Z" fill="#6f4f48"/>
+  </g>
+  <g opacity="0.78">
+    <path d="M432 314L452 234L470 234L486 314Z" fill="#372d2c"/>
+    <circle cx="460" cy="216" r="18" fill="#251d1d"/>
+  </g>
+  <path d="M344 86L354 118L388 118L360 138L372 172L344 150L316 172L328 138L300 118L334 118Z" fill="#d7bb5c" opacity="0.94"/>
+  <text x="370" y="110" fill="#2f2624" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="700" text-anchor="middle">CODE VEIN II</text>
+</svg>

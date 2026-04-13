@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">ROMEO IS A DEAD MAN cover version two</title>
+  <desc id="desc">A sci-fi robotic portrait inspired by ROMEO IS A DEAD MAN promotional art.</desc>
+  <defs>
+    <linearGradient id="rd2Bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06100b"/>
+      <stop offset="0.48" stop-color="#0e1510"/>
+      <stop offset="1" stop-color="#23161b"/>
+    </linearGradient>
+    <radialGradient id="rd2Stars" cx="18%" cy="40%" r="52%">
+      <stop offset="0" stop-color="#6eff91" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#6eff91" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rd2Halo" cx="70%" cy="14%" r="46%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#rd2Bg)"/>
+  <rect width="740" height="384" fill="url(#rd2Stars)"/>
+  <rect width="740" height="384" fill="url(#rd2Halo)"/>
+  <g opacity="0.58" fill="#7fff92">
+    <circle cx="68" cy="48" r="3"/><circle cx="94" cy="82" r="2"/><circle cx="126" cy="114" r="4"/>
+    <circle cx="140" cy="174" r="3"/><circle cx="96" cy="220" r="2"/><circle cx="170" cy="254" r="3"/>
+    <circle cx="188" cy="124" r="2"/><circle cx="212" cy="66" r="4"/><circle cx="252" cy="198" r="3"/>
+    <circle cx="48" cy="166" r="2"/><circle cx="228" cy="290" r="4"/><circle cx="128" cy="322" r="3"/>
+  </g>
+  <g opacity="0.96">
+    <path d="M320 360L336 148L404 84L478 90L522 150L536 360Z" fill="#ece7dd"/>
+    <path d="M360 158L386 132H448L470 156L450 252H374Z" fill="#6b8082"/>
+    <path d="M384 168H444V210H384Z" fill="#1a2329"/>
+    <path d="M352 238L470 238L498 360H328Z" fill="#947758"/>
+    <path d="M316 146L284 86L314 56L352 144Z" fill="#bebdb8"/>
+    <path d="M520 146L556 82L526 56L486 144Z" fill="#bebdb8"/>
+    <path d="M292 88C346 24 450 10 554 58" fill="none" stroke="#ffffff" stroke-width="12" opacity="0.84"/>
+    <path d="M266 112C344 22 490 16 594 92" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.58"/>
+  </g>
+  <text x="398" y="70" fill="#ffd22f" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="36" font-weight="800" text-anchor="middle">ROMEO IS</text>
+  <text x="398" y="110" fill="#ffd22f" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="56" font-weight="800" text-anchor="middle">A DEAD MAN</text>
+  <ellipse cx="408" cy="70" rx="188" ry="22" fill="none" stroke="#ffd22f" stroke-width="10" opacity="0.88"/>
+</svg>

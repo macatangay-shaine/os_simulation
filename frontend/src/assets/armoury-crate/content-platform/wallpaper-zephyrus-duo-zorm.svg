@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 384" role="img" aria-labelledby="title desc">
+  <title id="title">Zephyrus Duo collaborative wallpaper</title>
+  <desc id="desc">A cyberpunk character wallpaper with violet neon lighting.</desc>
+  <defs>
+    <linearGradient id="zdBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1024"/>
+      <stop offset="0.42" stop-color="#221437"/>
+      <stop offset="1" stop-color="#0d0a12"/>
+    </linearGradient>
+    <linearGradient id="zdNeon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8f42ff"/>
+      <stop offset="0.5" stop-color="#ff58cd"/>
+      <stop offset="1" stop-color="#56baff"/>
+    </linearGradient>
+  </defs>
+  <rect width="740" height="384" fill="url(#zdBg)"/>
+  <g opacity="0.7" fill="url(#zdNeon)">
+    <rect x="60" y="84" width="120" height="94" rx="10"/><rect x="214" y="60" width="156" height="96" rx="10"/>
+    <rect x="412" y="118" width="94" height="78" rx="10"/><rect x="520" y="74" width="126" height="102" rx="10"/>
+  </g>
+  <g opacity="0.18" stroke="#ffffff" stroke-width="2">
+    <path d="M0 230H740"/><path d="M96 0V384"/><path d="M224 0V384"/><path d="M398 0V384"/><path d="M544 0V384"/>
+  </g>
+  <g opacity="0.96">
+    <path d="M458 384L482 250L536 182L592 190L622 264L612 384Z" fill="#12141c"/>
+    <circle cx="540" cy="168" r="30" fill="#d7d4e3"/>
+    <path d="M508 154L530 140L560 142L574 162L544 180L516 178Z" fill="#1a1d27"/>
+    <path d="M508 226L594 214L648 384H456Z" fill="#1a1522"/>
+    <path d="M466 252L530 188" stroke="#8fdfff" stroke-width="6"/>
+  </g>
+  <path d="M114 102H330" stroke="#ff65cd" stroke-width="9" opacity="0.9"/>
+  <path d="M88 132H270" stroke="#4fdfff" stroke-width="8" opacity="0.86"/>
+  <path d="M548 64H656" stroke="#ff65cd" stroke-width="10" opacity="0.88"/>
+</svg>
