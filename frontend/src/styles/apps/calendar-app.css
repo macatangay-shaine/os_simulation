@@ -136,6 +136,7 @@
   text-align: center;
   color: var(--win-text);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .year-picker-grid {
@@ -172,4 +173,45 @@
   background: var(--win-accent);
   color: white;
   border-color: var(--win-accent);
+}
+
+@media (max-width: 760px) {
+  .calendar-app {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .calendar-header,
+  .calendar-grid,
+  .year-picker-grid,
+  .calendar-footer {
+    padding: 10px;
+  }
+
+  .calendar-title {
+    font-size: 16px;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .calendar-title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calendar-weekdays,
+  .calendar-days {
+    gap: 4px;
+  }
+
+  .calendar-weekday,
+  .calendar-day {
+    font-size: 12px;
+    padding: 4px;
+  }
+
+  .year-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
