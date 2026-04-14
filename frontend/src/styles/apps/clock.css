@@ -1,139 +1,1641 @@
-/* ============================================================================
-   Clock App Styles
-   ============================================================================ */
-
 .clock-app {
+  --clock-bg: #262321;
+  --clock-sidebar: #1e1c1b;
+  --clock-card: linear-gradient(180deg, rgba(58, 55, 53, 0.96), rgba(52, 48, 46, 0.96));
+  --clock-card-soft: rgba(66, 62, 59, 0.94);
+  --clock-card-border: rgba(255, 255, 255, 0.06);
+  --clock-text: #f4f4f4;
+  --clock-muted: rgba(255, 255, 255, 0.72);
+  --clock-subtle: rgba(255, 255, 255, 0.48);
+  --clock-accent: #4ab8ff;
+  --clock-accent-soft: rgba(74, 184, 255, 0.18);
+  --clock-ring: rgba(255, 255, 255, 0.12);
+
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--win-bg);
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255, 255, 255, 0.04), transparent 28%),
+    #272422;
+  color: var(--clock-text);
+  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  overflow: hidden;
 }
 
-.clock-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--win-border);
-  background: var(--win-surface);
-}
-
-.clock-tab {
+.clock-shell {
+  min-width: 0;
+  min-height: 0;
   flex: 1;
   display: flex;
+  flex-direction: column;
+}
+
+.clock-chrome {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 14px;
+  background: rgba(34, 32, 31, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.clock-chrome-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.clock-chrome-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.clock-window-controls {
+  display: flex;
+  align-items: stretch;
+  height: 40px;
+}
+
+.clock-window-control {
+  width: 46px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.clock-window-control:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.clock-window-control.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+.clock-workspace {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  background: var(--clock-bg);
+}
+
+.clock-sidebar {
+  width: 350px;
+  min-width: 350px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
+    var(--clock-sidebar);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.clock-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 6px;
+}
+
+.clock-nav-item {
+  min-height: 46px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--clock-text);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.clock-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.clock-nav-item.active {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 4px 0 0 var(--clock-accent);
+}
+
+.clock-nav-item span {
+  min-width: 0;
+  flex: 1;
+}
+
+.clock-sidebar-footer {
+  margin-top: auto;
+  padding: 0 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.clock-user-chip,
+.clock-settings-link {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.clock-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+}
+
+.clock-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.clock-user-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.clock-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clock-user-subtitle {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--clock-subtle);
+}
+
+.clock-settings-link {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: none;
+  color: var(--clock-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.clock-settings-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.clock-main {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  position: relative;
+  padding: 26px 34px 84px 38px;
+  overflow: auto;
+}
+
+.clock-main::-webkit-scrollbar {
+  width: 10px;
+}
+
+.clock-main::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.clock-page {
+  min-width: 0;
+  min-height: 100%;
+}
+
+.clock-card {
+  border: 1px solid var(--clock-card-border);
+  border-radius: 14px;
+  background: var(--clock-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.clock-card-toolbar,
+.clock-card-actions,
+.clock-card-title-with-icon {
+  display: flex;
+  align-items: center;
+}
+
+.clock-card-toolbar {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clock-card-toolbar h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.clock-card-actions {
+  gap: 6px;
+}
+
+.clock-card-title-with-icon {
+  gap: 8px;
+}
+
+.clock-icon-btn,
+.clock-subtle-btn,
+.clock-secondary-btn,
+.clock-primary-btn,
+.clock-floating-btn,
+.focus-stepper-button,
+.clock-delete-inline,
+.clock-circle-btn,
+.alarm-day-pill {
+  font: inherit;
+}
+
+.clock-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--clock-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.clock-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clock-text);
+}
+
+.clock-icon-btn:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.clock-icon-btn.active {
+  background: rgba(74, 184, 255, 0.16);
+  color: var(--clock-text);
+}
+
+.clock-empty-state {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.clock-empty-state.compact {
+  min-height: 180px;
+}
+
+.clock-empty-state h4,
+.clock-empty-state p {
+  margin: 0;
+}
+
+.clock-empty-state h4 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.clock-empty-state p {
+  max-width: 420px;
+  color: var(--clock-muted);
+  line-height: 1.45;
+  font-size: 15px;
+}
+
+.clock-subtle-btn,
+.clock-secondary-btn {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--clock-text);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--win-text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.clock-subtle-btn:hover,
+.clock-secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.clock-primary-btn {
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--clock-accent);
+  color: #081015;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.clock-primary-btn:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.clock-checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: center;
+  color: var(--clock-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.clock-checkbox-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.clock-checkbox-box {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--clock-accent);
+  background: transparent;
+}
+
+.clock-floating-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.clock-floating-btn {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(44, 41, 38, 0.96);
+  color: var(--clock-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.16);
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.clock-floating-btn:hover {
+  background: rgba(58, 54, 52, 0.98);
+  transform: translateY(-1px);
+}
+
+.clock-floating-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  transform: none;
+}
+
+.clock-floating-btn.active {
+  color: var(--clock-accent);
+  box-shadow: 0 0 0 1px var(--clock-accent-soft), 0 18px 30px rgba(0, 0, 0, 0.18);
+}
+
+.clock-circle-btn {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, opacity 140ms ease;
+}
+
+.clock-circle-btn.large {
+  width: 84px;
+  height: 84px;
+}
+
+.clock-circle-btn.primary {
+  background: var(--clock-accent);
+  color: #081015;
+}
+
+.clock-circle-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.clock-circle-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.clock-progress-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.clock-progress-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.clock-progress-ring-track,
+.clock-progress-ring-fill {
+  fill: none;
+}
+
+.clock-progress-ring-track {
+  stroke: var(--clock-ring);
+}
+
+.clock-progress-ring-fill {
+  stroke: var(--clock-accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 180ms ease;
+}
+
+.clock-progress-ring-content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.clock-focus-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) minmax(340px, 1fr);
+  gap: 18px;
+  align-content: start;
+}
+
+.focus-session-card,
+.focus-progress-card,
+.focus-tasks-card,
+.focus-spotify-card {
+  padding: 18px 20px 22px;
+}
+
+.focus-session-card {
+  min-height: 472px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+}
+
+.focus-session-copy h2,
+.focus-session-copy p,
+.focus-break-copy {
+  margin: 0;
+}
+
+.focus-session-copy h2 {
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.focus-session-copy p {
+  max-width: 470px;
+  color: var(--clock-muted);
+  line-height: 1.35;
+  font-size: 15px;
+}
+
+.focus-stepper {
+  width: 204px;
+  height: 108px;
+  display: grid;
+  grid-template-columns: 1fr 62px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.focus-stepper.running {
+  box-shadow: 0 0 0 1px var(--clock-accent-soft);
+}
+
+.focus-stepper-value-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.focus-stepper-value {
+  font-size: 52px;
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-stepper-label {
+  color: var(--clock-muted);
   font-size: 14px;
 }
 
-.clock-tab.active {
-  color: var(--win-accent);
-  border-bottom-color: var(--win-accent);
+.focus-stepper-controls {
+  display: grid;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.clock-view,
-.clock-view,
-.timer-view,
-.stopwatch-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.focus-stepper-button {
+  border: none;
+  background: transparent;
+  color: var(--clock-muted);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 32px;
-  padding: 32px;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
 }
 
-.current-time {
-  font-size: 72px;
-  font-weight: 300;
-  color: var(--win-text);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 2px;
+.focus-stepper-button + .focus-stepper-button {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.current-date {
-  font-size: 18px;
-  color: var(--win-text-muted);
+.focus-stepper-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--clock-text);
+}
+
+.focus-stepper-button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.focus-break-copy {
+  font-size: 15px;
+  color: var(--clock-text);
+}
+
+.focus-active-task {
+  width: min(100%, 360px);
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.focus-active-task.empty {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.focus-active-task-label {
+  font-size: 12px;
+  color: var(--clock-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.focus-active-task strong,
+.focus-active-task small {
+  min-width: 0;
+}
+
+.focus-active-task strong {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.focus-active-task small {
+  color: var(--clock-muted);
+  font-size: 13px;
+}
+
+.focus-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.focus-progress-card {
+  min-height: 330px;
+  container-type: inline-size;
+}
+
+.focus-progress-body {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto minmax(110px, 1fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.focus-progress-stat {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 6px;
   text-align: center;
 }
 
-.timer-inputs {
-  display: flex;
-  gap: 16px;
+.focus-progress-label,
+.focus-progress-meta {
+  color: var(--clock-muted);
 }
 
-.time-input-group {
+.focus-progress-label {
+  font-size: 14px;
+}
+
+.focus-progress-stat strong {
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-progress-meta {
+  font-size: 15px;
+}
+
+.focus-goal-ring .clock-progress-ring-track {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+
+.focus-goal-ring .clock-progress-ring-fill {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.focus-goal-copy {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.focus-goal-copy span,
+.focus-goal-copy small {
+  color: var(--clock-text);
+  font-size: 16px;
+}
+
+.focus-goal-copy strong {
+  font-size: 46px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.focus-progress-foot {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.focus-goal-editor,
+.focus-task-composer {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 12px;
+}
+
+.focus-field {
+  display: grid;
+  gap: 8px;
+}
+
+.focus-field span {
+  font-size: 13px;
+  color: var(--clock-muted);
+}
+
+.focus-field small {
+  font-size: 12px;
+  color: var(--clock-subtle);
+}
+
+.focus-field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(17, 16, 16, 0.28);
+  color: var(--clock-text);
+  font: inherit;
+}
+
+.focus-field input:focus {
+  outline: none;
+  border-color: rgba(74, 184, 255, 0.64);
+  box-shadow: 0 0 0 3px rgba(74, 184, 255, 0.12);
+}
+
+.focus-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.focus-tasks-card {
+  min-height: 320px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
+}
+
+.focus-task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.focus-task-item {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.focus-task-item.selected {
+  border-color: rgba(74, 184, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(74, 184, 255, 0.16);
+}
+
+.focus-task-item.completed {
+  opacity: 0.72;
+}
+
+.focus-task-check {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 999px;
+  background: transparent;
+  color: #081015;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
 }
 
-.time-input-group label {
-  font-size: 12px;
-  color: var(--win-text-muted);
+.focus-task-check.checked {
+  border-color: transparent;
+  background: var(--clock-accent);
 }
 
-.time-input-group input {
-  width: 100px;
-  padding: 12px;
-  font-size: 24px;
-  text-align: center;
-  background: var(--win-surface);
-  border: 1px solid var(--win-border);
-  border-radius: 8px;
-  color: var(--win-text);
+.focus-task-main {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
-.timer-display,
-.stopwatch-display {
-  font-size: 64px;
-  font-weight: 300;
-  font-variant-numeric: tabular-nums;
-  color: var(--win-text);
+.focus-task-edit-form {
+  display: grid;
+  gap: 10px;
 }
 
-.clock-controls {
+.focus-task-edit-form input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(17, 16, 16, 0.28);
+  color: var(--clock-text);
+  font: inherit;
+}
+
+.focus-task-edit-form input:focus {
+  outline: none;
+  border-color: rgba(74, 184, 255, 0.64);
+  box-shadow: 0 0 0 3px rgba(74, 184, 255, 0.12);
+}
+
+.focus-task-title-row {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-task-title {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.focus-task-item.completed .focus-task-title {
+  text-decoration: line-through;
+  color: var(--clock-muted);
+}
+
+.focus-task-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(74, 184, 255, 0.16);
+  color: var(--clock-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.focus-task-meta,
+.focus-task-foot span {
+  color: var(--clock-muted);
+  font-size: 13px;
+}
+
+.focus-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.focus-task-select-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--clock-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.focus-task-select-btn.active {
+  border-color: rgba(74, 184, 255, 0.42);
+  background: rgba(74, 184, 255, 0.18);
+}
+
+.focus-task-foot {
+  margin-top: auto;
+  padding-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@container (max-width: 620px) {
+  .focus-progress-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "goal goal"
+      "yesterday streak";
+    row-gap: 18px;
+  }
+
+  .focus-progress-body .focus-goal-ring {
+    grid-area: goal;
+    justify-self: center;
+  }
+
+  .focus-progress-body .focus-progress-stat:first-of-type {
+    grid-area: yesterday;
+  }
+
+  .focus-progress-body .focus-progress-stat:last-of-type {
+    grid-area: streak;
+  }
+}
+
+.focus-spotify-brand {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.clock-timer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  align-content: start;
+}
+
+.timer-card {
+  min-height: 402px;
+  padding: 16px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.timer-card.expanded {
+  grid-column: span 2;
+}
+
+.timer-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.timer-progress-ring .clock-progress-ring-track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.timer-progress-ring .clock-progress-ring-fill {
+  stroke: var(--clock-accent);
+}
+
+.timer-display {
+  font-size: clamp(42px, 4vw, 62px);
+  font-weight: 300;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.clock-alarm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 460px));
+  gap: 18px;
+  align-content: start;
+}
+
+.alarm-card {
+  min-height: 220px;
+  padding: 18px 18px 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.alarm-card.enabled {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(74, 184, 255, 0.08);
+}
+
+.alarm-card.ringing {
+  box-shadow: 0 0 0 1px rgba(74, 184, 255, 0.18), 0 20px 38px rgba(74, 184, 255, 0.1);
+}
+
+.alarm-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
 }
 
-.clock-btn {
+.alarm-card-time {
   display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.alarm-card-time span {
+  font-size: 86px;
+  line-height: 0.9;
+  font-weight: 300;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.alarm-card-time small {
+  margin-bottom: 8px;
+  color: var(--clock-subtle);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.clock-switch {
+  width: 52px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.clock-switch span {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(0);
+  transition: transform 140ms ease;
+}
+
+.clock-switch.active {
+  background: rgba(74, 184, 255, 0.26);
+  border-color: rgba(74, 184, 255, 0.48);
+}
+
+.clock-switch.active span {
+  transform: translateX(24px);
+  background: #ffffff;
+}
+
+.alarm-card-summary,
+.alarm-card-greeting {
+  font-size: 16px;
+}
+
+.alarm-card-summary {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid var(--win-border);
+  color: var(--clock-muted);
+}
+
+.alarm-card-greeting {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.alarm-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.alarm-day-pill {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 140ms ease, transform 140ms ease;
 }
 
-.clock-btn.start {
-  background: var(--win-accent);
-  color: white;
-  border-color: var(--win-accent);
+.alarm-day-pill:hover {
+  transform: translateY(-1px);
 }
 
-.clock-btn.pause {
-  background: #f59e0b;
-  color: white;
-  border-color: #f59e0b;
+.alarm-day-pill.active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
-.clock-btn.reset {
-  background: var(--win-surface);
-  color: var(--win-text);
+.clock-delete-inline {
+  justify-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ffb0b7;
+  cursor: pointer;
 }
 
-.clock-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.stopwatch-hero-card {
+  min-height: 100%;
+  padding: 12px 0 32px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.stopwatch-hero-display {
+  margin-top: 24px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.stopwatch-time {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+}
+
+.stopwatch-main {
+  font-size: clamp(84px, 10vw, 150px);
+  line-height: 0.92;
+  font-weight: 300;
+  letter-spacing: -0.08em;
+}
+
+.stopwatch-centiseconds {
+  margin-bottom: 12px;
+  font-size: clamp(42px, 4vw, 98px);
+  line-height: 1;
+  font-weight: 300;
+}
+
+.stopwatch-unit-row {
+  width: min(520px, 86%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  color: var(--clock-muted);
+  font-size: clamp(20px, 1.6vw, 26px);
+  text-align: center;
+}
+
+.stopwatch-controls {
+  margin-top: 42px;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+}
+
+.stopwatch-lap-list {
+  width: min(560px, 100%);
+  margin: 34px auto 0;
+  display: grid;
+  gap: 10px;
+}
+
+.stopwatch-lap-item {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.stopwatch-lap-item span {
+  color: var(--clock-muted);
+}
+
+.clock-world-layout {
+  min-height: 700px;
+  display: grid;
+  grid-template-columns: minmax(650px, 1.28fr) minmax(410px, 0.84fr);
+  gap: 40px;
+  align-items: stretch;
+}
+
+.world-map-stage {
+  min-height: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 0 40px;
+  overflow: hidden;
+}
+
+.world-map-stage-surface {
+  position: relative;
+  width: min(100%, 960px);
+  height: min(100%, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clock-world-map-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 494.7 / 265.7;
+  overflow: hidden;
+  isolation: isolate;
+  background: transparent;
+}
+
+.clock-world-map-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 18% 16% 8%;
+  border-radius: 42% 42% 38% 38% / 48% 48% 26% 26%;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05) 26%, rgba(255, 255, 255, 0.01) 56%, transparent 72%);
+  filter: blur(36px);
+  opacity: 0.92;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.clock-world-map-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 46.5%, rgba(255, 255, 255, 0.06) 50%, transparent 53.5%),
+    radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.04), transparent 38%);
+  opacity: 0.52;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.clock-world-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.84;
+  filter: grayscale(1) brightness(1.18) contrast(0.84);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.clock-world-shadow {
+  position: absolute;
+  left: 19%;
+  right: 19%;
+  top: 23%;
+  bottom: 12%;
+  border-radius: 44% 44% 34% 34% / 46% 46% 28% 28%;
+  background: radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04) 34%, transparent 72%);
+  filter: blur(34px);
+  opacity: 0.92;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.clock-world-glow {
+  position: absolute;
+  inset: 10% 18% 16%;
+  background:
+    radial-gradient(circle at 44% 52%, rgba(255, 255, 255, 0.12), transparent 36%),
+    linear-gradient(90deg, transparent 44%, rgba(255, 255, 255, 0.1) 50%, transparent 56%);
+  filter: blur(18px);
+  opacity: 0.46;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.clock-world-scanline {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 46.5%, rgba(255, 255, 255, 0.08) 50%, transparent 53.5%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 38%);
+  opacity: 0.46;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.clock-world-marker {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  color: rgba(255, 255, 255, 0.86);
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+  z-index: 5;
+}
+
+.clock-world-marker.local {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.clock-world-marker svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.25;
+}
+
+.world-side-panel {
+  min-height: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 18px 0 20px 36px;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.world-local-card,
+.world-city-card {
+  padding: 18px 20px 16px;
+  background: rgba(55, 52, 49, 0.96);
+}
+
+.world-local-card {
+  align-self: stretch;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 18px;
+  border-radius: 8px;
+}
+
+.world-local-icon {
+  color: var(--clock-text);
+}
+
+.world-local-time,
+.world-city-time {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.world-local-time strong,
+.world-city-time strong {
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.world-local-time span,
+.world-city-time span,
+.world-local-date,
+.world-city-date {
+  color: var(--clock-muted);
+}
+
+.world-local-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.world-saved-clocks {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.world-saved-clocks.empty {
+  min-height: 0;
+}
+
+.world-local-label,
+.world-city-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.world-city-card {
+  display: grid;
+  gap: 10px;
+}
+
+.world-city-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.world-floating-actions {
+  gap: 12px;
+}
+
+.world-floating-btn.muted {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.world-floating-btn:disabled {
+  cursor: default;
+  transform: none;
+}
+
+@media (max-width: 1380px) {
+  .clock-focus-grid,
+  .clock-world-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .clock-world-layout {
+    gap: 22px;
+  }
+
+  .world-map-stage {
+    min-height: 560px;
+    padding-top: 28px;
+  }
+
+  .world-side-panel {
+    min-height: 0;
+    padding: 0;
+    border-left: none;
+  }
+
+  .world-saved-clocks {
+    margin-top: 0;
+  }
+
+  .timer-card.expanded {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 1120px) {
+  .clock-sidebar {
+    width: 300px;
+    min-width: 300px;
+  }
+
+  .clock-main {
+    padding: 22px 22px 84px 24px;
+  }
+
+  .focus-progress-body {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-progress-stat {
+    order: 2;
+  }
+
+  .focus-goal-ring {
+    order: 1;
+    justify-self: center;
+  }
+
+  .focus-task-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .focus-task-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 920px) {
+  .clock-workspace {
+    flex-direction: column;
+  }
+
+  .clock-sidebar {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 10px 12px;
+  }
+
+  .clock-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .clock-nav-item {
+    flex: 1 1 180px;
+  }
+
+  .clock-sidebar-footer {
+    margin-top: 14px;
+    grid-template-columns: 1fr 180px;
+    align-items: center;
+  }
+
+  .clock-main {
+    padding: 18px 16px 82px;
+  }
+
+  .clock-focus-grid,
+  .clock-timer-grid,
+  .clock-alarm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .world-local-card {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .world-map-stage {
+    min-height: 420px;
+    padding: 12px 0 18px;
+  }
+
+  .world-side-panel {
+    gap: 14px;
+  }
+
+  .stopwatch-controls {
+    gap: 16px;
+  }
+
+  .clock-circle-btn.large {
+    width: 74px;
+    height: 74px;
+  }
+}
+
+@media (max-width: 640px) {
+  .clock-chrome-brand span,
+  .clock-user-subtitle {
+    display: none;
+  }
+
+  .clock-sidebar-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-session-card,
+  .focus-progress-card,
+  .focus-tasks-card,
+  .focus-spotify-card,
+  .timer-card,
+  .alarm-card,
+  .world-local-card,
+  .world-city-card {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .focus-stepper {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .focus-session-actions,
+  .focus-inline-actions,
+  .focus-task-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .alarm-card-time span {
+    font-size: 64px;
+  }
+
+  .stopwatch-main {
+    font-size: 64px;
+  }
+
+  .stopwatch-centiseconds {
+    font-size: 36px;
+    margin-bottom: 6px;
+  }
+
+  .stopwatch-unit-row {
+    font-size: 18px;
+  }
+
+  .clock-world-layout,
+  .world-map-stage,
+  .world-map-stage-surface,
+  .clock-world-map-wrap {
+    min-height: 0;
+  }
 }

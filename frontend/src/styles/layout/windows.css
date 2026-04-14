@@ -181,6 +181,12 @@
   color: var(--win-text);
 }
 
+.os-window-body.headerless {
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .window-placeholder-title {
   font-size: 16px;
   font-weight: 600;

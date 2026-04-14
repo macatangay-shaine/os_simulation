@@ -1,7 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Video, Circle, Square, Download } from 'lucide-react'
+import {
+  Camera,
+  Video,
+  Square,
+  Download,
+  Minus,
+  X,
+  Maximize2,
+  Minimize2,
+  Settings,
+  Timer,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  Image
+} from 'lucide-react'
 
-export default function CameraApp() {
+export default function CameraApp({ onWindowTitleChange, windowControls }) {
   const [mode, setMode] = useState('photo') // 'photo' or 'video'
   const [isRecording, setIsRecording] = useState(false)
   const [stream, setStream] = useState(null)
@@ -17,8 +32,11 @@ export default function CameraApp() {
   const startTokenRef = useRef(0)
 
   useEffect(() => {
+    onWindowTitleChange?.('Camera')
+  }, [onWindowTitleChange])
+
+  useEffect(() => {
     isMountedRef.current = true
-    startCamera()
     
     return () => {
       isMountedRef.current = false
@@ -27,8 +45,13 @@ export default function CameraApp() {
   }, [])
 
   useEffect(() => {
-    stopCamera(true)
-    startCamera()
+    if (!isMountedRef.current) return
+
+    void startCamera()
+
+    return () => {
+      stopCamera(true)
+    }
   }, [mode])
 
   const fetchApi = async (path, options = {}) => {
@@ -50,25 +73,97 @@ export default function CameraApp() {
     throw new Error('network')
   }
 
+  const requestUserMedia = async (constraints) => navigator.mediaDevices.getUserMedia(constraints)
+
+  const getCameraErrorMessage = (err) => {
+    if (!window.isSecureContext) {
+      return 'Camera needs a secure context. Open this app from localhost or HTTPS.'
+    }
+
+    switch (err?.name) {
+      case 'NotAllowedError':
+      case 'PermissionDeniedError':
+        return mode === 'video'
+          ? 'Camera or microphone permission was denied. Allow access in your browser site settings.'
+          : 'Camera permission was denied. Allow access in your browser site settings.'
+      case 'NotFoundError':
+      case 'DevicesNotFoundError':
+        return mode === 'video'
+          ? 'No camera or microphone was found on this device.'
+          : 'No camera device was found on this device.'
+      case 'NotReadableError':
+      case 'TrackStartError':
+        return 'Camera is busy in another app. Close the other app and try again.'
+      case 'OverconstrainedError':
+      case 'ConstraintNotSatisfiedError':
+        return 'Camera started with unsupported settings. We could not find a compatible device profile.'
+      case 'SecurityError':
+        return 'Browser security settings blocked camera access.'
+      case 'AbortError':
+        return 'Camera startup was interrupted. Try opening the Camera app again.'
+      default:
+        return 'Camera is unavailable right now. Check browser permission settings and device access.'
+    }
+  }
+
   const startCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('This browser does not support camera access.')
+      return
+    }
+
+    stopCamera()
     const token = ++startTokenRef.current
+
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' },
-        audio: mode === 'video' 
-      })
+      const wantsAudio = mode === 'video'
+      const preferredVideoConstraints = { facingMode: { ideal: 'user' } }
+      let mediaStream = null
+      let lastError = null
+
+      const attempts = wantsAudio
+        ? [
+            { video: preferredVideoConstraints, audio: true },
+            { video: preferredVideoConstraints, audio: false },
+            { video: true, audio: false }
+          ]
+        : [
+            { video: preferredVideoConstraints, audio: false },
+            { video: true, audio: false }
+          ]
+
+      for (const constraints of attempts) {
+        try {
+          mediaStream = await requestUserMedia(constraints)
+          break
+        } catch (err) {
+          lastError = err
+        }
+      }
+
+      if (!mediaStream) {
+        throw lastError || new Error('camera_unavailable')
+      }
+
       if (!isMountedRef.current || token !== startTokenRef.current) {
         mediaStream.getTracks().forEach(track => track.stop())
         return
       }
+
       streamRef.current = mediaStream
       setStream(mediaStream)
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
+        await videoRef.current.play?.().catch(() => {})
       }
       setError(null)
     } catch (err) {
-      setError('Camera access denied or not available')
+      if (!isMountedRef.current || token !== startTokenRef.current) {
+        return
+      }
+      streamRef.current = null
+      setStream(null)
+      setError(getCameraErrorMessage(err))
       console.error('Camera error:', err)
     }
   }
@@ -252,91 +347,191 @@ export default function CameraApp() {
     a.click()
   }
 
+  const retryCamera = () => {
+    setError(null)
+    void startCamera()
+  }
+
+  const statusText = mode === 'photo' ? 'Ready to shoot' : isRecording ? 'Recording...' : 'Ready to record'
+  const capturePreview = [...capturedMedia].slice(-4).reverse()
+
   return (
     <div className="camera-app">
-      <div className="camera-layout">
-        <div className="camera-preview">
-          {error ? (
-            <div className="camera-error">
-              <Camera size={48} />
-              <p>{error}</p>
-            </div>
-          ) : (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted
-              className="camera-video"
-            />
-          )}
-        </div>
-
-        <aside className="camera-side">
-          <div className="camera-controls">
-            <div className="mode-selector">
-              <button 
-                className={`mode-btn ${mode === 'photo' ? 'active' : ''}`}
-                onClick={() => setMode('photo')}
-              >
-                <Camera size={18} />
-                Photo
-              </button>
-              <button 
-                className={`mode-btn ${mode === 'video' ? 'active' : ''}`}
-                onClick={() => setMode('video')}
-              >
-                <Video size={18} />
-                Video
-              </button>
-            </div>
+      <div className="camera-shell">
+        <header className="camera-chrome" data-window-drag-handle="true">
+          <div className="camera-chrome-brand">
+            <img className="camera-chrome-icon" src="/desktop-icons/camera.png" alt="" />
+            <span>Camera</span>
           </div>
-
-          <div className="camera-actions">
-            {mode === 'photo' ? (
-              <button className="capture-btn" onClick={capturePhoto} disabled={!stream}>
-                <Circle size={32} />
-              </button>
-            ) : (
-              <button 
-                className={`capture-btn ${isRecording ? 'recording' : ''}`}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={!stream}
+          {windowControls ? (
+            <div className="camera-window-controls" data-no-window-drag="true">
+              <button
+                type="button"
+                className="camera-window-control"
+                onClick={windowControls.onMinimize}
+                aria-label="Minimize"
               >
-                {isRecording ? <Square size={24} /> : <Circle size={32} />}
+                <Minus size={14} />
               </button>
-            )}
-            <div className="camera-status">
-              {mode === 'photo' ? 'Ready to shoot' : isRecording ? 'Recording...' : 'Ready to record'}
+              {windowControls.canMaximize ? (
+                <button
+                  type="button"
+                  className="camera-window-control"
+                  onClick={windowControls.onMaximize}
+                  aria-label={windowControls.isMaximized ? 'Restore' : 'Maximize'}
+                >
+                  {windowControls.isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+              ) : null}
+              <button 
+                type="button"
+                className="camera-window-control close"
+                onClick={windowControls.onClose}
+                aria-label="Close"
+              >
+                <X size={14} />
+              </button>
             </div>
-          </div>
+          ) : null}
+        </header>
 
-          <div className="camera-gallery">
-            <h3>Recent Captures</h3>
-            {capturedMedia.length === 0 ? (
-              <div className="gallery-empty">No captures yet.</div>
-            ) : (
-              <div className="gallery-grid">
-                {capturedMedia.map((item, idx) => (
-                  <div key={idx} className="gallery-item">
-                    {item.type === 'photo' ? (
-                      <img src={item.url} alt={item.filename} />
-                    ) : (
-                      <video src={item.url} muted />
-                    )}
-                    <button 
-                      className="download-btn"
-                      onClick={() => downloadMedia(item)}
-                      title="Download"
-                    >
-                      <Download size={16} />
-                    </button>
-                  </div>
-                ))}
+        <div className="camera-workspace">
+          <aside className="camera-utility-rail" aria-hidden="true">
+            <div className="camera-utility-group">
+              <div className="camera-utility-icon">
+                <Settings size={18} />
               </div>
-            )}
+            </div>
+            <div className="camera-utility-group">
+              <div className="camera-utility-icon">
+                <Sparkles size={18} />
+              </div>
+              <div className="camera-utility-icon">
+                <Timer size={18} />
+              </div>
+            </div>
+          </aside>
+
+          <div className="camera-stage-area">
+            <div className="camera-stage">
+              {error ? (
+                <div className="camera-error">
+                  <Camera size={48} />
+                  <p>{error}</p>
+                  <button type="button" className="camera-error-retry" onClick={retryCamera}>
+                    Retry camera
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    playsInline 
+                    muted
+                    className="camera-video"
+                  />
+                  <div className="camera-stage-sheen" aria-hidden="true" />
+                  <div className="camera-guide-frame" aria-hidden="true" />
+                  <div className={`camera-status-chip ${isRecording ? 'recording' : ''}`}>
+                    {statusText}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </aside>
+
+          <aside className="camera-command-rail">
+            <div className="camera-rail-chevron" aria-hidden="true">
+              <ChevronUp size={22} />
+            </div>
+
+            <div className="camera-mode-stack" data-no-window-drag="true">
+              <button 
+                type="button"
+                className={`camera-mode-toggle ${mode === 'photo' ? 'active' : ''}`}
+                onClick={() => setMode('photo')}
+                aria-label="Switch to photo mode"
+                aria-pressed={mode === 'photo'}
+              >
+                <Camera size={19} />
+              </button>
+              <button 
+                type="button"
+                className={`camera-mode-toggle ${mode === 'video' ? 'active' : ''}`}
+                onClick={() => setMode('video')}
+                aria-label="Switch to video mode"
+                aria-pressed={mode === 'video'}
+              >
+                <Video size={19} />
+              </button>
+            </div>
+
+            <div className="camera-shutter-wrap" data-no-window-drag="true">
+              <button 
+                type="button"
+                className={`camera-shutter ${mode === 'video' ? 'video-mode' : ''} ${isRecording ? 'recording' : ''}`}
+                onClick={mode === 'photo' ? capturePhoto : isRecording ? stopRecording : startRecording}
+                disabled={!stream}
+                aria-label={
+                  mode === 'photo'
+                    ? 'Capture photo'
+                    : isRecording
+                      ? 'Stop recording'
+                      : 'Start recording'
+                }
+              >
+                <span className="camera-shutter-ring" />
+                <span className="camera-shutter-core">
+                  {mode === 'video' && isRecording ? <Square size={16} fill="currentColor" /> : mode === 'video' ? <Video size={20} /> : <Camera size={20} />}
+                </span>
+              </button>
+
+              <div className="camera-mode-caption">
+                {mode === 'photo' ? 'Photo' : isRecording ? 'Recording' : 'Video'}
+              </div>
+            </div>
+
+            <div className="camera-gallery-rail" data-no-window-drag="true">
+              <div className="camera-gallery-count">
+                {capturedMedia.length} {capturedMedia.length === 1 ? 'capture' : 'captures'}
+              </div>
+              {capturePreview.length === 0 ? (
+                <div className="camera-capture-placeholder">
+                  <Image size={20} />
+                </div>
+              ) : (
+                <div className="camera-capture-strip">
+                  {capturePreview.map((item, idx) => (
+                    <div key={`${item.filename}-${idx}`} className="camera-capture-card">
+                      {item.type === 'photo' ? (
+                        <img src={item.url} alt={item.filename} />
+                      ) : (
+                        <video src={item.url} muted playsInline preload="metadata" />
+                      )}
+                      <div className="camera-capture-badge">
+                        {item.type === 'photo' ? <Camera size={12} /> : <Video size={12} />}
+                      </div>
+                      <button 
+                        type="button"
+                        className="camera-download-btn"
+                        onClick={() => downloadMedia(item)}
+                        title={`Download ${item.filename}`}
+                        aria-label={`Download ${item.filename}`}
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="camera-rail-chevron" aria-hidden="true">
+              <ChevronDown size={22} />
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   )
