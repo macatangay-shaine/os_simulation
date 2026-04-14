@@ -1635,7 +1635,10 @@ function ArmouryCrateHomePage({
               reloadToken={appSettingsState.deviceImageReloadToken}
             />
             <div className="armoury-crate-device-name">ASUS TUF GAMING F15</div>
-            <div className="armoury-crate-device-spec">11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz</div>
+            <div className="armoury-crate-device-details">
+              <div className="armoury-crate-device-spec">11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz</div>
+              <div className="armoury-crate-device-spec secondary">NVIDIA GeForce RTX 2050 GDDR6 @ 4GB 64 bits</div>
+            </div>
           </div>
 
           <section className="armoury-crate-devices">
