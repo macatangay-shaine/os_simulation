@@ -1,333 +1,551 @@
+import React, { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Download,
+  Ellipsis,
+  Grip,
+  Maximize2,
+  Mic,
+  Minimize2,
+  Minus,
+  Plus,
+  Puzzle,
+  RotateCw,
+  Search,
+  Settings,
+  Sparkles,
+  Star,
+  UserCircle2,
+  X
+} from "lucide-react";
+import "../styles/apps/web-browser.css";
 
+const EDGE_ICON_SRC = "/desktop-icons/webbrowser.png";
 
-import React, { useRef, useState } from "react";
-import '../styles/apps/web-browser.css';
+function createTab(id) {
+  return {
+    id,
+    title: "New tab",
+    url: null,
+    input: "",
+    searchResults: null,
+    loading: false,
+    reloadToken: 0
+  };
+}
 
-const DEFAULT_URL = "duckduckgo.com";
-
-function isLikelyUrl(input) {
-  return /^https?:\/\//i.test(input) || /^[\w\d\-]+\.[\w\d\-]+/.test(input);
+function createHistoryEntry(tab) {
+  return {
+    title: tab.title,
+    url: tab.url,
+    input: tab.input,
+    searchResults: tab.searchResults
+  };
 }
 
 function getFullUrl(input) {
   if (/^https?:\/\//i.test(input)) return input;
-  if (/^[\w\d\-]+\.[\w\d\-]+/.test(input)) return `https://${input}`;
+  if (/^[\w\d-]+\.[\w\d-]+/.test(input)) return `https://${input}`;
   return null;
 }
 
+function getHostname(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch (error) {
+    return url;
+  }
+}
 
-export default function WebBrowserApp({ onDownload }) {
-  const iframeRef = useRef(null);
-  const [tabs, setTabs] = useState([
-    { id: 1, title: "New Tab", url: null, input: "", searchResults: null, loading: false }
-  ]);
+export default function WebBrowserApp({ onDownload, windowControls }) {
+  const [tabs, setTabs] = useState([createTab(1)]);
   const [activeTab, setActiveTab] = useState(1);
-
-  // Navigation state
-  const [history, setHistory] = useState({ 1: [null] });
+  const [history, setHistory] = useState({ 1: [createHistoryEntry(createTab(1))] });
   const [historyIndex, setHistoryIndex] = useState({ 1: 0 });
 
-  // Tab helpers
-  const getTab = (id) => tabs.find((t) => t.id === id);
-  const setTab = (id, data) => setTabs((prev) => prev.map((t) => t.id === id ? { ...t, ...data } : t));
+  const getTab = (id) => tabs.find((tab) => tab.id === id);
+  const activeBrowserTab = getTab(activeTab) || tabs[0];
 
-  // Navigation
-  const goTo = async (id, input) => {
-    // If input is a likely URL, try to load in iframe
-    const url = getFullUrl(input);
-    if (url) {
-      setTab(id, { url, input, searchResults: null, loading: false });
-      setHistory((prev) => {
-        const h = prev[id] ? prev[id].slice(0, historyIndex[id] + 1) : [];
-        return { ...prev, [id]: [...h, input] };
+  const setTab = (id, data) => {
+    setTabs((prev) => prev.map((tab) => (tab.id === id ? { ...tab, ...data } : tab)));
+  };
+
+  const pushHistoryEntry = (id, entry) => {
+    const nextIndex = (historyIndex[id] ?? 0) + 1;
+    setHistory((prev) => {
+      const stack = prev[id] ? prev[id].slice(0, (historyIndex[id] ?? 0) + 1) : [];
+      return { ...prev, [id]: [...stack, entry] };
+    });
+    setHistoryIndex((prev) => ({ ...prev, [id]: nextIndex }));
+  };
+
+  const restoreHistoryEntry = (id, entry) => {
+    setTab(id, {
+      title: entry.title || (entry.url ? entry.url : "New tab"),
+      url: entry.url ?? null,
+      input: entry.input ?? "",
+      searchResults: entry.searchResults ?? null,
+      loading: false
+    });
+  };
+
+  const goTo = async (id, rawInput) => {
+    const input = rawInput.trim();
+    if (!input) {
+      setTab(id, {
+        title: "New tab",
+        url: null,
+        input: "",
+        searchResults: null,
+        loading: false
       });
-      setHistoryIndex((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
       return;
     }
-    // Otherwise, treat as search query
-    setTab(id, { url: null, input, searchResults: null, loading: true });
-    try {
-      const resp = await fetch(`http://localhost:8000/app/search/duckduckgo?q=${encodeURIComponent(input)}`);
-      const data = await resp.json();
-      setTab(id, { url: null, input, searchResults: data, loading: false });
-    } catch (e) {
-      setTab(id, { url: null, input, searchResults: { error: "Search failed." }, loading: false });
+
+    const url = getFullUrl(input);
+    if (url) {
+      const nextTabState = {
+        title: input,
+        url,
+        input,
+        searchResults: null,
+        loading: false
+      };
+      setTab(id, nextTabState);
+      pushHistoryEntry(id, createHistoryEntry(nextTabState));
+      return;
     }
-    setHistory((prev) => {
-      const h = prev[id] ? prev[id].slice(0, historyIndex[id] + 1) : [];
-      return { ...prev, [id]: [...h, input] };
+
+    setTab(id, {
+      title: input,
+      url: null,
+      input,
+      searchResults: null,
+      loading: true
     });
-    setHistoryIndex((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+
+    let data;
+    try {
+      const response = await fetch(`http://localhost:8000/app/search/duckduckgo?q=${encodeURIComponent(input)}`);
+      data = await response.json();
+    } catch (error) {
+      data = { error: "Search failed." };
+    }
+
+    const nextTabState = {
+      title: input,
+      url: null,
+      input,
+      searchResults: data,
+      loading: false
+    };
+
+    setTab(id, nextTabState);
+    pushHistoryEntry(id, createHistoryEntry(nextTabState));
   };
 
-
-  const handleInputChange = (e) => {
-    setTab(activeTab, { input: e.target.value });
+  const handleInputChange = (event) => {
+    setTab(activeTab, { input: event.target.value });
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const tab = getTab(activeTab);
-    await goTo(activeTab, tab.input);
+  const handleSearch = async (event) => {
+    event.preventDefault();
+    const currentTab = getTab(activeTab);
+    await goTo(activeTab, currentTab?.input || "");
   };
 
-  const handleTabClick = (id) => setActiveTab(id);
+  const handleTabClick = (id) => {
+    setActiveTab(id);
+  };
+
   const handleNewTab = () => {
-    const newId = Math.max(...tabs.map((t) => t.id)) + 1;
-    setTabs([...tabs, { id: newId, title: "New Tab", url: null, input: "", searchResults: null, loading: false }]);
+    const newId = Math.max(...tabs.map((tab) => tab.id)) + 1;
+    const nextTab = createTab(newId);
+    setTabs((prev) => [...prev, nextTab]);
     setActiveTab(newId);
-    setHistory((prev) => ({ ...prev, [newId]: [null] }));
+    setHistory((prev) => ({ ...prev, [newId]: [createHistoryEntry(nextTab)] }));
     setHistoryIndex((prev) => ({ ...prev, [newId]: 0 }));
   };
+
   const handleCloseTab = (id) => {
     if (tabs.length === 1) return;
-    const idx = tabs.findIndex((t) => t.id === id);
-    const newTabs = tabs.filter((t) => t.id !== id);
-    setTabs(newTabs);
+    const closedIndex = tabs.findIndex((tab) => tab.id === id);
+    const nextTabs = tabs.filter((tab) => tab.id !== id);
+    setTabs(nextTabs);
+    setHistory((prev) => {
+      const nextHistory = { ...prev };
+      delete nextHistory[id];
+      return nextHistory;
+    });
+    setHistoryIndex((prev) => {
+      const nextIndexes = { ...prev };
+      delete nextIndexes[id];
+      return nextIndexes;
+    });
     if (activeTab === id) {
-      setActiveTab(newTabs[Math.max(0, idx - 1)].id);
+      setActiveTab(nextTabs[Math.max(0, closedIndex - 1)].id);
     }
   };
 
-  // Navigation controls
   const handleBack = () => {
-    if (historyIndex[activeTab] > 0) {
-      setHistoryIndex((prev) => ({ ...prev, [activeTab]: prev[activeTab] - 1 }));
-      const url = history[activeTab][historyIndex[activeTab] - 1];
-      setTab(activeTab, { url, input: url });
-    }
-  };
-  const handleForward = () => {
-    if (historyIndex[activeTab] < history[activeTab].length - 1) {
-      setHistoryIndex((prev) => ({ ...prev, [activeTab]: prev[activeTab] + 1 }));
-      const url = history[activeTab][historyIndex[activeTab] + 1];
-      setTab(activeTab, { url, input: url });
-    }
-  };
-  const handleReload = () => {
-    setTab(activeTab, { url: getTab(activeTab).url });
+    if ((historyIndex[activeTab] ?? 0) <= 0) return;
+    const nextIndex = historyIndex[activeTab] - 1;
+    setHistoryIndex((prev) => ({ ...prev, [activeTab]: nextIndex }));
+    restoreHistoryEntry(activeTab, history[activeTab][nextIndex]);
   };
 
-  // Download current page
+  const handleForward = () => {
+    if ((historyIndex[activeTab] ?? 0) >= (history[activeTab]?.length ?? 1) - 1) return;
+    const nextIndex = historyIndex[activeTab] + 1;
+    setHistoryIndex((prev) => ({ ...prev, [activeTab]: nextIndex }));
+    restoreHistoryEntry(activeTab, history[activeTab][nextIndex]);
+  };
+
+  const handleReload = () => {
+    const currentTab = getTab(activeTab);
+    setTab(activeTab, {
+      reloadToken: (currentTab?.reloadToken ?? 0) + 1
+    });
+  };
+
   const handleDownload = async () => {
     try {
-      const url = getTab(activeTab).url;
+      const url = getTab(activeTab)?.url;
+      if (!url) throw new Error("Open a page first.");
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch page');
+      if (!response.ok) throw new Error("Failed to fetch page");
       const blob = await response.blob();
-      const filename = url.split('/').pop() || 'downloaded_page.html';
+      const filename = url.split("/").pop() || "downloaded_page.html";
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64data = reader.result.split(',')[1];
-        await fetch('http://localhost:8000/fs/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const base64data = reader.result.split(",")[1];
+        await fetch("http://localhost:8000/fs/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             path: `/home/user/Downloads/${filename}`,
-            node_type: 'file',
+            node_type: "file",
             content: base64data
           })
         });
-        alert('Downloaded to Downloads folder!');
+        alert("Downloaded to Downloads folder!");
         if (onDownload) onDownload(filename);
       };
       reader.readAsDataURL(blob);
-    } catch (err) {
-      alert('Download failed: ' + err.message);
+    } catch (error) {
+      alert(`Download failed: ${error.message}`);
     }
   };
 
-
-  // Responsive, non-overlapping UI and dynamic tab title
-  const tab = getTab(activeTab);
-
-  // Update tab title on iframe load
-  const handleIframeLoad = () => {
-    try {
-      const iframe = iframeRef.current;
-      if (iframe && iframe.contentDocument) {
-        const title = iframe.contentDocument.title;
-        if (title && title !== tab.title) {
-          setTab(activeTab, { title });
-        }
-      }
-    } catch (e) {
-      // Cross-origin, fallback to URL
-      setTab(activeTab, { title: tab.url });
-    }
+  const handleDocumentTitle = (id, title) => {
+    if (!title) return;
+    setTab(id, { title });
   };
 
-  // Render search results from DuckDuckGo API
-  function renderSearchResults(results) {
+  const renderSearchResults = (results) => {
     if (!results) return null;
-    if (results.error) return <div style={{ padding: 24, color: 'red' }}>{results.error}</div>;
-    // Helper to get favicon
-    const getFavicon = url => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}`;
-    // Helper to render a result card
+    if (results.error) {
+      return (
+        <div className="browser-status-view">
+          <div className="browser-status-card">
+            <strong>Search unavailable</strong>
+            <p>{results.error}</p>
+          </div>
+        </div>
+      );
+    }
+
+    const getFavicon = (url) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}&sz=64`;
+
     const ResultCard = ({ title, url, text }) => (
-      <div style={{
-        border: '1px solid var(--win-border)',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        background: 'var(--win-surface)',
-        boxShadow: '0 1px 4px #0001',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        color: 'var(--win-text)'
-      }}>
-        <img src={getFavicon(url)} alt="" style={{ width: 20, height: 20, marginTop: 2 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 2, color: 'var(--win-text)' }}>{title || url}</div>
-          {text && <div style={{ color: 'var(--win-muted)', marginBottom: 4 }}>{text}</div>}
-          <a
-            href={url}
-            style={{ color: 'var(--win-accent)', fontSize: 14 }}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => {
-              // Allow Ctrl/Cmd+Click or middle-click to open in new tab
-              if (e.ctrlKey || e.metaKey || e.button === 1) return;
-              e.preventDefault();
-              goTo(activeTab, url);
-            }}
-          >
-            {url}
-          </a>
+      <article className="browser-result-card">
+        <div className="browser-result-site">
+          <img className="browser-result-favicon" src={getFavicon(url)} alt="" />
+          <span>{getHostname(url)}</span>
+        </div>
+        <button
+          type="button"
+          className="browser-result-title"
+          onClick={() => {
+            void goTo(activeTab, url);
+          }}
+        >
+          {title || url}
+        </button>
+        {text ? <p className="browser-result-text">{text}</p> : null}
+        <div className="browser-result-link">{url}</div>
+      </article>
+    );
+
+    return (
+      <div className="browser-results-view">
+        <div className="browser-results-scroll">
+          {results.Heading ? <h2 className="browser-results-heading">{results.Heading}</h2> : null}
+          {results.AbstractText ? <p className="browser-results-abstract">{results.AbstractText}</p> : null}
+          {results.Results?.map((result, index) => (
+            <ResultCard key={`result-${index}`} title={result.Text} url={result.FirstURL} text={null} />
+          ))}
+          {results.RelatedTopics?.map((topic, index) =>
+            topic.FirstURL ? (
+              <ResultCard key={`topic-${index}`} title={topic.Text} url={topic.FirstURL} text={null} />
+            ) : topic.Topics ? (
+              topic.Topics.map((subTopic, subIndex) => (
+                <ResultCard
+                  key={`topic-${index}-${subIndex}`}
+                  title={subTopic.Text}
+                  url={subTopic.FirstURL}
+                  text={null}
+                />
+              ))
+            ) : null
+          )}
+          {!results.Heading && !results.AbstractText && !results.RelatedTopics?.length && !results.Results?.length ? (
+            <div className="browser-status-card">
+              <strong>No results found</strong>
+              <p>Try a different search term or type a full website address.</p>
+            </div>
+          ) : null}
         </div>
       </div>
     );
-    return (
-      <div style={{ padding: 24, overflowY: 'auto', width: '100%', background: 'var(--win-surface-strong)', color: 'var(--win-text)' }}>
-        {results.Heading && <h2 style={{ marginTop: 0, color: 'var(--win-text)' }}>{results.Heading}</h2>}
-        {results.AbstractText && <div style={{ marginBottom: 20, fontSize: 17, color: 'var(--win-muted)' }}>{results.AbstractText}</div>}
-        {/* Main Results */}
-        {results.Results && results.Results.length > 0 && results.Results.map((res, i) => (
-          <ResultCard key={i} title={res.Text} url={res.FirstURL} text={null} />
-        ))}
-        {/* Related Topics */}
-        {results.RelatedTopics && results.RelatedTopics.length > 0 && results.RelatedTopics.map((topic, i) => (
-          topic.FirstURL ? (
-            <ResultCard key={i} title={topic.Text} url={topic.FirstURL} text={null} />
-          ) : topic.Topics ? (
-            topic.Topics.map((sub, j) => (
-              <ResultCard key={i + '-' + j} title={sub.Text} url={sub.FirstURL} text={null} />
-            ))
-          ) : null
-        ))}
-        {/* No results */}
-        {!results.Heading && !results.AbstractText && !results.RelatedTopics?.length && !results.Results?.length && (
-          <div>No results found.</div>
-        )}
-      </div>
-    );
-  }
+  };
 
   return (
     <div className="web-browser-app">
-      {/* Tabs Bar */}
-      <div className="browser-tabs-bar">
-        {tabs.map((t) => (
-          <div key={t.id} className={"browser-tab" + (t.id === activeTab ? " active" : "")}
-            onClick={() => handleTabClick(t.id)}>
-            <span className="browser-tab-title">{t.title || "New Tab"}</span>
-            {tabs.length > 1 && <span className="browser-tab-close" onClick={e => { e.stopPropagation(); handleCloseTab(t.id); }}>×</span>}
+      <div className="browser-tabs-bar" data-window-drag-handle="true">
+        <div className="browser-tabs-scroll">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`browser-tab${tab.id === activeTab ? " active" : ""}`}
+              data-no-window-drag="true"
+              onClick={() => handleTabClick(tab.id)}
+            >
+              <img className="browser-tab-icon" src={EDGE_ICON_SRC} alt="" />
+              <span className="browser-tab-title">{tab.title || "New tab"}</span>
+              <span
+                className="browser-tab-close"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleCloseTab(tab.id);
+                }}
+              >
+                <X size={14} />
+              </span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="browser-tab-add" data-no-window-drag="true" onClick={handleNewTab} aria-label="New tab">
+          <Plus size={18} />
+        </button>
+        {windowControls ? (
+          <div className="browser-window-controls" data-no-window-drag="true">
+            <button type="button" className="browser-window-control" onClick={windowControls.onMinimize} aria-label="Minimize">
+              <Minus size={14} />
+            </button>
+            {windowControls.canMaximize ? (
+              <button type="button" className="browser-window-control" onClick={windowControls.onMaximize} aria-label={windowControls.isMaximized ? "Restore" : "Maximize"}>
+                {windowControls.isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            ) : null}
+            <button type="button" className="browser-window-control close" onClick={windowControls.onClose} aria-label="Close">
+              <X size={14} />
+            </button>
           </div>
-        ))}
-        <button className="browser-tab-add" onClick={handleNewTab}>+</button>
+        ) : null}
       </div>
-      {/* Toolbar */}
+
       <div className="browser-toolbar">
-        <button className="browser-nav-btn" onClick={handleBack} title="Back" disabled={historyIndex[activeTab] === 0}>{"<"}</button>
-        <button className="browser-nav-btn" onClick={handleForward} title="Forward" disabled={historyIndex[activeTab] >= (history[activeTab]?.length - 1)}>{">"}</button>
-        <button className="browser-nav-btn" onClick={handleReload} title="Reload">⟳</button>
+        <div className="browser-toolbar-nav">
+          <button
+            type="button"
+            className="browser-nav-btn"
+            onClick={handleBack}
+            title="Back"
+            disabled={(historyIndex[activeTab] ?? 0) === 0}
+            aria-label="Back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <button
+            type="button"
+            className="browser-nav-btn"
+            onClick={handleForward}
+            title="Forward"
+            disabled={(historyIndex[activeTab] ?? 0) >= (history[activeTab]?.length ?? 1) - 1}
+            aria-label="Forward"
+          >
+            <ArrowRight size={18} />
+          </button>
+          <button type="button" className="browser-nav-btn" onClick={handleReload} title="Reload" aria-label="Reload">
+            <RotateCw size={17} />
+          </button>
+        </div>
+
         <form className="browser-search-form" onSubmit={handleSearch}>
-          <input
-            className="browser-search-input"
-            type="text"
-            value={tab.input || (tab.url || "")}
-            onChange={handleInputChange}
-            placeholder="Search or type a URL"
-          />
+          <div className="browser-search-shell">
+            <Search size={18} className="browser-search-leading" />
+            <input
+              className="browser-search-input"
+              type="text"
+              value={activeBrowserTab?.input || activeBrowserTab?.url || ""}
+              onChange={handleInputChange}
+              placeholder="Search the web or type a URL"
+            />
+          </div>
         </form>
-        <button className="browser-download-btn" onClick={handleDownload}>Download</button>
+
+        <div className="browser-toolbar-actions">
+          <button type="button" className="browser-action-btn" title="Favorites" aria-label="Favorites">
+            <Star size={18} />
+          </button>
+          <button type="button" className="browser-action-btn" title="Extensions" aria-label="Extensions">
+            <Puzzle size={18} />
+          </button>
+          <button type="button" className="browser-action-btn" title="Discover" aria-label="Discover">
+            <Sparkles size={18} />
+          </button>
+          <button
+            type="button"
+            className="browser-action-btn"
+            title="Download current page"
+            aria-label="Download current page"
+            onClick={handleDownload}
+            disabled={!activeBrowserTab?.url}
+          >
+            <Download size={18} />
+          </button>
+          <button type="button" className="browser-action-btn" title="Profile" aria-label="Profile">
+            <UserCircle2 size={22} />
+          </button>
+          <button type="button" className="browser-action-btn" title="More options" aria-label="More options">
+            <Ellipsis size={18} />
+          </button>
+          <button type="button" className="browser-chat-pill" title="Chat" aria-label="Chat">
+            <img src={EDGE_ICON_SRC} alt="" />
+            <span>Chat</span>
+          </button>
+        </div>
       </div>
-      {/* Webview or Search Results */}
+
       <div className="browser-content-area">
-        {tab.loading ? (
-          <div className="browser-loading">Loading...</div>
-        ) : tab.url ? (
+        {activeBrowserTab?.loading ? (
+          <div className="browser-status-view">
+            <div className="browser-status-card">
+              <strong>Loading...</strong>
+              <p>We're pulling your page into the browser now.</p>
+            </div>
+          </div>
+        ) : activeBrowserTab?.url ? (
           <IframeWithErrorHandler
-            url={tab.url}
-            onLoad={handleIframeLoad}
+            key={`${activeBrowserTab.url}-${activeBrowserTab.reloadToken}`}
+            tabId={activeTab}
+            url={activeBrowserTab.url}
+            onTitleChange={handleDocumentTitle}
           />
-        ) : tab.searchResults ? (
-          renderSearchResults(tab.searchResults)
+        ) : activeBrowserTab?.searchResults ? (
+          renderSearchResults(activeBrowserTab.searchResults)
         ) : (
-          <div className="browser-placeholder">Enter a search or URL above.</div>
+          <BrowserHomePage
+            inputValue={activeBrowserTab?.input || ""}
+            onInputChange={handleInputChange}
+            onSearch={handleSearch}
+          />
         )}
       </div>
     </div>
   );
 }
 
-// Helper component to handle iframe embedding errors
-function IframeWithErrorHandler({ url, onLoad }) {
+function BrowserHomePage({ inputValue, onInputChange, onSearch }) {
+  return (
+    <div className="browser-home-page">
+      <div className="browser-home-surface">
+        <div className="browser-home-topbar">
+          <button type="button" className="browser-home-icon-btn" aria-label="Apps">
+            <Grip size={24} />
+          </button>
+          <div className="browser-home-weather">
+            <span className="browser-home-weather-location">San Pablo</span>
+            <span className="browser-home-weather-sun" aria-hidden="true" />
+            <span className="browser-home-weather-temp">34 C</span>
+            <button type="button" className="browser-home-icon-btn" aria-label="Page settings">
+              <Settings size={22} />
+            </button>
+          </div>
+        </div>
+
+        <div className="browser-home-main">
+          <form className="browser-home-search" onSubmit={onSearch}>
+            <Search size={24} className="browser-home-search-icon" />
+            <input
+              type="text"
+              value={inputValue}
+              onChange={onInputChange}
+              placeholder="Search the web"
+              className="browser-home-search-input"
+            />
+            <button type="button" className="browser-home-search-action" aria-label="Voice input">
+              <Mic size={25} />
+            </button>
+            <button type="submit" className="browser-home-search-brand" aria-label="Search with browser">
+              <img src={EDGE_ICON_SRC} alt="" />
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IframeWithErrorHandler({ tabId, url, onTitleChange }) {
   const [blocked, setBlocked] = React.useState(false);
   const iframeRef = React.useRef(null);
 
-  // Try to detect embedding errors after load
   const handleLoad = () => {
-    if (onLoad) onLoad();
-    // Try to access contentWindow; if blocked, show error
     try {
       const iframe = iframeRef.current;
-      // Some sites will throw on access or have blank content
       if (!iframe || !iframe.contentWindow || !iframe.contentDocument) return;
-      // If the document is empty or about:blank, likely blocked
+      const title = iframe.contentDocument.title;
+      if (title && onTitleChange) onTitleChange(tabId, title);
       if (
-        iframe.contentDocument.body.innerHTML.trim() === '' ||
-        iframe.contentWindow.location.href === 'about:blank'
+        iframe.contentDocument.body.innerHTML.trim() === "" ||
+        iframe.contentWindow.location.href === "about:blank"
       ) {
         setBlocked(true);
       }
-    } catch (e) {
+    } catch (error) {
       setBlocked(true);
     }
   };
 
   if (blocked) {
-    // Special message for DuckDuckGo and similar search engines
-    const isDuckDuckGo = url.includes('duckduckgo.com');
+    const isDuckDuckGo = url.includes("duckduckgo.com");
     return (
-      <div style={{ padding: 32, textAlign: 'center', width: '100%' }}>
-        <div style={{ color: 'red', marginBottom: 16 }}>
-          {isDuckDuckGo ? (
-            <>
-              DuckDuckGo and most search engines cannot be displayed in the browser window.<br />
-              (They block embedding for security reasons.)<br />
-              Use the search box above to get results here instead.
-            </>
-          ) : (
-            <>
-              This site cannot be displayed in the browser window.<br />
-              (It blocks embedding for security reasons.)
-            </>
-          )}
+      <div className="browser-status-view">
+        <div className="browser-status-card browser-status-card-error">
+          <strong>{isDuckDuckGo ? "Search engine blocked inside the frame" : "This site can't be shown here"}</strong>
+          <p>
+            {isDuckDuckGo
+              ? "DuckDuckGo and similar services block embedded loading for security reasons. Use the browser search box above to browse results in-app."
+              : "This page blocks embedding inside an iframe. Open it in a separate browser window if you need the full site."}
+          </p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="browser-external-link">
+            Open externally
+          </a>
         </div>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontWeight: 500 }}>
-          Open Externally
-        </a>
       </div>
     );
   }
+
   return (
     <iframe
       ref={iframeRef}
       src={url}
       title="Web Browser"
-      style={{ flex: 1, border: 'none', background: '#fff', minHeight: 0, minWidth: 0 }}
+      className="browser-iframe"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       onLoad={handleLoad}
     />

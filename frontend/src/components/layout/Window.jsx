@@ -25,8 +25,7 @@ export default function Window({
   touchpadEnabled = true,
   children
 }) {
-  const { id, title, x, y, width, height, zIndex, minimized, isActive, isMaximized, noMaximize, minWidth = 300, minHeight = 200 } = windowData
-  const headerRef = useRef(null)
+  const { id, title, x, y, width, height, zIndex, minimized, isActive, isMaximized, noMaximize, hideHeader = false, minWidth = 300, minHeight = 200 } = windowData
   const windowRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(null)
@@ -113,23 +112,39 @@ export default function Window({
     }
   }, [dragging, resizing, id, offset.x, offset.y, x, y, width, height, onMove, onResize, snapZone, onSnap])
 
-  const handleMouseDown = (event) => {
+  const startDrag = (event) => {
     if (!touchpadEnabled) {
       onFocus(id)
       return
     }
 
-    if (!headerRef.current) return
-    const rect = headerRef.current.getBoundingClientRect()
+    if (event.button !== 0 || !windowRef.current) return
+    const rect = windowRef.current.getBoundingClientRect()
     setOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top })
     setDragging(true)
     onFocus(id)
+  }
+
+  const handleMouseDown = (event) => {
+    startDrag(event)
   }
 
   const handleHeaderDoubleClick = () => {
     if (onMaximize) {
       onMaximize(id)
     }
+  }
+
+  const handleCustomChromeMouseDownCapture = (event) => {
+    if (!event.target.closest('[data-window-drag-handle="true"]')) return
+    if (event.target.closest('[data-no-window-drag="true"]')) return
+    startDrag(event)
+  }
+
+  const handleCustomChromeDoubleClickCapture = (event) => {
+    if (!event.target.closest('[data-window-drag-handle="true"]')) return
+    if (event.target.closest('[data-no-window-drag="true"]')) return
+    handleHeaderDoubleClick()
   }
 
   const handleResizeMouseDown = (direction) => (event) => {
@@ -169,32 +184,35 @@ export default function Window({
           zIndex
         }}
         onMouseDown={() => onFocus(id)}
+        onMouseDownCapture={hideHeader ? handleCustomChromeMouseDownCapture : undefined}
+        onDoubleClickCapture={hideHeader ? handleCustomChromeDoubleClickCapture : undefined}
       >
-        <div
-          className={`os-window-header ${touchpadEnabled ? '' : 'touchpad-disabled'}`}
-          ref={headerRef}
-          onMouseDown={handleMouseDown}
-          onDoubleClick={handleHeaderDoubleClick}
-        >
-          <span className="os-window-title">{title}</span>
-          <div className="os-window-actions">
-            <button type="button" className="os-window-btn" onClick={() => onMinimize(id)}>
-              <Minus className="os-window-icon" />
-            </button>
-            {!noMaximize && (
-              <button type="button" className="os-window-btn" onClick={() => onMaximize(id)}>
-                {isMaximized ? <Minimize2 className="os-window-icon" /> : <Maximize2 className="os-window-icon" />}
+        {!hideHeader && (
+          <div
+            className={`os-window-header ${touchpadEnabled ? '' : 'touchpad-disabled'}`}
+            onMouseDown={handleMouseDown}
+            onDoubleClick={handleHeaderDoubleClick}
+          >
+            <span className="os-window-title">{title}</span>
+            <div className="os-window-actions">
+              <button type="button" className="os-window-btn" onClick={() => onMinimize(id)}>
+                <Minus className="os-window-icon" />
               </button>
-            )}
-            <button type="button" className="os-window-btn close" onClick={() => {
-              setIsClosing(true)
-              setTimeout(() => onClose(id), 200)
-            }}>
-              <X className="os-window-icon" />
-            </button>
+              {!noMaximize && (
+                <button type="button" className="os-window-btn" onClick={() => onMaximize(id)}>
+                  {isMaximized ? <Minimize2 className="os-window-icon" /> : <Maximize2 className="os-window-icon" />}
+                </button>
+              )}
+              <button type="button" className="os-window-btn close" onClick={() => {
+                setIsClosing(true)
+                setTimeout(() => onClose(id), 200)
+              }}>
+                <X className="os-window-icon" />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="os-window-body">{children}</div>
+        )}
+        <div className={`os-window-body ${hideHeader ? 'headerless' : ''}`}>{children}</div>
         
         {!isMaximized && (
           <>

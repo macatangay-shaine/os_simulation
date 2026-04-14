@@ -842,8 +842,18 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const shouldStartMaximized =
         options.startMaximized ?? MAXIMIZED_BY_DEFAULT_APP_IDS.has(app.id)
 
-      const defaultWidth = app.id === 'calculator' ? 428 : WINDOW_DEFAULTS.width
-      const defaultHeight = app.id === 'calculator' ? 520 : WINDOW_DEFAULTS.height
+      const defaultWidth =
+        app.id === 'calculator'
+          ? 384
+          : app.id === 'clock'
+            ? 1280
+            : WINDOW_DEFAULTS.width
+      const defaultHeight =
+        app.id === 'calculator'
+          ? 620
+          : app.id === 'clock'
+            ? 760
+            : WINDOW_DEFAULTS.height
 
       const windowEntry = {
         id: pid,
@@ -864,9 +874,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         prevY: defaultY,
         prevWidth: defaultWidth,
         prevHeight: defaultHeight,
-        noMaximize: app.id === 'calculator', // Disable maximize for calculator
-        minWidth: app.id === 'calculator' ? 428 : undefined,
-        minHeight: app.id === 'calculator' ? 520 : undefined
+        hideHeader: app.id === 'webbrowser' || app.id === 'camera' || app.id === 'calculator' || app.id === 'clock',
+        noMaximize: false,
+        minWidth: app.id === 'calculator' ? 384 : app.id === 'clock' ? 860 : undefined,
+        minHeight: app.id === 'calculator' ? 620 : app.id === 'clock' ? 560 : undefined
       }
 
       return [
@@ -1126,7 +1137,16 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               keepMountedWhenMinimized={SESSION_PERSISTENT_APP_IDS.has(win.appId)}
               touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
             >
-              {AppComponent ? <AppComponent onWindowTitleChange={(title) => updateWindowTitle(win.id, title)} /> : (
+              {AppComponent ? <AppComponent
+                onWindowTitleChange={(title) => updateWindowTitle(win.id, title)}
+                windowControls={{
+                  isMaximized: win.isMaximized,
+                  canMaximize: !win.noMaximize,
+                  onMinimize: () => toggleMinimize(win.id),
+                  onMaximize: () => maximizeWindow(win.id),
+                  onClose: () => closeWindow(win.id)
+                }}
+              /> : (
                 <div className="window-placeholder">
                   <div className="window-placeholder-title">{win.title}</div>
                   <div className="window-placeholder-body">
