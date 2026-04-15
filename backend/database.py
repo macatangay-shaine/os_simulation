@@ -334,6 +334,33 @@ def remove_startup_process(app_name: str) -> None:
     conn.close()
 
 
+def init_apps() -> None:
+    """Initialize apps table."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS apps (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            description TEXT,
+            icon TEXT,
+            category TEXT,
+            builtin INTEGER DEFAULT 0,
+            installed INTEGER DEFAULT 1,
+            permissions TEXT,
+            storage_size_mb INTEGER DEFAULT 0,
+            installed_at TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
 def init_database():
     """Initialize all database tables."""
     init_users()
@@ -341,6 +368,7 @@ def init_database():
     init_notifications()
     init_startup_processes()
     init_updates()
+    init_apps()
     
     # Migration: Ensure initial history entry exists for existing databases
     conn = get_db_connection()
@@ -394,7 +422,9 @@ def migrate_apps_storage():
         "localfiles": 18,
         "appstore": 56,
         "eventviewer": 20,
-        "diagnostics": 30
+        "diagnostics": 30,
+        "minesweeper": 2,
+        "solitaire": 2
     }
     
     for app_id, size in app_sizes.items():

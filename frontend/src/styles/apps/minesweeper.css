@@ -1,0 +1,291 @@
+.minesweeper-app {
+  --panel: #c0c0c0;
+  --panel-border-dark: #808080;
+  --panel-border-light: #ffffff;
+  --text-main: #111111;
+  --text-muted: #373737;
+  --counter-bg: #000000;
+  --counter-fg: #ff2a2a;
+  --cell-size: 34px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  color: var(--text-main);
+  background: var(--panel);
+  border-top: 2px solid var(--panel-border-light);
+  border-left: 2px solid var(--panel-border-light);
+  border-right: 2px solid var(--panel-border-dark);
+  border-bottom: 2px solid var(--panel-border-dark);
+  border-radius: 0;
+  padding: 10px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.minesweeper-header {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) minmax(360px, 2fr) auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel);
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+  padding: 8px;
+}
+
+.minesweeper-title-block h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.minesweeper-title-block p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.minesweeper-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.status-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  background: var(--counter-bg);
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+  border-radius: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+.status-item .label {
+  font-size: 10px;
+  color: #d5d5d5;
+  letter-spacing: 0.03em;
+}
+
+.status-item .value {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: var(--counter-fg);
+}
+
+.reset-btn {
+  height: 44px;
+  min-width: 92px;
+  border-radius: 0;
+  border-top: 2px solid var(--panel-border-light);
+  border-left: 2px solid var(--panel-border-light);
+  border-right: 2px solid var(--panel-border-dark);
+  border-bottom: 2px solid var(--panel-border-dark);
+  background: #d4d4d4;
+  color: var(--text-main);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: none;
+}
+
+.reset-btn:hover {
+  background: #dadada;
+}
+
+.reset-btn:active {
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+}
+
+.minesweeper-difficulty {
+  display: flex;
+  gap: 10px;
+}
+
+.difficulty-btn {
+  min-width: 120px;
+  border-top: 2px solid var(--panel-border-light);
+  border-left: 2px solid var(--panel-border-light);
+  border-right: 2px solid var(--panel-border-dark);
+  border-bottom: 2px solid var(--panel-border-dark);
+  border-radius: 0;
+  background: #d5d5d5;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.14s ease;
+}
+
+.difficulty-btn span {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.difficulty-btn small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.difficulty-btn:hover {
+  background: #dfdfdf;
+}
+
+.difficulty-btn.active {
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+  background: #b8b8b8;
+}
+
+.minesweeper-result {
+  border-radius: 0;
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+  padding: 10px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #d0d0d0;
+}
+
+.minesweeper-result.won {
+  color: #0b730b;
+  background: #c8eac8;
+}
+
+.minesweeper-result.lost {
+  color: #8e0e0e;
+  background: #efc4c4;
+}
+
+.minesweeper-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+  background: #bfbfbf;
+  padding: 12px;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+}
+
+.minesweeper-grid {
+  display: grid;
+  gap: 2px;
+  place-content: center;
+}
+
+.minesweeper-cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: 0;
+  border-top: 2px solid var(--panel-border-light);
+  border-left: 2px solid var(--panel-border-light);
+  border-right: 2px solid var(--panel-border-dark);
+  border-bottom: 2px solid var(--panel-border-dark);
+  background: #d8d8d8;
+  color: #111;
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: none;
+}
+
+.minesweeper-cell.unrevealed:hover {
+  background: #e2e2e2;
+}
+
+.minesweeper-cell.unrevealed:active {
+  border-top: 2px solid var(--panel-border-dark);
+  border-left: 2px solid var(--panel-border-dark);
+  border-right: 2px solid var(--panel-border-light);
+  border-bottom: 2px solid var(--panel-border-light);
+}
+
+.minesweeper-cell.revealed {
+  cursor: default;
+  background: #c8c8c8;
+  border: 1px solid #8a8a8a;
+  color: #111111;
+}
+
+.minesweeper-cell.mine {
+  background: #efb0b0;
+  color: #5b0000;
+}
+
+.minesweeper-cell.flagged {
+  color: #cc1010;
+}
+
+.minesweeper-cell.number-1 { color: #1163ff; }
+.minesweeper-cell.number-2 { color: #008d62; }
+.minesweeper-cell.number-3 { color: #d01a2f; }
+.minesweeper-cell.number-4 { color: #4528d4; }
+.minesweeper-cell.number-5 { color: #8f2f1f; }
+.minesweeper-cell.number-6 { color: #047c92; }
+.minesweeper-cell.number-7 { color: #163447; }
+.minesweeper-cell.number-8 { color: #677f92; }
+
+.minesweeper-footer {
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 12px;
+  padding-bottom: 2px;
+}
+
+@media (max-width: 900px) {
+  .minesweeper-app {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .minesweeper-header {
+    grid-template-columns: 1fr;
+  }
+
+  .minesweeper-status {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .reset-btn {
+    width: 100%;
+  }
+
+  .difficulty-btn {
+    min-width: 0;
+    flex: 1;
+  }
+}

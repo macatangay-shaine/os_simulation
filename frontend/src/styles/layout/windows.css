@@ -136,14 +136,14 @@
 
 .os-window-actions {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   flex-shrink: 0;
 }
 
 .os-window-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 46px;
+  height: 30px;
+  border-radius: 0;
   border: none;
   background: transparent;
   color: var(--win-text);
@@ -157,11 +157,12 @@
 }
 
 .os-window-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .os-window-btn:active {
-  transform: scale(0.95);
+  transform: none;
+  background: rgba(0, 0, 0, 0.14);
 }
 
 .os-window-btn.close:hover {
@@ -169,9 +170,63 @@
   color: white;
 }
 
-.os-window-icon {
-  width: 14px;
-  height: 14px;
+.os-window-glyph {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+}
+
+.os-window-glyph::before,
+.os-window-glyph::after {
+  content: '';
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.os-window-glyph-minimize::before {
+  left: 1px;
+  right: 1px;
+  bottom: 2px;
+  border-top: 1.5px solid currentColor;
+}
+
+.os-window-glyph-maximize::before {
+  inset: 1px;
+  border: 1.5px solid currentColor;
+}
+
+.os-window-glyph-restore::before {
+  top: 1px;
+  right: 1px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+}
+
+.os-window-glyph-restore::after {
+  left: 1px;
+  bottom: 1px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+}
+
+.os-window-glyph-close::before,
+.os-window-glyph-close::after {
+  top: 1px;
+  left: 5px;
+  width: 1.5px;
+  height: 10px;
+  background: currentColor;
+}
+
+.os-window-glyph-close::before {
+  transform: rotate(45deg);
+}
+
+.os-window-glyph-close::after {
+  transform: rotate(-45deg);
 }
 
 .os-window-body {

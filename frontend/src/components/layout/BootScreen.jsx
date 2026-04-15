@@ -9,6 +9,48 @@ export default function BootScreen({ onComplete }) {
     let cancelled = false
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+    const bootEndpoints = [
+      'http://localhost:8000/boot',
+      'http://127.0.0.1:8000/boot'
+    ]
+
+    const checkBootEndpoint = async (url) => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      try {
+        const response = await fetch(url, { signal: controller.signal })
+        if (!response.ok) {
+          throw new Error(`Boot failed: ${response.status}`)
+        }
+        await response.json()
+        return true
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    const waitForKernel = async () => {
+      const maxAttempts = 3
+      let lastError = null
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        for (const endpoint of bootEndpoints) {
+          try {
+            await checkBootEndpoint(endpoint)
+            return true
+          } catch (error) {
+            lastError = error
+          }
+        }
+
+        if (attempt < maxAttempts) {
+          await wait(1000)
+        }
+      }
+
+      throw lastError || new Error('Kernel API unavailable')
+    }
+
     const runBoot = async () => {
       try {
         const BLACK_DELAY = 4000
@@ -23,11 +65,7 @@ export default function BootScreen({ onComplete }) {
         if (cancelled) return
         setStage('loading')
 
-        const response = await fetch('http://localhost:8000/boot')
-        if (!response.ok) {
-          throw new Error(`Boot failed: ${response.status}`)
-        }
-        await response.json()
+        await waitForKernel()
         await wait(LOADING_DELAY)
         if (cancelled) return
         if (!completedRef.current) {
@@ -35,7 +73,17 @@ export default function BootScreen({ onComplete }) {
           onComplete?.()
         }
       } catch (err) {
-        setError('Kernel initialization failed')
+        const message = err instanceof Error ? err.message : ''
+        if (
+          message.includes('Failed to fetch') ||
+          message.includes('NetworkError') ||
+          message.includes('aborted') ||
+          message.includes('unavailable')
+        ) {
+          setError('Kernel API offline. Start backend on http://localhost:8000 and retry.')
+        } else {
+          setError('Kernel initialization failed')
+        }
       }
     }
 

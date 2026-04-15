@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, FileText, Folder, HardDrive, Settings, Terminal, Bell, Package, AlertCircle, Stethoscope, Calculator, Camera, Clock, Calendar as CalendarIcon, Lightbulb, Shield } from 'lucide-react'
+import { Activity, FileText, Folder, HardDrive, Settings, Terminal, Bell, Package, AlertCircle, Stethoscope, Calculator, Camera, Clock, Calendar as CalendarIcon, Lightbulb, Shield, LayoutGrid, ArrowUpDown, RefreshCw, PlusCircle, Monitor, Palette, Ellipsis, Bomb, Spade } from 'lucide-react'
 import AppLauncher from '../app-management/AppLauncher.jsx'
 import ContextMenu from '../ui/ContextMenu.jsx'
 import StartMenu from './StartMenu.jsx'
@@ -26,10 +26,13 @@ import CalendarViewerApp from '../../apps/CalendarViewerApp.jsx'
 import TipsApp from '../../apps/TipsApp.jsx'
 import WebBrowserApp from '../../apps/WebBrowserApp.jsx'
 import ArmouryCrateApp from '../../apps/ArmouryCrateApp.jsx'
+import MinesweeperApp from '../../apps/MinesweeperApp.jsx'
+import SolitaireApp from '../../apps/SolitaireApp.jsx'
 
 const RECYCLE_BIN_PATH = '/home/user/.recycle_bin'
 const ARMOURY_DEVICE_SETTINGS_STORAGE_KEY = 'jezos_armoury_device_settings'
 const ARMOURY_DISPLAY_SETTINGS_STORAGE_KEY = 'jezos_armoury_display_settings_state'
+const DESKTOP_VIEW_SETTINGS_STORAGE_KEY = 'jez_os_desktop_view_settings'
 const RECYCLE_BIN_DESKTOP_ITEM = {
   path: RECYCLE_BIN_PATH,
   type: 'dir',
@@ -42,6 +45,40 @@ const DEFAULT_ARMOURY_DISPLAY_SETTINGS = {
   colorTemperature: 50,
   osdEnabled: true,
   lastUserSelectionAt: null
+}
+
+const DEFAULT_DESKTOP_VIEW_SETTINGS = {
+  iconSize: 'medium',
+  autoArrangeIcons: false,
+  alignIconsToGrid: true,
+  showDesktopIcons: true
+}
+
+function loadDesktopViewSettings() {
+  try {
+    const saved = localStorage.getItem(DESKTOP_VIEW_SETTINGS_STORAGE_KEY)
+    if (!saved) return DEFAULT_DESKTOP_VIEW_SETTINGS
+
+    const parsed = JSON.parse(saved)
+    return {
+      iconSize: ['large', 'medium', 'small'].includes(parsed?.iconSize) ? parsed.iconSize : DEFAULT_DESKTOP_VIEW_SETTINGS.iconSize,
+      autoArrangeIcons: typeof parsed?.autoArrangeIcons === 'boolean' ? parsed.autoArrangeIcons : DEFAULT_DESKTOP_VIEW_SETTINGS.autoArrangeIcons,
+      alignIconsToGrid: typeof parsed?.alignIconsToGrid === 'boolean' ? parsed.alignIconsToGrid : DEFAULT_DESKTOP_VIEW_SETTINGS.alignIconsToGrid,
+      showDesktopIcons: typeof parsed?.showDesktopIcons === 'boolean' ? parsed.showDesktopIcons : DEFAULT_DESKTOP_VIEW_SETTINGS.showDesktopIcons
+    }
+  } catch (error) {
+    console.warn('Failed to load desktop view settings:', error)
+    return DEFAULT_DESKTOP_VIEW_SETTINGS
+  }
+}
+
+function normalizeDesktopViewSettings(settings) {
+  return {
+    iconSize: ['large', 'medium', 'small'].includes(settings?.iconSize) ? settings.iconSize : DEFAULT_DESKTOP_VIEW_SETTINGS.iconSize,
+    autoArrangeIcons: Boolean(settings?.autoArrangeIcons),
+    alignIconsToGrid: settings?.alignIconsToGrid !== false,
+    showDesktopIcons: settings?.showDesktopIcons !== false
+  }
 }
 
 // Component mapping for built-in apps
@@ -61,7 +98,9 @@ const APP_COMPONENTS = {
   'calendar': CalendarViewerApp,
   'tips': TipsApp,
   'webbrowser': WebBrowserApp,
-  'armourycrate': ArmouryCrateApp
+  'armourycrate': ArmouryCrateApp,
+  'minesweeper': MinesweeperApp,
+  'solitaire': SolitaireApp
 }
 
 // Icon mapping for all apps
@@ -81,7 +120,9 @@ const APP_ICONS = {
   'calendar': CalendarIcon,
   'tips': Lightbulb,
   'webbrowser': Package, // You can replace with a browser icon if available
-  'armourycrate': Shield
+  'armourycrate': Shield,
+  'minesweeper': Bomb,
+  'solitaire': Spade
 }
 
 const APP_ICON_SOURCES = {
@@ -104,7 +145,9 @@ const APP_DESKTOP_ICON_SOURCES = {
   'calendar': '/desktop-icons/calendar.png',
   'tips': '/desktop-icons/tips.png',
   'webbrowser': '/desktop-icons/webbrowser.png',
-  'armourycrate': '/desktop-icons/armourycrate.png'
+  'armourycrate': '/desktop-icons/armourycrate.png',
+  'minesweeper': '/desktop-icons/minesweeper.svg',
+  'solitaire': '/desktop-icons/solitaire.svg'
 }
 
 const WINDOW_DEFAULTS = {
@@ -112,6 +155,21 @@ const WINDOW_DEFAULTS = {
   height: 280,
   x: 120,
   y: 120
+}
+
+const DESKTOP_GRID_COLUMNS = 5
+const DESKTOP_SORT_MODES = {
+  name: 'name',
+  size: 'size',
+  type: 'type',
+  modified: 'modified'
+}
+
+const APP_CATEGORY_SORT_ORDER = {
+  System: 0,
+  Productivity: 1,
+  Multimedia: 2,
+  Internet: 3
 }
 
 // Apps that should open maximized by default, similar to common desktop UX.
@@ -151,6 +209,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const [recentApps, setRecentApps] = useState([])
   const [taskbarSearchQuery, setTaskbarSearchQuery] = useState('')
   const [updateStatus, setUpdateStatus] = useState(null)
+  const [viewMenu, setViewMenu] = useState({ visible: false, x: 0, y: 0 })
+  const [sortMenu, setSortMenu] = useState({ visible: false, x: 0, y: 0 })
+  const [newMenu, setNewMenu] = useState({ visible: false, x: 0, y: 0 })
+  const [desktopSortMode, setDesktopSortMode] = useState(DESKTOP_SORT_MODES.name)
+  const [isRefreshingDesktop, setIsRefreshingDesktop] = useState(false)
+  const [desktopViewSettings, setDesktopViewSettings] = useState(() => loadDesktopViewSettings())
   const [armouryDeviceSettings, setArmouryDeviceSettings] = useState(() => loadArmouryDeviceSettings())
   const [armouryDisplaySettings, setArmouryDisplaySettings] = useState(() => loadArmouryDisplaySettings())
   const [pinnedAppIds, setPinnedAppIds] = useState(() => {
@@ -187,6 +251,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       return {}
     }
   })
+  const refreshAnimationTimeoutRef = useRef(null)
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -195,12 +260,146 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const newPositions = {}
       prev.forEach((app, index) => {
         newPositions[app.id] = {
-          row: Math.floor(index / 5),
-          col: index % 5
+          row: Math.floor(index / DESKTOP_GRID_COLUMNS),
+          col: index % DESKTOP_GRID_COLUMNS
         }
       })
       setIconPositions(newPositions)
       return prev
+    })
+  }
+
+  useEffect(() => {
+    return () => {
+      if (refreshAnimationTimeoutRef.current) {
+        clearTimeout(refreshAnimationTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const pulseDesktopRefreshAnimation = () => {
+    if (refreshAnimationTimeoutRef.current) {
+      clearTimeout(refreshAnimationTimeoutRef.current)
+    }
+
+    setIsRefreshingDesktop(true)
+    refreshAnimationTimeoutRef.current = setTimeout(() => {
+      setIsRefreshingDesktop(false)
+    }, 220)
+  }
+
+  const closeViewMenu = () => {
+    setViewMenu((previous) => ({ ...previous, visible: false }))
+  }
+
+  const closeSortMenu = () => {
+    setSortMenu((previous) => ({ ...previous, visible: false }))
+  }
+
+  const closeNewMenu = () => {
+    setNewMenu((previous) => ({ ...previous, visible: false }))
+  }
+
+  const parseDateValue = (value) => {
+    if (!value) return 0
+    const timestamp = Date.parse(value)
+    return Number.isFinite(timestamp) ? timestamp : 0
+  }
+
+  const getDesktopSortableEntries = () => {
+    const appEntries = appRegistry.map((app, index) => ({
+      id: app.id,
+      label: app.title,
+      kind: 'app',
+      size: Number(app.storage_size_mb ?? app.storageSizeMb ?? 0),
+      modifiedAt: parseDateValue(app.installed_at || app.created_at || app.createdAt),
+      typeRank: APP_CATEGORY_SORT_ORDER[app.category] ?? 99,
+      originalIndex: index
+    }))
+
+    const fileEntries = desktopFiles
+      .filter((file) => !file.path.endsWith('.lnk'))
+      .map((file, index) => {
+        const isRecycleBin = file.path === RECYCLE_BIN_PATH
+        const isFolder = file.type === 'dir'
+        const label = isRecycleBin ? 'Recycle Bin' : file.path.split('/').pop()
+        return {
+          id: `file-${file.path}`,
+          label,
+          kind: 'file',
+          size: Number(file.size || 0),
+          modifiedAt: parseDateValue(file.modified_at || file.modifiedAt || file.created_at || file.createdAt || file.deleted_at),
+          typeRank: isFolder ? 1 : 2,
+          originalIndex: appEntries.length + index,
+          itemType: isFolder ? 'Folder' : 'File'
+        }
+      })
+
+    return [...appEntries, ...fileEntries]
+  }
+
+  const applyDesktopSort = (sortMode) => {
+    const entries = getDesktopSortableEntries()
+    const compareByName = (left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
+
+    const comparators = {
+      name: (left, right) => compareByName(left, right),
+      size: (left, right) => (left.size - right.size) || compareByName(left, right),
+      type: (left, right) => (left.typeRank - right.typeRank) || compareByName(left, right),
+      modified: (left, right) => (right.modifiedAt - left.modifiedAt) || compareByName(left, right)
+    }
+
+    const comparator = comparators[sortMode] || comparators.name
+    const ordered = [...entries].sort(comparator)
+    setDesktopSortMode(sortMode)
+    setIconPositions((prev) => {
+      const next = { ...prev }
+      ordered.forEach((entry, index) => {
+        next[entry.id] = {
+          row: Math.floor(index / DESKTOP_GRID_COLUMNS),
+          col: index % DESKTOP_GRID_COLUMNS
+        }
+      })
+      return next
+    })
+  }
+
+  const arrangeDesktopIcons = () => {
+    const orderedEntries = [
+      ...appRegistry.map((app) => ({ id: app.id, label: app.title })),
+      ...desktopFiles
+        .filter((file) => !file.path.endsWith('.lnk'))
+        .map((file) => {
+          const isRecycleBin = file.path === RECYCLE_BIN_PATH
+          const fileName = isRecycleBin ? 'Recycle Bin' : file.path.split('/').pop()
+          return {
+            id: `file-${file.path}`,
+            label: fileName
+          }
+        })
+    ]
+
+    setIconPositions((prev) => {
+      const next = { ...prev }
+      orderedEntries.forEach((entry, index) => {
+        next[entry.id] = {
+          row: Math.floor(index / DESKTOP_GRID_COLUMNS),
+          col: index % DESKTOP_GRID_COLUMNS
+        }
+      })
+      return next
+    })
+  }
+
+  const updateDesktopViewSettings = (patch) => {
+    setDesktopViewSettings((previous) => {
+      const next = normalizeDesktopViewSettings({ ...previous, ...patch })
+      try {
+        localStorage.setItem(DESKTOP_VIEW_SETTINGS_STORAGE_KEY, JSON.stringify(next))
+      } catch (error) {
+        console.warn('Failed to save desktop view settings:', error)
+      }
+      return next
     })
   }
   
@@ -208,24 +407,29 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const loadApps = async () => {
       const defaultRegistry = [
-        { id: 'terminal', title: 'Terminal', icon: Terminal, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.terminal, component: TerminalApp },
-        { id: 'files', title: 'Files', icon: Folder, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.files, component: FileExplorer },
-        { id: 'localfiles', title: 'Local Files', icon: HardDrive, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.localfiles, component: LocalFilesApp },
-        { id: 'notes', title: 'Notes', icon: FileText, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.notes, component: NotesApp },
-        { id: 'settings', title: 'Settings', icon: Settings, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.settings, component: SettingsApp },
-        { id: 'monitor', title: 'System Monitor', icon: Activity, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.monitor, component: SystemMonitor },
-        { id: 'webbrowser', title: 'Web Browser', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.webbrowser, component: WebBrowserApp },
-        { id: 'appstore', title: 'App Store', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.appstore, component: AppStore },
-        { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.eventviewer, component: EventViewer },
-        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.diagnostics, component: SystemDiagnostics },
+        { id: 'terminal', title: 'Terminal', icon: Terminal, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.terminal, component: TerminalApp, category: 'System', storage_size_mb: 45, created_at: '2026-01-01T00:00:00Z' },
+        { id: 'files', title: 'Files', icon: Folder, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.files, component: FileExplorer, category: 'System', storage_size_mb: 32, created_at: '2026-01-02T00:00:00Z' },
+        { id: 'localfiles', title: 'Local Files', icon: HardDrive, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.localfiles, component: LocalFilesApp, category: 'System', storage_size_mb: 18, created_at: '2026-01-03T00:00:00Z' },
+        { id: 'notes', title: 'Notes', icon: FileText, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.notes, component: NotesApp, category: 'Productivity', storage_size_mb: 12, created_at: '2026-01-04T00:00:00Z' },
+        { id: 'settings', title: 'Settings', icon: Settings, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.settings, component: SettingsApp, category: 'System', storage_size_mb: 8, created_at: '2026-01-05T00:00:00Z' },
+        { id: 'monitor', title: 'System Monitor', icon: Activity, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.monitor, component: SystemMonitor, category: 'System', storage_size_mb: 25, created_at: '2026-01-06T00:00:00Z' },
+        { id: 'webbrowser', title: 'Web Browser', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.webbrowser, component: WebBrowserApp, category: 'Internet', storage_size_mb: 22, created_at: '2026-01-07T00:00:00Z' },
+        { id: 'appstore', title: 'App Store', icon: Package, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.appstore, component: AppStore, category: 'System', storage_size_mb: 56, created_at: '2026-01-08T00:00:00Z' },
+        { id: 'eventviewer', title: 'Event Viewer', icon: AlertCircle, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.eventviewer, component: EventViewer, category: 'System', storage_size_mb: 20, created_at: '2026-01-09T00:00:00Z' },
+        { id: 'diagnostics', title: 'System Diagnostics', icon: Stethoscope, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.diagnostics, component: SystemDiagnostics, category: 'System', storage_size_mb: 30, created_at: '2026-01-10T00:00:00Z' },
         {
           id: 'armourycrate',
           title: 'Armoury Crate',
           icon: Shield,
           iconSrc: APP_ICON_SOURCES.armourycrate,
           desktopIconSrc: APP_DESKTOP_ICON_SOURCES.armourycrate,
-          component: ArmouryCrateApp
-        }
+          component: ArmouryCrateApp,
+          category: 'System',
+          storage_size_mb: 0,
+          created_at: '2026-01-11T00:00:00Z'
+        },
+        { id: 'minesweeper', title: 'Minesweeper', icon: Bomb, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.minesweeper, component: MinesweeperApp, category: 'Games', storage_size_mb: 2, created_at: '2026-01-12T00:00:00Z' },
+        { id: 'solitaire', title: 'Solitaire', icon: Spade, desktopIconSrc: APP_DESKTOP_ICON_SOURCES.solitaire, component: SolitaireApp, category: 'Games', storage_size_mb: 2, created_at: '2026-01-13T00:00:00Z' }
       ]
 
       try {
@@ -259,7 +463,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           iconSrc: APP_ICON_SOURCES[app.id] || null,
           desktopIconSrc: APP_DESKTOP_ICON_SOURCES[app.id] || APP_ICON_SOURCES[app.id] || null,
           component: APP_COMPONENTS[app.id] || AppStore,
-          installed: app.installed
+          installed: app.installed,
+          category: app.category || 'System',
+          storage_size_mb: app.storage_size_mb || 0,
+          created_at: app.created_at || app.installed_at || null
         }))
 
         // Ensure critical system apps are always present
@@ -272,7 +479,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               icon: Package,
               desktopIconSrc: APP_DESKTOP_ICON_SOURCES.appstore,
               component: AppStore,
-              installed: 1
+              installed: 1,
+              category: 'System',
+              storage_size_mb: 56,
+              created_at: '2026-01-08T00:00:00Z'
             }
           ]
         }
@@ -286,7 +496,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               icon: AlertCircle,
               desktopIconSrc: APP_DESKTOP_ICON_SOURCES.eventviewer,
               component: EventViewer,
-              installed: 1
+              installed: 1,
+              category: 'System',
+              storage_size_mb: 20,
+              created_at: '2026-01-09T00:00:00Z'
             }
           ]
         }
@@ -300,7 +513,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               icon: Stethoscope,
               desktopIconSrc: APP_DESKTOP_ICON_SOURCES.diagnostics,
               component: SystemDiagnostics,
-              installed: 1
+              installed: 1,
+              category: 'System',
+              storage_size_mb: 30,
+              created_at: '2026-01-10T00:00:00Z'
             }
           ]
         }
@@ -315,7 +531,44 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               iconSrc: APP_ICON_SOURCES.armourycrate,
               desktopIconSrc: APP_DESKTOP_ICON_SOURCES.armourycrate,
               component: ArmouryCrateApp,
-              installed: 1
+              installed: 1,
+              category: 'System',
+              storage_size_mb: 0,
+              created_at: '2026-01-11T00:00:00Z'
+            }
+          ]
+        }
+
+        if (!registry.some((app) => app.id === 'minesweeper')) {
+          registry = [
+            ...registry,
+            {
+              id: 'minesweeper',
+              title: 'Minesweeper',
+              icon: Bomb,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.minesweeper,
+              component: MinesweeperApp,
+              installed: 1,
+              category: 'Games',
+              storage_size_mb: 2,
+              created_at: '2026-01-12T00:00:00Z'
+            }
+          ]
+        }
+
+        if (!registry.some((app) => app.id === 'solitaire')) {
+          registry = [
+            ...registry,
+            {
+              id: 'solitaire',
+              title: 'Solitaire',
+              icon: Spade,
+              desktopIconSrc: APP_DESKTOP_ICON_SOURCES.solitaire,
+              component: SolitaireApp,
+              installed: 1,
+              category: 'Games',
+              storage_size_mb: 2,
+              created_at: '2026-01-13T00:00:00Z'
             }
           ]
         }
@@ -358,6 +611,20 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     
     loadApps()
   }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DESKTOP_VIEW_SETTINGS_STORAGE_KEY, JSON.stringify(desktopViewSettings))
+    } catch (error) {
+      console.warn('Failed to persist desktop view settings:', error)
+    }
+  }, [desktopViewSettings])
+
+  useEffect(() => {
+    if (desktopViewSettings.autoArrangeIcons) {
+      arrangeDesktopIcons()
+    }
+  }, [desktopViewSettings.autoArrangeIcons, appRegistry, desktopFiles])
 
   useEffect(() => {
     const syncArmouryDeviceSettings = (event) => {
@@ -457,13 +724,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         const response = await fetch('http://localhost:8000/process/list')
         if (!response.ok) return
         const processList = await response.json()
-        const runningPids = new Set(
-          (processList || [])
-            .filter((proc) => proc.state === 'running')
-            .map((proc) => proc.pid)
+        const processStatesByPid = new Map(
+          (processList || []).map((proc) => [Number(proc.pid), proc.state])
         )
 
-        setWindows((prev) => prev.filter((win) => runningPids.has(win.id)))
+        // Only close windows when backend explicitly marks the PID terminated.
+        setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
       } catch {
         // Ignore transient backend failures.
       }
@@ -578,6 +844,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const handleKeyDown = (event) => {
       console.log('Key pressed:', event.key, 'Zero pressed:', zeroKeyPressed.current, 'Active window:', activeWindowId)
+
+      if (event.key === 'F5') {
+        event.preventDefault()
+        handleDesktopRefresh()
+        return
+      }
       
       // Track when '0' is pressed
       if (event.key === '0') {
@@ -822,8 +1094,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         // Check if we need to kill background processes
         if (data.killed_processes && data.killed_processes.length > 0) {
           console.log('Auto-killed background processes:', data.killed_processes)
-          const killedSet = new Set(data.killed_processes)
-          setWindows((prev) => prev.filter((win) => !killedSet.has(win.id)))
+          const killedSet = new Set(data.killed_processes.map((killedPid) => Number(killedPid)))
+          setWindows((prev) => prev.filter((win) => !killedSet.has(Number(win.id))))
         }
       } else {
         const errorData = await response.json()
@@ -847,18 +1119,27 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           ? 384
           : app.id === 'clock'
             ? 1280
+            : app.id === 'solitaire'
+              ? 920
+              : app.id === 'minesweeper'
+                ? 980
             : WINDOW_DEFAULTS.width
       const defaultHeight =
         app.id === 'calculator'
           ? 620
           : app.id === 'clock'
             ? 760
+            : app.id === 'solitaire'
+              ? 640
+              : app.id === 'minesweeper'
+                ? 760
             : WINDOW_DEFAULTS.height
 
       const windowEntry = {
         id: pid,
         appId: app.id,
         title: options.windowTitle || app.title,
+        appProps: options.appProps || {},
         icon: app.icon,
         iconSrc: app.iconSrc || app.desktopIconSrc || null,
         desktopIconSrc: app.desktopIconSrc || null,
@@ -876,8 +1157,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         prevHeight: defaultHeight,
         hideHeader: app.id === 'webbrowser' || app.id === 'camera' || app.id === 'calculator' || app.id === 'clock',
         noMaximize: false,
-        minWidth: app.id === 'calculator' ? 384 : app.id === 'clock' ? 860 : undefined,
-        minHeight: app.id === 'calculator' ? 620 : app.id === 'clock' ? 560 : undefined
+        minWidth: app.id === 'calculator' ? 384 : app.id === 'clock' ? 860 : app.id === 'solitaire' ? 760 : app.id === 'minesweeper' ? 820 : undefined,
+        minHeight: app.id === 'calculator' ? 620 : app.id === 'clock' ? 560 : app.id === 'solitaire' ? 520 : app.id === 'minesweeper' ? 620 : undefined
       }
 
       return [
@@ -1032,23 +1313,266 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     )
   }
 
-  const desktopContextItems = useMemo(
-    () =>
-      appRegistry.map((app) => ({
-        label: `Open ${app.title}`,
-        onClick: () => launchApp(app)
-      })),
-    [appRegistry, zCounter]
-  )
+  const launchAppById = (appId, options = {}) => {
+    const app = appRegistry.find((entry) => entry.id === appId)
+    if (app) {
+      launchApp(app, options)
+    }
+  }
+
+  const createDesktopItem = async (nodeType) => {
+    const isFolder = nodeType === 'dir'
+    const defaultName = isFolder ? 'New Folder' : 'New Text Document.txt'
+    const itemName = window.prompt(isFolder ? 'New folder name:' : 'New file name:', defaultName)
+    if (!itemName) return
+
+    const itemPath = `/home/user/Desktop/${itemName}`
+
+    try {
+      const response = await fetch('http://localhost:8000/fs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: itemPath,
+          node_type: nodeType,
+          content: ''
+        })
+      })
+
+      if (!response.ok && response.status !== 409) {
+        throw new Error(`Failed to create ${isFolder ? 'folder' : 'file'}`)
+      }
+
+      const now = new Date().toISOString()
+      setDesktopFiles((previous) => {
+        if (previous.some((entry) => entry.path === itemPath)) {
+          return previous
+        }
+        return [
+          ...previous,
+          {
+            path: itemPath,
+            type: nodeType,
+            size: 0,
+            created_at: now,
+            modified_at: now
+          }
+        ]
+      })
+    } catch (error) {
+      console.error('Failed to create desktop item:', error)
+      alert(`Failed to create ${isFolder ? 'folder' : 'file'}`)
+    }
+  }
+
+  const handleDesktopRefresh = async () => {
+    pulseDesktopRefreshAnimation()
+
+    const refreshTasks = []
+
+    refreshTasks.push((async () => {
+      const response = await fetch('http://localhost:8000/fs/list?path=%2Fhome%2Fuser%2FDesktop')
+      if (!response.ok) {
+        throw new Error('Failed to refresh desktop files')
+      }
+
+      const data = await response.json()
+      const nodes = Array.isArray(data.nodes) ? data.nodes : []
+      const hasRecycleBin = nodes.some((node) => node.path === RECYCLE_BIN_PATH)
+      setDesktopFiles(hasRecycleBin ? nodes : [RECYCLE_BIN_DESKTOP_ITEM, ...nodes])
+    })())
+
+    refreshTasks.push((async () => {
+      const response = await fetch('http://localhost:8000/process/list')
+      if (!response.ok) {
+        throw new Error('Failed to refresh process state')
+      }
+
+      const processList = await response.json()
+      const processStatesByPid = new Map(
+        (processList || []).map((proc) => [Number(proc.pid), proc.state])
+      )
+
+      setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
+    })())
+
+    try {
+      await Promise.all(refreshTasks)
+    } catch (error) {
+      console.error('Desktop refresh failed:', error)
+    }
+  }
+
+  const openViewMenu = () => {
+    setViewMenu({ visible: true, x: contextMenu.x + 278, y: contextMenu.y })
+  }
+
+  const openSortMenu = () => {
+    setSortMenu({ visible: true, x: contextMenu.x + 278, y: contextMenu.y + 44 })
+  }
+
+  const openNewMenu = () => {
+    setNewMenu({ visible: true, x: contextMenu.x + 278, y: contextMenu.y + 88 })
+  }
+
+  const closeAllMenus = () => {
+    closeViewMenu()
+    closeSortMenu()
+    closeNewMenu()
+  }
+
+  const viewMenuItems = useMemo(() => [
+    {
+      label: 'Large icons',
+      icon: LayoutGrid,
+      checked: desktopViewSettings.iconSize === 'large',
+      shortcut: 'Ctrl+Shift+2',
+      onClick: () => updateDesktopViewSettings({ iconSize: 'large' })
+    },
+    {
+      label: 'Medium icons',
+      icon: LayoutGrid,
+      checked: desktopViewSettings.iconSize === 'medium',
+      shortcut: 'Ctrl+Shift+3',
+      onClick: () => updateDesktopViewSettings({ iconSize: 'medium' })
+    },
+    {
+      label: 'Small icons',
+      icon: LayoutGrid,
+      checked: desktopViewSettings.iconSize === 'small',
+      shortcut: 'Ctrl+Shift+4',
+      onClick: () => updateDesktopViewSettings({ iconSize: 'small' })
+    },
+    { separator: true },
+    {
+      label: 'Auto arrange icons',
+      icon: RefreshCw,
+      checked: desktopViewSettings.autoArrangeIcons,
+      onClick: () => {
+        const nextValue = !desktopViewSettings.autoArrangeIcons
+        updateDesktopViewSettings({ autoArrangeIcons: nextValue })
+        if (nextValue) {
+          arrangeDesktopIcons()
+        }
+      }
+    },
+    {
+      label: 'Align icons to grid',
+      icon: Monitor,
+      checked: desktopViewSettings.alignIconsToGrid,
+      onClick: () => updateDesktopViewSettings({ alignIconsToGrid: !desktopViewSettings.alignIconsToGrid })
+    },
+    { separator: true },
+    {
+      label: 'Show desktop icons',
+      icon: desktopViewSettings.showDesktopIcons ? Monitor : LayoutGrid,
+      checked: desktopViewSettings.showDesktopIcons,
+      onClick: () => updateDesktopViewSettings({ showDesktopIcons: !desktopViewSettings.showDesktopIcons })
+    }
+  ], [desktopViewSettings])
+
+  const sortMenuItems = useMemo(() => [
+    {
+      label: 'Name',
+      checked: desktopSortMode === DESKTOP_SORT_MODES.name,
+      onClick: () => {
+        applyDesktopSort(DESKTOP_SORT_MODES.name)
+        closeSortMenu()
+      }
+    },
+    {
+      label: 'Size',
+      checked: desktopSortMode === DESKTOP_SORT_MODES.size,
+      onClick: () => {
+        applyDesktopSort(DESKTOP_SORT_MODES.size)
+        closeSortMenu()
+      }
+    },
+    {
+      label: 'Item type',
+      checked: desktopSortMode === DESKTOP_SORT_MODES.type,
+      onClick: () => {
+        applyDesktopSort(DESKTOP_SORT_MODES.type)
+        closeSortMenu()
+      }
+    },
+    {
+      label: 'Date modified',
+      checked: desktopSortMode === DESKTOP_SORT_MODES.modified,
+      onClick: () => {
+        applyDesktopSort(DESKTOP_SORT_MODES.modified)
+        closeSortMenu()
+      }
+    }
+  ], [desktopSortMode, applyDesktopSort, closeSortMenu])
+
+  const newMenuItems = useMemo(() => [
+    {
+      label: 'Folder',
+      icon: Folder,
+      onClick: () => createDesktopItem('dir')
+    },
+    {
+      label: 'Text Document',
+      icon: FileText,
+      onClick: () => createDesktopItem('file')
+    }
+  ], [createDesktopItem])
+
   const desktopScreenStyle = useMemo(() => getDesktopScreenStyle(armouryDisplaySettings), [armouryDisplaySettings])
 
   const handleContextMenu = (event) => {
     event.preventDefault()
+    closeAllMenus()
+    closeNewMenu()
     const items = [
-      ...desktopContextItems,
+      {
+        label: 'View',
+        icon: LayoutGrid,
+        hasSubmenu: true,
+        keepOpen: true,
+        onClick: openViewMenu
+      },
+      {
+        label: 'Sort by',
+        icon: ArrowUpDown,
+        hasSubmenu: true,
+        keepOpen: true,
+        onClick: openSortMenu
+      },
+      {
+        label: 'Refresh',
+        icon: RefreshCw,
+        onClick: handleDesktopRefresh
+      },
       { separator: true },
       {
-        label: 'Reset Desktop Layout',
+        label: 'New',
+        icon: PlusCircle,
+        hasSubmenu: true,
+        keepOpen: true,
+        onClick: openNewMenu
+      },
+      { separator: true },
+      {
+        label: 'Display settings',
+        icon: Monitor,
+        onClick: () => launchAppById('settings', { windowTitle: 'Display settings', appProps: { initialSection: 'system' } })
+      },
+      {
+        label: 'Personalize',
+        icon: Palette,
+        onClick: () => launchAppById('settings', { windowTitle: 'Personalize', appProps: { initialSection: 'personalization' } })
+      },
+      { separator: true },
+      {
+        label: 'Open in Terminal',
+        icon: Terminal,
+        onClick: () => launchAppById('terminal', { startMaximized: false })
+      },
+      {
+        label: 'Show more options',
+        icon: Ellipsis,
         onClick: () => resetDesktopLayout()
       }
     ]
@@ -1076,6 +1600,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
   const closeContextMenu = () => {
     setContextMenu((prev) => ({ ...prev, visible: false }))
+    closeAllMenus()
   }
 
   const closeAllPanels = () => {
@@ -1118,6 +1643,11 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             onIconMove={handleIconMove}
             onAppContextMenu={handleAppContextMenu}
             touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
+            iconSize={desktopViewSettings.iconSize}
+            showDesktopIcons={desktopViewSettings.showDesktopIcons}
+            autoArrangeIcons={desktopViewSettings.autoArrangeIcons}
+            alignIconsToGrid={desktopViewSettings.alignIconsToGrid}
+            isRefreshing={isRefreshingDesktop}
           />
         </div>
 
@@ -1138,6 +1668,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               touchpadEnabled={armouryDeviceSettings['touch-pad'] !== false}
             >
               {AppComponent ? <AppComponent
+                {...(win.appProps || {})}
                 onWindowTitleChange={(title) => updateWindowTitle(win.id, title)}
                 windowControls={{
                   isMaximized: win.isMaximized,
@@ -1162,7 +1693,31 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           visible={contextMenu.visible}
           x={contextMenu.x}
           y={contextMenu.y}
-          items={contextMenuItems.length ? contextMenuItems : desktopContextItems}
+          items={contextMenuItems}
+          onClose={closeContextMenu}
+        />
+
+        <ContextMenu
+          visible={viewMenu.visible}
+          x={viewMenu.x}
+          y={viewMenu.y}
+          items={viewMenuItems}
+          onClose={closeContextMenu}
+        />
+
+        <ContextMenu
+          visible={sortMenu.visible}
+          x={sortMenu.x}
+          y={sortMenu.y}
+          items={sortMenuItems}
+          onClose={closeContextMenu}
+        />
+
+        <ContextMenu
+          visible={newMenu.visible}
+          x={newMenu.x}
+          y={newMenu.y}
+          items={newMenuItems}
           onClose={closeContextMenu}
         />
 

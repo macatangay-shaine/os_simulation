@@ -3,10 +3,7 @@ import {
   ChevronDown,
   Delete,
   History,
-  Maximize2,
   Menu,
-  Minimize2,
-  Minus,
   PanelRightOpen,
   X
 } from 'lucide-react'
@@ -585,7 +582,7 @@ export default function CalculatorApp({ onWindowTitleChange, windowControls }) {
                 onClick={windowControls.onMinimize}
                 aria-label="Minimize"
               >
-                <Minus size={14} />
+                <span className="os-window-glyph os-window-glyph-minimize" aria-hidden="true" />
               </button>
               {windowControls.canMaximize ? (
                 <button
@@ -594,7 +591,10 @@ export default function CalculatorApp({ onWindowTitleChange, windowControls }) {
                   onClick={windowControls.onMaximize}
                   aria-label={windowControls.isMaximized ? 'Restore' : 'Maximize'}
                 >
-                  {windowControls.isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  <span
+                    className={`os-window-glyph ${windowControls.isMaximized ? 'os-window-glyph-restore' : 'os-window-glyph-maximize'}`}
+                    aria-hidden="true"
+                  />
                 </button>
               ) : null}
               <button
@@ -603,7 +603,7 @@ export default function CalculatorApp({ onWindowTitleChange, windowControls }) {
                 onClick={windowControls.onClose}
                 aria-label="Close"
               >
-                <X size={14} />
+                <span className="os-window-glyph os-window-glyph-close" aria-hidden="true" />
               </button>
             </div>
           ) : null}

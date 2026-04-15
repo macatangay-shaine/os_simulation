@@ -286,9 +286,16 @@ def list_nodes(path: str = Query(default="/", min_length=1)):
         conn.close()
         raise HTTPException(status_code=400, detail="Path is not a directory")
 
-    cursor.execute("SELECT path, node_type FROM fs_nodes WHERE parent = ?", (normalized,))
+    cursor.execute("SELECT path, node_type, size, created_at, modified_at FROM fs_nodes WHERE parent = ?", (normalized,))
     nodes = [
-        {"path": r["path"], "type": r["node_type"], "name": r["path"].split("/")[-1]}
+        {
+            "path": r["path"],
+            "type": r["node_type"],
+            "name": r["path"].split("/")[-1],
+            "size": r["size"] if "size" in r.keys() else 0,
+            "created_at": r["created_at"] if "created_at" in r.keys() else None,
+            "modified_at": r["modified_at"] if "modified_at" in r.keys() else None,
+        }
         for r in cursor.fetchall()
     ]
     conn.close()

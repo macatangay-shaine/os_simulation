@@ -5,10 +5,7 @@ import {
   Download,
   Ellipsis,
   Grip,
-  Maximize2,
   Mic,
-  Minimize2,
-  Minus,
   Plus,
   Puzzle,
   RotateCw,
@@ -343,15 +340,18 @@ export default function WebBrowserApp({ onDownload, windowControls }) {
         {windowControls ? (
           <div className="browser-window-controls" data-no-window-drag="true">
             <button type="button" className="browser-window-control" onClick={windowControls.onMinimize} aria-label="Minimize">
-              <Minus size={14} />
+              <span className="os-window-glyph os-window-glyph-minimize" aria-hidden="true" />
             </button>
             {windowControls.canMaximize ? (
               <button type="button" className="browser-window-control" onClick={windowControls.onMaximize} aria-label={windowControls.isMaximized ? "Restore" : "Maximize"}>
-                {windowControls.isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span
+                  className={`os-window-glyph ${windowControls.isMaximized ? 'os-window-glyph-restore' : 'os-window-glyph-maximize'}`}
+                  aria-hidden="true"
+                />
               </button>
             ) : null}
             <button type="button" className="browser-window-control close" onClick={windowControls.onClose} aria-label="Close">
-              <X size={14} />
+              <span className="os-window-glyph os-window-glyph-close" aria-hidden="true" />
             </button>
           </div>
         ) : null}
