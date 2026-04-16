@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Minus, X, Maximize2, Minimize2 } from 'lucide-react'
 
 const SNAP_THRESHOLD = 20
 const SNAP_ZONES = {
@@ -195,19 +194,40 @@ export default function Window({
           >
             <span className="os-window-title">{title}</span>
             <div className="os-window-actions">
-              <button type="button" className="os-window-btn" onClick={() => onMinimize(id)}>
-                <Minus className="os-window-icon" />
+              <button
+                type="button"
+                className="os-window-btn"
+                aria-label="Minimize"
+                title="Minimize"
+                onClick={() => onMinimize(id)}
+              >
+                <span className="os-window-glyph os-window-glyph-minimize" aria-hidden="true" />
               </button>
               {!noMaximize && (
-                <button type="button" className="os-window-btn" onClick={() => onMaximize(id)}>
-                  {isMaximized ? <Minimize2 className="os-window-icon" /> : <Maximize2 className="os-window-icon" />}
+                <button
+                  type="button"
+                  className="os-window-btn"
+                  aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
+                  title={isMaximized ? 'Restore Down' : 'Maximize'}
+                  onClick={() => onMaximize(id)}
+                >
+                  <span
+                    className={`os-window-glyph ${isMaximized ? 'os-window-glyph-restore' : 'os-window-glyph-maximize'}`}
+                    aria-hidden="true"
+                  />
                 </button>
               )}
-              <button type="button" className="os-window-btn close" onClick={() => {
-                setIsClosing(true)
-                setTimeout(() => onClose(id), 200)
-              }}>
-                <X className="os-window-icon" />
+              <button
+                type="button"
+                className="os-window-btn close"
+                aria-label="Close"
+                title="Close"
+                onClick={() => {
+                  setIsClosing(true)
+                  setTimeout(() => onClose(id), 200)
+                }}
+              >
+                <span className="os-window-glyph os-window-glyph-close" aria-hidden="true" />
               </button>
             </div>
           </div>

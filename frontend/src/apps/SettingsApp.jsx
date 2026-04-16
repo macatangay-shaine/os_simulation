@@ -16,8 +16,8 @@ const SECTIONS = [
   { id: 'about', label: 'About', icon: Info }
 ]
 
-export default function SettingsApp() {
-  const [activeSection, setActiveSection] = useState('system')
+export default function SettingsApp({ initialSection = 'system' }) {
+  const [activeSection, setActiveSection] = useState(initialSection)
   const [settings, setSettings] = useState({
     theme: localStorage.getItem('jezos_theme') || 'light',
     accentColor: localStorage.getItem('jezos_accent') || '#2563eb',
@@ -50,6 +50,12 @@ export default function SettingsApp() {
     loadUpdateStatus()
     loadSecurityData()
   }, [])
+
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection)
+    }
+  }, [initialSection])
 
   useEffect(() => {
     applySettings(settings)

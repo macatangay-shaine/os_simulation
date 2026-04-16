@@ -1,0 +1,650 @@
+/* Solitaire Retro Styling */
+.solitaire-app {
+  --card-width: 82px;
+  --card-height: 116px;
+  --pile-width: 88px;
+  --pile-height: 122px;
+  --pile-gap: 12px;
+  --tableau-gap: 1.25in;
+  --tableau-edge-padding: 0.6in;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  background: #008000;
+  font-family: 'MS Sans Serif', Arial, sans-serif;
+  font-size: 11px;
+  color: #fff;
+  padding: 6px;
+  gap: 6px;
+  position: relative;
+}
+
+.solitaire-settings-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 12, 8, 0.56);
+  z-index: 45;
+}
+
+.solitaire-settings-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(340px, 82vw);
+  padding: 26px 22px;
+  background: rgba(8, 13, 10, 0.82);
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  color: #f5f8f5;
+  z-index: 50;
+  transform: translateX(106%);
+  transition: transform 0.26s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.solitaire-settings-drawer.open {
+  transform: translateX(0);
+}
+
+.solitaire-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.solitaire-settings-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.solitaire-settings-close {
+  border: none;
+  background: transparent;
+  color: rgba(245, 248, 245, 0.8);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.solitaire-settings-close:hover {
+  color: #ffffff;
+}
+
+.solitaire-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.solitaire-settings-label {
+  font-size: 12px;
+  color: rgba(236, 244, 237, 0.85);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.solitaire-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 5px;
+}
+
+.solitaire-segment-option {
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(233, 242, 233, 0.86);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.solitaire-segment-option:hover {
+  color: #ffffff;
+}
+
+.solitaire-segment-option.active {
+  background: #f3f6f3;
+  color: #132019;
+}
+
+.solitaire-win-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 40;
+}
+
+.solitaire-win-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 320px;
+  max-width: min(90%, 440px);
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #fff7b8 0%, #f2d668 100%);
+  border: 2px outset #ffe78a;
+  color: #111;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.solitaire-win-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #8b0000;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.solitaire-win-subtitle {
+  font-size: 12px;
+  text-align: center;
+  color: #222;
+}
+
+.solitaire-win-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.solitaire-win-button {
+  width: auto;
+  min-width: 120px;
+  padding: 4px 10px;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.solitaire-error,
+.solitaire-loading {
+  align-items: center;
+  justify-content: center;
+}
+
+.solitaire-error-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  max-width: 320px;
+  background: rgba(192, 192, 192, 0.96);
+  border: 2px outset #dfdfdf;
+  color: #111;
+  text-align: center;
+}
+
+.solitaire-error-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.solitaire-error-body {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.solitaire-error-detail {
+  max-width: 100%;
+  padding: 6px 8px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  background: #f7f7f7;
+  border: 1px solid #999;
+  color: #a40000;
+  word-break: break-word;
+}
+
+.solitaire-error-button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.solitaire-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  align-items: center;
+}
+
+.header-btn {
+  width: 32px;
+  height: 24px;
+  padding: 2px;
+  background: linear-gradient(135deg, #dfdfdf 0%, #afafaf 100%);
+  border: 2px outset #dfdfdf;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  transition: none;
+}
+
+.header-btn:active {
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+
+.header-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.header-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f0f0f0 0%, #c0c0c0 100%);
+}
+
+.settings-trigger {
+  width: 32px;
+  height: 24px;
+  border: 2px outset #dfdfdf;
+  border-color: #dfdfdf #808080 #808080 #dfdfdf;
+  background: linear-gradient(135deg, #dfdfdf 0%, #afafaf 100%);
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.settings-trigger:active {
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+
+.moves-counter {
+  font-weight: bold;
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.score-counter {
+  font-weight: bold;
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.win-text {
+  font-weight: bold;
+  color: #ffff00;
+  font-size: 14px;
+  text-shadow: 1px 1px 0 #000;
+  animation: pulse 1s infinite;
+}
+
+.lose-text {
+  font-weight: bold;
+  color: #ffb3b3;
+  font-size: 14px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.solitaire-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 2px outset #dfdfdf;
+  background: rgba(192, 192, 192, 0.96);
+  color: #111;
+  font-weight: 700;
+  text-align: center;
+}
+
+.solitaire-status-banner.lose {
+  background: #7f0000;
+  color: #fff;
+  border-color: #ffb3b3 #440000 #440000 #ffb3b3;
+}
+
+.solitaire-status-banner.no-moves {
+  background: linear-gradient(135deg, #fff1a8 0%, #f3c94b 100%);
+  color: #111;
+  border-color: #fff7d1 #9b6f00 #9b6f00 #fff7d1;
+}
+
+.solitaire-status-banner.hint {
+  background: linear-gradient(135deg, #d2efff 0%, #8fd1f0 100%);
+  color: #0b1c29;
+  border-color: #eaf7ff #2f6f95 #2f6f95 #eaf7ff;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.solitaire-play-area {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pile-gap);
+  margin-bottom: 6px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  min-height: var(--pile-height);
+  padding-bottom: 4px;
+}
+
+.solitaire-stock-waste {
+  display: flex;
+  gap: var(--pile-gap);
+  flex-shrink: 0;
+}
+
+.solitaire-foundations {
+  display: flex;
+  gap: var(--pile-gap);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.solitaire-pile {
+  width: var(--pile-width);
+  height: var(--pile-height);
+  border: 2px solid #000;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 100, 0, 0.6);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.solitaire-pile:hover {
+  background: rgba(0, 120, 0, 0.8);
+}
+
+.solitaire-pile.drag-over {
+  box-shadow: 0 0 0 2px #ffff00 inset, 0 0 8px rgba(255, 255, 0, 0.8);
+}
+
+.solitaire-pile:active {
+  background: rgba(0, 80, 0, 0.9);
+}
+
+.pile-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+  font-weight: bold;
+}
+
+.card-count {
+  font-size: 20px;
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.stock-pile {
+  border-style: dashed;
+  border-color: #666;
+}
+
+.waste-pile {
+  position: relative;
+  min-height: var(--pile-height);
+}
+
+.card {
+  width: var(--card-width);
+  height: var(--card-height);
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.card:active {
+  transform: translateY(0);
+}
+
+.card.selected {
+  box-shadow: 0 0 0 3px #ffff00, 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.waste-card {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+}
+
+.foundation-card {
+  position: absolute;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.card-corner.top-left {
+  top: 6px;
+  left: 6px;
+}
+
+.card-corner.bottom-right {
+  right: 6px;
+  bottom: 6px;
+  transform: rotate(180deg);
+}
+
+.card-center-suit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.card-suit {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-rank {
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.card.face-down {
+  background: linear-gradient(45deg, #0066cc 25%, transparent 25%, transparent 75%, #0066cc 75%, #0066cc),
+              linear-gradient(45deg, #0066cc 25%, transparent 25%, transparent 75%, #0066cc 75%, #0066cc);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+  background-color: #003366;
+  border-color: #000080;
+}
+
+.solitaire-tableau {
+  display: flex;
+  justify-content: center;
+  gap: var(--tableau-gap);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 10px var(--tableau-edge-padding) 14px;
+  min-width: 0;
+}
+
+.tableau-column {
+  position: relative;
+  width: var(--pile-width);
+  height: 100%;
+  min-height: 460px;
+  flex-shrink: 0;
+}
+
+.tableau-column.drag-over .column-placeholder {
+  border-color: #ffff00;
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.7);
+}
+
+.column-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 2px dashed #000;
+  border-radius: 4px;
+  background: rgba(0, 100, 0, 0.2);
+  z-index: 0;
+}
+
+.tableau-card {
+  position: absolute;
+  width: var(--card-width);
+  height: var(--card-height);
+  z-index: 1;
+  border-radius: 4px;
+  cursor: grab;
+  overflow: visible;
+}
+
+.tableau-card:active {
+  cursor: grabbing;
+  z-index: 10;
+}
+
+.tableau-card.selected {
+  z-index: 20;
+  box-shadow: 0 0 0 3px #ffff00;
+}
+
+.solitaire-footer {
+  padding: 4px 6px;
+  text-align: center;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 1px 1px 0 #000;
+  border-top: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar styling for green table feel */
+.solitaire-tableau::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.solitaire-tableau::-webkit-scrollbar-track {
+  background: rgba(0, 100, 0, 0.4);
+  border-radius: 6px;
+}
+
+.solitaire-tableau::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  border: 1px solid #000;
+}
+
+.solitaire-tableau::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.solitaire-app.layout-windowed {
+  --card-width: 68px;
+  --card-height: 96px;
+  --pile-width: 74px;
+  --pile-height: 102px;
+  --pile-gap: 8px;
+  --tableau-gap: 1.1in;
+  --tableau-edge-padding: 0.45in;
+}
+
+.solitaire-app.layout-maximized {
+  --card-width: 82px;
+  --card-height: 116px;
+  --pile-width: 88px;
+  --pile-height: 122px;
+  --pile-gap: 12px;
+  --tableau-gap: 1.25in;
+  --tableau-edge-padding: 0.6in;
+}
+
+@media (max-width: 1024px) {
+  .header-center {
+    justify-content: flex-start;
+  }
+
+  .solitaire-header {
+    flex-wrap: wrap;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

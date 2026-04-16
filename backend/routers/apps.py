@@ -184,6 +184,28 @@ DEFAULT_APPS = [
         "builtin": True,
         "permissions": ["filesystem", "network"],
         "storage_size_mb": 22
+    },
+    {
+        "id": "minesweeper",
+        "name": "Minesweeper",
+        "version": "1.0.0",
+        "description": "Classic mine detection puzzle game",
+        "icon": "Bomb",
+        "category": "Games",
+        "builtin": True,
+        "permissions": [],
+        "storage_size_mb": 2
+    },
+    {
+        "id": "solitaire",
+        "name": "Solitaire",
+        "version": "1.0.0",
+        "description": "Classic Klondike card game",
+        "icon": "Spade",
+        "category": "Games",
+        "builtin": True,
+        "permissions": [],
+        "storage_size_mb": 2
     }
 ]
 
