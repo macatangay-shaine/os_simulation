@@ -1,0 +1,120 @@
+.settings-app {
+  --settings-bg: var(--win-bg);
+  --settings-surface: var(--win-surface-strong);
+  --settings-surface-soft: var(--win-surface);
+  --settings-text: var(--win-text);
+  --settings-muted: var(--win-muted);
+  --settings-border: var(--win-border);
+  --settings-accent: var(--win-accent);
+  --settings-accent-soft: var(--win-accent-soft);
+  --settings-ok: #16a34a;
+  --settings-warn: #f59e0b;
+  --settings-danger: #dc2626;
+}
+
+[data-theme='dark'] .settings-app {
+  --settings-about-hero-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(15, 23, 42, 0.05));
+  --settings-active-ring-outer: rgba(255, 255, 255, 0.85);
+  --settings-active-ring-inner: rgba(0, 0, 0, 0.25);
+}
+
+[data-theme='light'] .settings-app {
+  --settings-about-hero-bg: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(255, 255, 255, 0.35));
+  --settings-active-ring-outer: rgba(0, 0, 0, 0.65);
+  --settings-active-ring-inner: rgba(255, 255, 255, 0.9);
+}
+
+.settings-app,
+.settings-app .settings-main {
+  background: var(--settings-bg);
+  color: var(--settings-text);
+}
+
+.settings-app .settings-sidebar,
+.settings-app .settings-info-card,
+.settings-app .settings-theme-card,
+.settings-app .settings-wallpaper-card,
+.settings-app .settings-permission-item,
+.settings-app .settings-user-card,
+.settings-app .settings-update-card,
+.settings-app .settings-about-card {
+  background: var(--settings-surface);
+  border-color: var(--settings-border);
+}
+
+.settings-app .settings-storage-category,
+.settings-app .settings-cleanup-item,
+.settings-app .settings-update-history-item,
+.settings-app .settings-about-item,
+.settings-app .settings-about-pill,
+.settings-app .settings-select {
+  background: var(--settings-surface-soft);
+  border-color: var(--settings-border);
+  color: var(--settings-text);
+}
+
+.settings-app .settings-info-label,
+.settings-app .settings-label,
+.settings-app .settings-loading,
+.settings-app .settings-storage-total,
+.settings-app .settings-update-label,
+.settings-app .settings-update-desc,
+.settings-app .settings-update-progress-text,
+.settings-app .settings-update-empty,
+.settings-app .settings-user-home,
+.settings-app .settings-permission-desc,
+.settings-app .settings-alert-message {
+  color: var(--settings-muted);
+}
+
+.settings-app .settings-nav-item.active,
+.settings-app .settings-theme-card.active,
+.settings-app .settings-wallpaper-card.active {
+  border-color: var(--settings-accent);
+}
+
+.settings-app .settings-progress-fill,
+.settings-app .settings-storage-category-fill,
+.settings-app .settings-update-progress-fill,
+.settings-app .settings-toggle input:checked + .settings-toggle-slider {
+  background: var(--settings-accent);
+}
+
+.settings-app .settings-color-option.active {
+  border-color: var(--settings-active-ring-inner);
+  box-shadow: 0 0 0 2px var(--settings-active-ring-outer), 0 4px 12px var(--settings-accent-soft);
+}
+
+.settings-app .settings-about-hero {
+  background: var(--settings-about-hero-bg);
+  border-color: var(--settings-border);
+}
+
+.settings-app .settings-update-status {
+  color: var(--settings-ok);
+}
+
+.settings-app .settings-update-status.available {
+  color: var(--settings-warn);
+}
+
+.settings-app .settings-update-status.restart,
+.settings-app .settings-update-error {
+  color: var(--settings-danger);
+}
+
+[data-contrast='high'] .settings-app {
+  --settings-border: rgba(255, 255, 255, 0.42);
+}
+
+[data-contrast='high'][data-theme='light'] .settings-app {
+  --settings-border: rgba(0, 0, 0, 0.45);
+}
+
+[data-contrast='high'] .settings-app .settings-nav-item,
+[data-contrast='high'] .settings-app .settings-label,
+[data-contrast='high'] .settings-app .settings-info-value,
+[data-contrast='high'] .settings-app .settings-user-name,
+[data-contrast='high'] .settings-app .settings-content-title {
+  font-weight: 700;
+}

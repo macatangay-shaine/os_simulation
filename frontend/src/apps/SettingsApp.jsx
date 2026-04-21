@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import './SettingsApp.css'
 import { Monitor, Palette, HardDrive, Shield, Info, Users, RefreshCw } from 'lucide-react'
 import {
   BUILTIN_WALLPAPER_OPTIONS,
@@ -22,8 +23,8 @@ export default function SettingsApp({ initialSection = 'system' }) {
     theme: localStorage.getItem('jezos_theme') || 'light',
     accentColor: localStorage.getItem('jezos_accent') || '#2563eb',
     fontSize: localStorage.getItem('jezos_font_size') || 'medium',
-    highContrast: localStorage.getItem('jezos_high_contrast') === 'true',
-    wallpaper: localStorage.getItem('jezos_wallpaper') || 'default',
+    highContrast: localStorage.getItem('jezos_high_contrast') !== 'false',
+    wallpaper: localStorage.getItem('jezos_wallpaper') || 'bloom-dark',
     language: localStorage.getItem('jezos_language') || 'en',
     timeFormat: localStorage.getItem('jezos_time_format') || '12h'
   })
