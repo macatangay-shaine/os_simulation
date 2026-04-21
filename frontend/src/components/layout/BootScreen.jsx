@@ -80,7 +80,7 @@ export default function BootScreen({ onComplete }) {
           message.includes('aborted') ||
           message.includes('unavailable')
         ) {
-          setError('Kernel API offline. Start backend on http://localhost:8000 and retry.')
+          setError('Kernel API offline. Start backend and verify VITE_API_BASE_URL points to a reachable API.')
         } else {
           setError('Kernel initialization failed')
         }
