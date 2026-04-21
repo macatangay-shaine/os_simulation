@@ -9,9 +9,11 @@ export default function BootScreen({ onComplete }) {
     let cancelled = false
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+    // Use the same API base URL computation as main.jsx
+    const DEFAULT_LOCAL_API_BASE = 'http://localhost:8000'
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_LOCAL_API_BASE).replace(/\/$/, '')
     const bootEndpoints = [
-      'http://localhost:8000/boot',
-      'http://127.0.0.1:8000/boot'
+      `${API_BASE}/boot`
     ]
 
     const checkBootEndpoint = async (url) => {
