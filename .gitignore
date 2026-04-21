@@ -83,3 +83,4 @@ main_backup.py
 # Database
 virt_os.db
 *.db-journal
+backend/virt_os.sql
