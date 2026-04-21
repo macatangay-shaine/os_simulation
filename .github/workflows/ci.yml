@@ -29,10 +29,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Export database url
-        run: echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> "$GITHUB_ENV"
+      - name: Check DATABASE_URL secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "ERROR: GitHub secret DATABASE_URL is not configured for this repository/environment."
+            echo "Set it in Settings > Secrets and variables > Actions > New repository secret."
+            exit 1
+          fi
 
       - name: Run deployment validation
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python scripts/validate_postgres.py
 
       - name: Compile backend modules
