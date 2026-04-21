@@ -7,6 +7,8 @@ from models import ProcessRecord
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+	DATABASE_URL = DATABASE_URL.strip().strip("\"'")
 DB_PATH = DATABASE_URL
 
 # OS versioning
