@@ -1,10 +1,15 @@
 """Configuration and global state for JezOS kernel."""
 
+import os
 from typing import List, Dict
+
 from models import ProcessRecord
 
 # Database
-DB_PATH = "virt_os.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+	DATABASE_URL = DATABASE_URL.strip().strip("\"'")
+DB_PATH = DATABASE_URL
 
 # OS versioning
 OS_VERSION = "1.0.0"

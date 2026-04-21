@@ -13,7 +13,7 @@ def init_event_logs():
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS system_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id BIGSERIAL PRIMARY KEY,
             timestamp TEXT NOT NULL,
             level TEXT NOT NULL,
             category TEXT NOT NULL,

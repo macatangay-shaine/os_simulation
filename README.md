@@ -83,7 +83,14 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install fastapi uvicorn sqlalchemy pydantic
+pip install -r requirements.txt
+
+# Set the database connection for Postgres deployment
+# Windows PowerShell example:
+$env:DATABASE_URL="postgresql://..."
+
+# macOS/Linux example:
+# export DATABASE_URL="postgresql://..."
 
 # Run the backend server
 uvicorn main:app --reload
@@ -177,7 +184,7 @@ jez_OS/
 ### Backend Configuration (`backend/config.py`)
 - `MAX_MEMORY`: Maximum simulated memory
 - `MEMORY_WARNING_THRESHOLD`: Warning threshold for memory pressure
-- `DB_PATH`: Database file location
+- `DATABASE_URL`: PostgreSQL connection string used by the backend
 
 ### Frontend Configuration
 - Wallpapers: Place images in `frontend/public/wallpapers/`
@@ -214,6 +221,9 @@ Comprehensive documentation for the project structure and recent changes:
 ### Vercel Deployment
 
 The project is configured for automatic deployment to Vercel on push to the `main` branch.
+
+**Required environment variable:**
+- `DATABASE_URL` must point to a reachable PostgreSQL database. The backend now refuses to start if the URL is missing, malformed, or unreachable.
 
 **Recent Update (March 27, 2026):**
 - File structure refactored: 57+ files reorganized into domain-based folders

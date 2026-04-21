@@ -28,7 +28,7 @@ def ensure_support_tables_and_recycle_bin(cursor) -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS note_versions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id BIGSERIAL PRIMARY KEY,
             path TEXT NOT NULL,
             content TEXT NOT NULL,
             created_at TEXT NOT NULL
