@@ -1,7 +1,3 @@
-databases:
-  - name: jezos-postgres
-    plan: free
-
 services:
   - type: web
     name: jezos-backend
@@ -15,6 +11,4 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: jezos-postgres
-          property: connectionString
+        value: 'postgresql://neondb_owner:npg_p7XQ6aBfctqo@ep-lively-term-amyrttw6-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
