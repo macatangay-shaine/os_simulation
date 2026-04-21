@@ -115,6 +115,16 @@ cd backend
 python -m uvicorn main:app --reload
 ```
 
+### Deployment Validation
+
+Run the deployment check locally before merging:
+
+```bash
+python scripts/validate_postgres.py
+```
+
+The check expects `DATABASE_URL` to be set and reachable.
+
 The server will automatically:
 - Initialize database tables
 - Load all routers
