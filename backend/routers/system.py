@@ -1,7 +1,7 @@
 """System resources and performance monitoring endpoints."""
 
-from fastapi import APIRouter, Query
-from datetime import datetime
+from fastapi import APIRouter, Query, HTTPException
+from datetime import datetime, timedelta
 import random
 from pydantic import BaseModel, Field
 import config
@@ -26,6 +26,132 @@ ARMOURY_CRATE_GPU_STATE = {
     "mode": "eco",
     "notifications_enabled": True
 }
+
+GIB = 1024 * 1024 * 1024
+TOTAL_DISK_CAPACITY_BYTES = 512 * GIB
+
+DISK_SCHEDULER_STATE = {
+    "policy": "FCFS",
+    "quantum_ms": 6
+}
+
+DISK_PARTITION_STATE = [
+    {
+        "drive": "C:",
+        "label": "System",
+        "file_system": "NTFS",
+        "type": "Primary",
+        "total_bytes": 360 * GIB,
+        "usage_ratio": 0.0
+    },
+    {
+        "drive": "D:",
+        "label": "Data",
+        "file_system": "NTFS",
+        "type": "Primary",
+        "total_bytes": 128 * GIB,
+        "usage_ratio": 0.0
+    },
+    {
+        "drive": "R:",
+        "label": "Recovery",
+        "file_system": "FAT32",
+        "type": "Recovery",
+        "total_bytes": 24 * GIB,
+        "usage_ratio": 0.45
+    }
+]
+
+
+class DiskSchedulerUpdateRequest(BaseModel):
+    policy: str = Field(..., pattern="^(FCFS|RR)$")
+    quantum_ms: int = Field(6, ge=1, le=32)
+
+
+class DiskPartitionCreateRequest(BaseModel):
+    label: str = Field(..., min_length=1, max_length=24)
+    size_gb: float = Field(..., gt=1.0, le=128.0)
+    file_system: str = Field("NTFS", pattern="^(NTFS|exFAT|FAT32)$")
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(upper, value))
+
+
+def _next_drive_letter() -> str:
+    used_letters = {partition["drive"][0].upper() for partition in DISK_PARTITION_STATE}
+    for letter in "EFGHIJKLMNOPQSTUVWXYZ":
+        if letter not in used_letters:
+            return f"{letter}:"
+    raise HTTPException(status_code=400, detail="No drive letters available for new partition")
+
+
+def _compute_storage_snapshot(file_storage_bytes: int, app_storage_bytes: int, file_count: int, directory_count: int):
+    """Build a realistic storage profile so the simulated OS reports GB-scale usage."""
+    simulated_os_bytes = 68 * GIB
+    simulated_swap_bytes = 16 * GIB
+    simulated_recovery_bytes = 14 * GIB
+    simulated_update_cache_bytes = int(_clamp((file_count * 85 + directory_count * 32) * 1024 * 1024, 6 * GIB, 28 * GIB))
+    simulated_logs_bytes = int(_clamp((file_count * 2.5) * 1024 * 1024, 1 * GIB, 8 * GIB))
+
+    effective_user_bytes = max(file_storage_bytes, 3 * GIB)
+    effective_apps_bytes = max(app_storage_bytes, 10 * GIB)
+
+    category_totals = {
+        "System": simulated_os_bytes + simulated_swap_bytes,
+        "Recovery": simulated_recovery_bytes,
+        "Updates": simulated_update_cache_bytes,
+        "Logs": simulated_logs_bytes,
+        "User Data": effective_user_bytes,
+        "Apps": effective_apps_bytes
+    }
+
+    total_used_bytes = sum(category_totals.values())
+    if total_used_bytes > TOTAL_DISK_CAPACITY_BYTES:
+        overflow = total_used_bytes - TOTAL_DISK_CAPACITY_BYTES
+        category_totals["Updates"] = max(2 * GIB, category_totals["Updates"] - overflow)
+        total_used_bytes = sum(category_totals.values())
+
+    free_bytes = max(0, TOTAL_DISK_CAPACITY_BYTES - total_used_bytes)
+    usage_percent = round((total_used_bytes / TOTAL_DISK_CAPACITY_BYTES) * 100, 2)
+
+    return {
+        "total_capacity_bytes": TOTAL_DISK_CAPACITY_BYTES,
+        "total_used_bytes": total_used_bytes,
+        "free_bytes": free_bytes,
+        "usage_percent": usage_percent,
+        "category_totals": category_totals
+    }
+
+
+def _build_partition_view(total_used_bytes: int):
+    partition_capacity_total = sum(partition["total_bytes"] for partition in DISK_PARTITION_STATE)
+    if partition_capacity_total <= 0:
+        return []
+
+    partitions = []
+    for partition in DISK_PARTITION_STATE:
+        baseline_ratio = partition.get("usage_ratio", 0.0)
+        weighted_used_bytes = int(total_used_bytes * (partition["total_bytes"] / partition_capacity_total))
+        baseline_used_bytes = int(partition["total_bytes"] * baseline_ratio)
+        used_bytes = int(_clamp(max(weighted_used_bytes, baseline_used_bytes), 0, partition["total_bytes"]))
+        free_bytes = partition["total_bytes"] - used_bytes
+        usage_percent = round((used_bytes / partition["total_bytes"]) * 100, 2) if partition["total_bytes"] else 0.0
+
+        partitions.append(
+            {
+                "drive": partition["drive"],
+                "label": partition["label"],
+                "file_system": partition["file_system"],
+                "type": partition["type"],
+                "total_bytes": partition["total_bytes"],
+                "used_bytes": used_bytes,
+                "free_bytes": free_bytes,
+                "usage_percent": usage_percent
+            }
+        )
+
+    return partitions
 
 GPU_MODE_DEFINITIONS = {
     "standard": {
@@ -325,16 +451,53 @@ def get_storage_info():
     
     conn.close()
     
-    # Set total disk capacity to 256 GB
-    total_capacity = 256 * 1024 * 1024 * 1024  # 256 GB in bytes
-    total_used_bytes = file_storage_bytes + app_storage_bytes
-    free_bytes = total_capacity - total_used_bytes
+    storage_snapshot = _compute_storage_snapshot(
+        file_storage_bytes=file_storage_bytes,
+        app_storage_bytes=app_storage_bytes,
+        file_count=counts.get("file", 0),
+        directory_count=counts.get("dir", 0)
+    )
+
+    category_totals = storage_snapshot["category_totals"]
+
+    # Merge real folder breakdown into User Data to keep category details realistic.
+    for key, value in storage_by_category.items():
+        if key == "Apps":
+            continue
+        category_totals["User Data"] += value.get("bytes", 0)
+
+    storage_by_category = {
+        "System": {
+            "bytes": category_totals["System"],
+            "files": 12483
+        },
+        "Recovery": {
+            "bytes": category_totals["Recovery"],
+            "files": 132
+        },
+        "Updates": {
+            "bytes": category_totals["Updates"],
+            "files": 947
+        },
+        "Logs": {
+            "bytes": category_totals["Logs"],
+            "files": 1840
+        },
+        "User Data": {
+            "bytes": category_totals["User Data"],
+            "files": counts.get("file", 0)
+        },
+        "Apps": {
+            "bytes": category_totals["Apps"],
+            "files": app_count
+        }
+    }
     
     return {
-        "total_capacity_bytes": total_capacity,
-        "used_bytes": total_used_bytes,
-        "free_bytes": free_bytes,
-        "usage_percent": round((total_used_bytes / total_capacity) * 100, 2),
+        "total_capacity_bytes": storage_snapshot["total_capacity_bytes"],
+        "used_bytes": storage_snapshot["total_used_bytes"],
+        "free_bytes": storage_snapshot["free_bytes"],
+        "usage_percent": storage_snapshot["usage_percent"],
         "file_count": counts.get("file", 0),
         "directory_count": counts.get("dir", 0),
         "storage_by_category": storage_by_category
@@ -372,29 +535,100 @@ def get_disk_management():
             "size_mb": round((row["total_size"] or 0) / (1024 * 1024), 2)
         })
     
-    # Get volume information
-    total_capacity = 256 * 1024 * 1024 * 1024  # 256 GB
-    
     cursor.execute("SELECT SUM(size) as total FROM fs_nodes WHERE node_type = 'file'")
     result = cursor.fetchone()
-    used_bytes = result["total"] or 0
-    
-    free_bytes = total_capacity - used_bytes
+    file_storage_bytes = result["total"] or 0
+
+    app_storage_bytes = 0
+    try:
+        cursor.execute("SELECT SUM(storage_size_mb) as total_app_size FROM apps WHERE installed = 1")
+        app_result = cursor.fetchone()
+        app_storage_bytes = (app_result["total_app_size"] or 0) * 1024 * 1024
+    except Exception:
+        app_storage_bytes = 0
+
+    storage_snapshot = _compute_storage_snapshot(
+        file_storage_bytes=file_storage_bytes,
+        app_storage_bytes=app_storage_bytes,
+        file_count=0,
+        directory_count=0
+    )
+    used_bytes = storage_snapshot["total_used_bytes"]
+    free_bytes = storage_snapshot["free_bytes"]
+    partitions = _build_partition_view(used_bytes)
     
     conn.close()
-    
+
     return {
         "volumes": [
             {
                 "drive": "C:",
-                "total_bytes": total_capacity,
+                "total_bytes": storage_snapshot["total_capacity_bytes"],
                 "used_bytes": used_bytes,
                 "free_bytes": free_bytes,
-                "usage_percent": round((used_bytes / total_capacity) * 100, 2),
+                "usage_percent": storage_snapshot["usage_percent"],
                 "type": "SSD"
             }
         ],
+        "scheduler": {
+            "policy": DISK_SCHEDULER_STATE["policy"],
+            "quantum_ms": DISK_SCHEDULER_STATE["quantum_ms"],
+            "supported_policies": ["FCFS", "RR"]
+        },
+        "partitions": partitions,
+        "unallocated_bytes": max(
+            0,
+            storage_snapshot["total_capacity_bytes"] - sum(partition["total_bytes"] for partition in DISK_PARTITION_STATE)
+        ),
         "disk_items": disk_items
+    }
+
+
+@router.post("/disk-management/scheduler")
+def update_disk_scheduler(payload: DiskSchedulerUpdateRequest):
+    """Update the active disk scheduling mode used by the simulator."""
+    DISK_SCHEDULER_STATE["policy"] = payload.policy
+    if payload.policy == "RR":
+        DISK_SCHEDULER_STATE["quantum_ms"] = payload.quantum_ms
+
+    return {
+        "status": "updated",
+        "scheduler": {
+            "policy": DISK_SCHEDULER_STATE["policy"],
+            "quantum_ms": DISK_SCHEDULER_STATE["quantum_ms"],
+            "supported_policies": ["FCFS", "RR"]
+        }
+    }
+
+
+@router.post("/disk-management/partitions")
+def create_disk_partition(payload: DiskPartitionCreateRequest):
+    """Create a simulated disk partition from remaining unallocated space."""
+    requested_bytes = int(payload.size_gb * GIB)
+    allocated_bytes = sum(partition["total_bytes"] for partition in DISK_PARTITION_STATE)
+    unallocated_bytes = TOTAL_DISK_CAPACITY_BYTES - allocated_bytes
+
+    if requested_bytes > unallocated_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough unallocated space. Available: {round(unallocated_bytes / GIB, 2)} GB"
+        )
+
+    DISK_PARTITION_STATE.append(
+        {
+            "drive": _next_drive_letter(),
+            "label": payload.label.strip(),
+            "file_system": payload.file_system,
+            "type": "Primary",
+            "total_bytes": requested_bytes,
+            "usage_ratio": 0.0
+        }
+    )
+
+    return {
+        "status": "created",
+        "partition": DISK_PARTITION_STATE[-1],
+        "unallocated_bytes": TOTAL_DISK_CAPACITY_BYTES - sum(partition["total_bytes"] for partition in DISK_PARTITION_STATE)
     }
 
 

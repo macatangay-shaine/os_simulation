@@ -18,6 +18,8 @@ export default function SystemMonitor() {
   
   // New state for new tabs
   const [diskData, setDiskData] = useState(null)
+  const [partitionForm, setPartitionForm] = useState({ label: 'Work', sizeGb: '24', fileSystem: 'NTFS' })
+  const [diskActionMessage, setDiskActionMessage] = useState('')
   const [users, setUsers] = useState([])
   const [services, setServices] = useState([])
   const [appHistory, setAppHistory] = useState([])
@@ -121,6 +123,60 @@ export default function SystemMonitor() {
       }
     } catch (error) {
       console.error('Failed to load disk data:', error)
+    }
+  }
+
+  const updateDiskScheduler = async (policy, quantumMs) => {
+    try {
+      setDiskActionMessage('Applying disk scheduler...')
+      const response = await fetch('http://localhost:8000/system/disk-management/scheduler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          policy,
+          quantum_ms: quantumMs
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Unable to update scheduler')
+      }
+
+      setDiskActionMessage(`Disk scheduler set to ${policy}${policy === 'RR' ? ` (${quantumMs}ms quantum)` : ''}.`)
+      await loadDiskData()
+    } catch (error) {
+      setDiskActionMessage('Failed to update disk scheduler.')
+    }
+  }
+
+  const createDiskPartition = async () => {
+    const sizeGb = Number(partitionForm.sizeGb)
+    if (!partitionForm.label.trim() || !Number.isFinite(sizeGb) || sizeGb <= 1) {
+      setDiskActionMessage('Enter a partition label and a valid size greater than 1 GB.')
+      return
+    }
+
+    try {
+      setDiskActionMessage('Creating partition...')
+      const response = await fetch('http://localhost:8000/system/disk-management/partitions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: partitionForm.label,
+          size_gb: sizeGb,
+          file_system: partitionForm.fileSystem
+        })
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to create partition')
+      }
+
+      setDiskActionMessage(`Partition ${data.partition.drive} (${partitionForm.label}) created.`)
+      await loadDiskData()
+    } catch (error) {
+      setDiskActionMessage(error instanceof Error ? error.message : 'Failed to create partition.')
     }
   }
 
@@ -522,6 +578,84 @@ export default function SystemMonitor() {
               <div className="monitor-title">Disk Management</div>
               {diskData ? (
                 <>
+                  <div className="monitor-disk-controls">
+                    <div className="monitor-disk-title">Disk Scheduler</div>
+                    <div className="monitor-disk-controls-row">
+                      <select
+                        className="monitor-disk-select"
+                        value={diskData.scheduler?.policy || 'FCFS'}
+                        onChange={(event) => updateDiskScheduler(event.target.value, diskData.scheduler?.quantum_ms || 6)}
+                      >
+                        {(diskData.scheduler?.supported_policies || ['FCFS', 'RR']).map((policy) => (
+                          <option key={policy} value={policy}>{policy}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min="1"
+                        max="32"
+                        className="monitor-disk-input"
+                        value={diskData.scheduler?.quantum_ms || 6}
+                        disabled={(diskData.scheduler?.policy || 'FCFS') !== 'RR'}
+                        onChange={(event) => updateDiskScheduler(diskData.scheduler?.policy || 'FCFS', Number(event.target.value) || 6)}
+                      />
+                      <span className="monitor-disk-help">Quantum (ms)</span>
+                    </div>
+                  </div>
+
+                  <div className="monitor-disk-partitions">
+                    <div className="monitor-disk-title">Disk Partitions</div>
+                    <div className="monitor-disk-item-list">
+                      {diskData.partitions?.map((partition) => (
+                        <div key={partition.drive} className="monitor-disk-item">
+                          <div className="monitor-disk-item-info">
+                            <span className="monitor-disk-item-path">{partition.drive} ({partition.label})</span>
+                            <span className="monitor-disk-item-type">{partition.file_system} · {partition.type}</span>
+                          </div>
+                          <div className="monitor-disk-item-size">
+                            <span>{formatBytes(partition.used_bytes)} / {formatBytes(partition.total_bytes)}</span>
+                            <span className="monitor-disk-usage-percent">{partition.usage_percent}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="monitor-disk-partition-form">
+                      <input
+                        type="text"
+                        className="monitor-disk-input"
+                        placeholder="Partition label"
+                        value={partitionForm.label}
+                        onChange={(event) => setPartitionForm((prev) => ({ ...prev, label: event.target.value }))}
+                      />
+                      <input
+                        type="number"
+                        min="2"
+                        step="1"
+                        className="monitor-disk-input"
+                        placeholder="Size (GB)"
+                        value={partitionForm.sizeGb}
+                        onChange={(event) => setPartitionForm((prev) => ({ ...prev, sizeGb: event.target.value }))}
+                      />
+                      <select
+                        className="monitor-disk-select"
+                        value={partitionForm.fileSystem}
+                        onChange={(event) => setPartitionForm((prev) => ({ ...prev, fileSystem: event.target.value }))}
+                      >
+                        <option value="NTFS">NTFS</option>
+                        <option value="exFAT">exFAT</option>
+                        <option value="FAT32">FAT32</option>
+                      </select>
+                      <button type="button" className="monitor-disk-button" onClick={createDiskPartition}>
+                        Create Partition
+                      </button>
+                    </div>
+                    <div className="monitor-disk-help">
+                      Unallocated space: {formatBytes(diskData.unallocated_bytes || 0)}
+                    </div>
+                    {diskActionMessage ? <div className="monitor-disk-message">{diskActionMessage}</div> : null}
+                  </div>
+
                   <div className="monitor-disk-volumes">
                     <div className="monitor-disk-title">Volumes</div>
                     {diskData.volumes.map((volume, idx) => (

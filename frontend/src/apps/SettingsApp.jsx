@@ -269,6 +269,17 @@ export default function SettingsApp({ initialSection = 'system' }) {
     return `${hours}h ${minutes}m`
   }
 
+  const formatStorageFromMb = (valueMb) => {
+    if (!Number.isFinite(valueMb)) return '0 MB'
+    if (valueMb >= 1024 * 1024) {
+      return `${(valueMb / (1024 * 1024)).toFixed(2)} TB`
+    }
+    if (valueMb >= 1024) {
+      return `${(valueMb / 1024).toFixed(2)} GB`
+    }
+    return `${valueMb.toFixed(0)} MB`
+  }
+
   const calculateTotalSize = (files) => {
     let total = 0
     if (Array.isArray(files)) {
@@ -414,7 +425,11 @@ export default function SettingsApp({ initialSection = 'system' }) {
                 </div>
                 <div className="settings-info-card">
                   <div className="settings-info-label">Storage</div>
-                  <div className="settings-info-value">512 GB NVMe SSD</div>
+                  <div className="settings-info-value">
+                    {storageInfo
+                      ? `${formatStorageFromMb(storageInfo.used)} / ${formatStorageFromMb(storageInfo.total)}`
+                      : '512 GB NVMe SSD'}
+                  </div>
                 </div>
                 <div className="settings-info-card">
                   <div className="settings-info-label">BIOS</div>
@@ -634,8 +649,8 @@ export default function SettingsApp({ initialSection = 'system' }) {
                       />
                     </svg>
                     <div className="settings-storage-label">
-                      <div className="settings-storage-used">{storageInfo.used} MB</div>
-                      <div className="settings-storage-total">of {storageInfo.total} MB</div>
+                      <div className="settings-storage-used">{formatStorageFromMb(storageInfo.used)}</div>
+                      <div className="settings-storage-total">of {formatStorageFromMb(storageInfo.total)}</div>
                       <div className="settings-storage-percent">{storagePercent.toFixed(1)}%</div>
                     </div>
                   </div>
@@ -644,11 +659,11 @@ export default function SettingsApp({ initialSection = 'system' }) {
                 <div className="settings-grid">
                   <div className="settings-info-card">
                     <div className="settings-info-label">Used Space</div>
-                    <div className="settings-info-value">{storageInfo.used} MB</div>
+                    <div className="settings-info-value">{formatStorageFromMb(storageInfo.used)}</div>
                   </div>
                   <div className="settings-info-card">
                     <div className="settings-info-label">Available Space</div>
-                    <div className="settings-info-value">{storageInfo.available} MB</div>
+                    <div className="settings-info-value">{formatStorageFromMb(storageInfo.available)}</div>
                   </div>
                   <div className="settings-info-card">
                     <div className="settings-info-label">Total Files</div>
@@ -705,7 +720,7 @@ export default function SettingsApp({ initialSection = 'system' }) {
                           <div className="settings-storage-category-header">
                             <span className="settings-storage-category-name">{category}</span>
                             <span className="settings-storage-category-size">
-                              {(data.bytes / (1024 * 1024)).toFixed(2)} MB
+                              {formatStorageFromMb(data.bytes / (1024 * 1024))}
                             </span>
                           </div>
                           <div className="settings-storage-category-bar">
