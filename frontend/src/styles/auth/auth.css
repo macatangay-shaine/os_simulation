@@ -236,6 +236,8 @@
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
     radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  background-color: rgba(8, 14, 28, 0.28);
+  backdrop-filter: blur(28px) saturate(140%);
   pointer-events: none;
 }
 
@@ -292,6 +294,7 @@
   text-align: center;
   color: #ffffff;
   text-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .lock-time {
@@ -304,6 +307,7 @@
   font-size: 16px;
   font-weight: 500;
   opacity: 0.9;
+  margin-top: 6px;
 }
 
 @keyframes fadeInUp {
@@ -314,6 +318,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes lockPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -353,15 +368,45 @@
   text-align: left;
 }
 
+.lock-screen-revealed .lock-clock {
+  transform: translateY(-24px);
+}
+
 .login-field {
   display: grid;
   gap: 8px;
 }
 
-.login-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--win-text);
+.login-pin-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-pin-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--win-border);
+  background: var(--win-surface-strong);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.login-pin-icon-svg {
+  width: 18px;
+  height: 18px;
+  color: var(--win-accent);
+}
+
+.login-pin-input {
+  flex: 1;
+}
+
+.login-pin-help {
+  font-size: 12px;
+  color: var(--win-muted);
 }
 
 .login-input,
@@ -731,6 +776,10 @@
 .lock-switch:hover {
   background: var(--win-surface-strong);
   transform: translateY(-1px);
+}
+
+.lock-panel-enter {
+  animation: lockPanelReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ============================================================================
