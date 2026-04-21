@@ -32,7 +32,8 @@ TOTAL_DISK_CAPACITY_BYTES = 512 * GIB
 
 DISK_SCHEDULER_STATE = {
     "policy": "FCFS",
-    "quantum_ms": 6
+    "direction": "right",
+    "head_track": 96
 }
 
 DISK_PARTITION_STATE = [
@@ -64,14 +65,22 @@ DISK_PARTITION_STATE = [
 
 
 class DiskSchedulerUpdateRequest(BaseModel):
-    policy: str = Field(..., pattern="^(FCFS|RR)$")
-    quantum_ms: int = Field(6, ge=1, le=32)
+    policy: str = Field(..., pattern="^(FCFS|SSTF|SCAN|C-SCAN)$")
+    direction: str = Field("right", pattern="^(left|right)$")
 
 
 class DiskPartitionCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=24)
     size_gb: float = Field(..., gt=1.0, le=128.0)
     file_system: str = Field("NTFS", pattern="^(NTFS|exFAT|FAT32)$")
+
+
+class DiskPartitionResizeRequest(BaseModel):
+    size_gb: float = Field(..., gt=1.0, le=256.0)
+
+
+class DiskPartitionFormatRequest(BaseModel):
+    file_system: str = Field(..., pattern="^(NTFS|exFAT|FAT32)$")
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -84,6 +93,22 @@ def _next_drive_letter() -> str:
         if letter not in used_letters:
             return f"{letter}:"
     raise HTTPException(status_code=400, detail="No drive letters available for new partition")
+
+
+def _find_partition_or_404(drive: str) -> dict:
+    drive_key = drive.upper().replace("\\", "").replace("/", "")
+    if not drive_key.endswith(":"):
+        drive_key = f"{drive_key}:"
+
+    for partition in DISK_PARTITION_STATE:
+        if partition["drive"].upper() == drive_key:
+            return partition
+
+    raise HTTPException(status_code=404, detail=f"Partition {drive_key} not found")
+
+
+def _is_protected_partition(partition: dict) -> bool:
+    return partition["drive"].upper() == "C:" or partition.get("type") == "Recovery"
 
 
 def _compute_storage_snapshot(file_storage_bytes: int, app_storage_bytes: int, file_count: int, directory_count: int):
@@ -147,11 +172,133 @@ def _build_partition_view(total_used_bytes: int):
                 "total_bytes": partition["total_bytes"],
                 "used_bytes": used_bytes,
                 "free_bytes": free_bytes,
-                "usage_percent": usage_percent
+                "usage_percent": usage_percent,
+                "is_protected": _is_protected_partition(partition),
+                "health": "Healthy" if free_bytes > (0.08 * partition["total_bytes"]) else "Warning"
             }
         )
 
     return partitions
+
+
+def _track_for_path(path: str, max_track: int = 199) -> int:
+    """Map a path to a deterministic disk track for scheduler simulation."""
+    rolling = 0
+    for idx, ch in enumerate(path):
+        rolling += (idx + 1) * ord(ch)
+    return rolling % (max_track + 1)
+
+
+def _build_disk_request_queue(disk_items, max_track: int = 199):
+    requests = []
+    for item in disk_items[:16]:
+        requests.append(
+            {
+                "path": item["path"],
+                "track": _track_for_path(item["path"], max_track=max_track),
+                "size_bytes": item["size_bytes"],
+                "type": item["type"]
+            }
+        )
+
+    if requests:
+        return requests
+
+    return [
+        {"path": "/system", "track": 12, "size_bytes": 6 * 1024 * 1024, "type": "dir"},
+        {"path": "/users", "track": 38, "size_bytes": 12 * 1024 * 1024, "type": "dir"},
+        {"path": "/apps", "track": 74, "size_bytes": 8 * 1024 * 1024, "type": "dir"},
+        {"path": "/var/log", "track": 116, "size_bytes": 3 * 1024 * 1024, "type": "dir"},
+        {"path": "/backup", "track": 149, "size_bytes": 18 * 1024 * 1024, "type": "dir"},
+        {"path": "/recovery", "track": 182, "size_bytes": 5 * 1024 * 1024, "type": "dir"}
+    ]
+
+
+def _simulate_disk_schedule(policy: str, requests, head_track: int, direction: str = "right", max_track: int = 199):
+    """Simulate disk-head movement for common scheduling algorithms."""
+    queue = list(requests)
+    if not queue:
+        return {
+            "head_start_track": head_track,
+            "head_end_track": head_track,
+            "service_order": [],
+            "head_path": [head_track],
+            "total_seek_tracks": 0,
+            "average_seek_tracks": 0.0,
+            "request_count": 0
+        }
+
+    if policy == "FCFS":
+        service_order = queue
+        head_path = [head_track] + [item["track"] for item in service_order]
+    elif policy == "SSTF":
+        pending = list(queue)
+        service_order = []
+        current = head_track
+        while pending:
+            nearest = min(pending, key=lambda item: (abs(item["track"] - current), item["track"]))
+            service_order.append(nearest)
+            current = nearest["track"]
+            pending.remove(nearest)
+        head_path = [head_track] + [item["track"] for item in service_order]
+    else:
+        left = sorted([item for item in queue if item["track"] < head_track], key=lambda item: item["track"])
+        right = sorted([item for item in queue if item["track"] >= head_track], key=lambda item: item["track"])
+        moving_right = direction == "right"
+        head_path = [head_track]
+
+        if policy == "SCAN":
+            if moving_right:
+                service_order = right + list(reversed(left))
+                if right:
+                    head_path.extend([item["track"] for item in right])
+                if left:
+                    if head_path[-1] != max_track:
+                        head_path.append(max_track)
+                    head_path.extend([item["track"] for item in reversed(left)])
+            else:
+                service_order = list(reversed(left)) + right
+                if left:
+                    head_path.extend([item["track"] for item in reversed(left)])
+                if right:
+                    if head_path[-1] != 0:
+                        head_path.append(0)
+                    head_path.extend([item["track"] for item in right])
+        else:  # C-SCAN
+            if moving_right:
+                service_order = right + left
+                if right:
+                    head_path.extend([item["track"] for item in right])
+                if left:
+                    if head_path[-1] != max_track:
+                        head_path.append(max_track)
+                    head_path.append(0)
+                    head_path.extend([item["track"] for item in left])
+            else:
+                descending_right = list(reversed(right))
+                descending_left = list(reversed(left))
+                service_order = descending_left + descending_right
+                if descending_left:
+                    head_path.extend([item["track"] for item in descending_left])
+                if descending_right:
+                    if head_path[-1] != 0:
+                        head_path.append(0)
+                    head_path.append(max_track)
+                    head_path.extend([item["track"] for item in descending_right])
+
+    total_seek = 0
+    for index in range(1, len(head_path)):
+        total_seek += abs(head_path[index] - head_path[index - 1])
+
+    return {
+        "head_start_track": head_track,
+        "head_end_track": head_path[-1] if head_path else head_track,
+        "service_order": service_order,
+        "head_path": head_path,
+        "total_seek_tracks": total_seek,
+        "average_seek_tracks": round(total_seek / max(1, len(service_order)), 2),
+        "request_count": len(service_order)
+    }
 
 GPU_MODE_DEFINITIONS = {
     "standard": {
@@ -556,6 +703,14 @@ def get_disk_management():
     used_bytes = storage_snapshot["total_used_bytes"]
     free_bytes = storage_snapshot["free_bytes"]
     partitions = _build_partition_view(used_bytes)
+    request_queue = _build_disk_request_queue(disk_items)
+    schedule_summary = _simulate_disk_schedule(
+        policy=DISK_SCHEDULER_STATE["policy"],
+        requests=request_queue,
+        head_track=DISK_SCHEDULER_STATE["head_track"],
+        direction=DISK_SCHEDULER_STATE["direction"]
+    )
+    DISK_SCHEDULER_STATE["head_track"] = schedule_summary["head_end_track"]
     
     conn.close()
 
@@ -572,9 +727,12 @@ def get_disk_management():
         ],
         "scheduler": {
             "policy": DISK_SCHEDULER_STATE["policy"],
-            "quantum_ms": DISK_SCHEDULER_STATE["quantum_ms"],
-            "supported_policies": ["FCFS", "RR"]
+            "direction": DISK_SCHEDULER_STATE["direction"],
+            "head_track": DISK_SCHEDULER_STATE["head_track"],
+            "supported_policies": ["FCFS", "SSTF", "SCAN", "C-SCAN"]
         },
+        "schedule": schedule_summary,
+        "request_queue": request_queue,
         "partitions": partitions,
         "unallocated_bytes": max(
             0,
@@ -588,15 +746,15 @@ def get_disk_management():
 def update_disk_scheduler(payload: DiskSchedulerUpdateRequest):
     """Update the active disk scheduling mode used by the simulator."""
     DISK_SCHEDULER_STATE["policy"] = payload.policy
-    if payload.policy == "RR":
-        DISK_SCHEDULER_STATE["quantum_ms"] = payload.quantum_ms
+    DISK_SCHEDULER_STATE["direction"] = payload.direction
 
     return {
         "status": "updated",
         "scheduler": {
             "policy": DISK_SCHEDULER_STATE["policy"],
-            "quantum_ms": DISK_SCHEDULER_STATE["quantum_ms"],
-            "supported_policies": ["FCFS", "RR"]
+            "direction": DISK_SCHEDULER_STATE["direction"],
+            "head_track": DISK_SCHEDULER_STATE["head_track"],
+            "supported_policies": ["FCFS", "SSTF", "SCAN", "C-SCAN"]
         }
     }
 
@@ -621,7 +779,7 @@ def create_disk_partition(payload: DiskPartitionCreateRequest):
             "file_system": payload.file_system,
             "type": "Primary",
             "total_bytes": requested_bytes,
-            "usage_ratio": 0.0
+            "usage_ratio": 0.03
         }
     )
 
@@ -629,6 +787,69 @@ def create_disk_partition(payload: DiskPartitionCreateRequest):
         "status": "created",
         "partition": DISK_PARTITION_STATE[-1],
         "unallocated_bytes": TOTAL_DISK_CAPACITY_BYTES - sum(partition["total_bytes"] for partition in DISK_PARTITION_STATE)
+    }
+
+
+@router.patch("/disk-management/partitions/{drive}/resize")
+def resize_disk_partition(drive: str, payload: DiskPartitionResizeRequest):
+    """Resize an existing simulated partition while respecting unallocated space."""
+    partition = _find_partition_or_404(drive)
+    if _is_protected_partition(partition):
+        raise HTTPException(status_code=400, detail="System and recovery partitions cannot be resized.")
+
+    requested_bytes = int(payload.size_gb * GIB)
+    current_bytes = partition["total_bytes"]
+    total_allocated = sum(item["total_bytes"] for item in DISK_PARTITION_STATE)
+    unallocated = TOTAL_DISK_CAPACITY_BYTES - total_allocated
+
+    if requested_bytes < int(current_bytes * partition.get("usage_ratio", 0.0)):
+        raise HTTPException(status_code=400, detail="Requested size is smaller than current partition usage.")
+
+    growth_bytes = requested_bytes - current_bytes
+    if growth_bytes > unallocated:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough unallocated space. Available: {round(unallocated / GIB, 2)} GB"
+        )
+
+    partition["total_bytes"] = requested_bytes
+
+    return {
+        "status": "resized",
+        "partition": partition,
+        "unallocated_bytes": TOTAL_DISK_CAPACITY_BYTES - sum(item["total_bytes"] for item in DISK_PARTITION_STATE)
+    }
+
+
+@router.post("/disk-management/partitions/{drive}/format")
+def format_disk_partition(drive: str, payload: DiskPartitionFormatRequest):
+    """Format a simulated partition by resetting file system and usage ratio."""
+    partition = _find_partition_or_404(drive)
+    if _is_protected_partition(partition):
+        raise HTTPException(status_code=400, detail="System and recovery partitions cannot be formatted.")
+
+    partition["file_system"] = payload.file_system
+    partition["usage_ratio"] = 0.02
+
+    return {
+        "status": "formatted",
+        "partition": partition
+    }
+
+
+@router.delete("/disk-management/partitions/{drive}")
+def delete_disk_partition(drive: str):
+    """Delete a simulated partition and return capacity back to unallocated space."""
+    partition = _find_partition_or_404(drive)
+    if _is_protected_partition(partition):
+        raise HTTPException(status_code=400, detail="System and recovery partitions cannot be deleted.")
+
+    DISK_PARTITION_STATE.remove(partition)
+
+    return {
+        "status": "deleted",
+        "drive": partition["drive"],
+        "unallocated_bytes": TOTAL_DISK_CAPACITY_BYTES - sum(item["total_bytes"] for item in DISK_PARTITION_STATE)
     }
 
 

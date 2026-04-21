@@ -126,7 +126,7 @@ export default function SystemMonitor() {
     }
   }
 
-  const updateDiskScheduler = async (policy, quantumMs) => {
+  const updateDiskScheduler = async (policy, direction) => {
     try {
       setDiskActionMessage('Applying disk scheduler...')
       const response = await fetch('http://localhost:8000/system/disk-management/scheduler', {
@@ -134,7 +134,7 @@ export default function SystemMonitor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           policy,
-          quantum_ms: quantumMs
+          direction
         })
       })
 
@@ -142,7 +142,7 @@ export default function SystemMonitor() {
         throw new Error('Unable to update scheduler')
       }
 
-      setDiskActionMessage(`Disk scheduler set to ${policy}${policy === 'RR' ? ` (${quantumMs}ms quantum)` : ''}.`)
+      setDiskActionMessage(`Disk scheduler set to ${policy} (${direction}).`)
       await loadDiskData()
     } catch (error) {
       setDiskActionMessage('Failed to update disk scheduler.')
@@ -177,6 +177,83 @@ export default function SystemMonitor() {
       await loadDiskData()
     } catch (error) {
       setDiskActionMessage(error instanceof Error ? error.message : 'Failed to create partition.')
+    }
+  }
+
+  const resizeDiskPartition = async (drive, currentBytes) => {
+    const currentGb = Math.max(1, Math.round(currentBytes / (1024 * 1024 * 1024)))
+    const nextSize = window.prompt(`Resize ${drive} partition (GB):`, String(currentGb))
+    if (!nextSize) return
+
+    const sizeGb = Number(nextSize)
+    if (!Number.isFinite(sizeGb) || sizeGb <= 1) {
+      setDiskActionMessage('Enter a valid partition size greater than 1 GB.')
+      return
+    }
+
+    try {
+      setDiskActionMessage(`Resizing ${drive} partition...`)
+      const response = await fetch(`http://localhost:8000/system/disk-management/partitions/${encodeURIComponent(drive)}/resize`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ size_gb: sizeGb })
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to resize partition')
+      }
+
+      setDiskActionMessage(`${drive} resized to ${sizeGb} GB.`)
+      await loadDiskData()
+    } catch (error) {
+      setDiskActionMessage(error instanceof Error ? error.message : 'Failed to resize partition.')
+    }
+  }
+
+  const formatDiskPartition = async (drive) => {
+    const fileSystem = window.prompt(`Format ${drive} as file system (NTFS/exFAT/FAT32):`, 'NTFS')
+    if (!fileSystem) return
+
+    try {
+      setDiskActionMessage(`Formatting ${drive}...`)
+      const response = await fetch(`http://localhost:8000/system/disk-management/partitions/${encodeURIComponent(drive)}/format`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_system: fileSystem.toUpperCase() })
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to format partition')
+      }
+
+      setDiskActionMessage(`${drive} formatted to ${data.partition.file_system}.`)
+      await loadDiskData()
+    } catch (error) {
+      setDiskActionMessage(error instanceof Error ? error.message : 'Failed to format partition.')
+    }
+  }
+
+  const deleteDiskPartition = async (drive) => {
+    const confirmed = window.confirm(`Delete partition ${drive}? This simulated action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      setDiskActionMessage(`Deleting ${drive}...`)
+      const response = await fetch(`http://localhost:8000/system/disk-management/partitions/${encodeURIComponent(drive)}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to delete partition')
+      }
+
+      setDiskActionMessage(`${drive} deleted.`)
+      await loadDiskData()
+    } catch (error) {
+      setDiskActionMessage(error instanceof Error ? error.message : 'Failed to delete partition.')
     }
   }
 
@@ -584,23 +661,29 @@ export default function SystemMonitor() {
                       <select
                         className="monitor-disk-select"
                         value={diskData.scheduler?.policy || 'FCFS'}
-                        onChange={(event) => updateDiskScheduler(event.target.value, diskData.scheduler?.quantum_ms || 6)}
+                        onChange={(event) => updateDiskScheduler(event.target.value, diskData.scheduler?.direction || 'right')}
                       >
-                        {(diskData.scheduler?.supported_policies || ['FCFS', 'RR']).map((policy) => (
+                        {(diskData.scheduler?.supported_policies || ['FCFS', 'SSTF', 'SCAN', 'C-SCAN']).map((policy) => (
                           <option key={policy} value={policy}>{policy}</option>
                         ))}
                       </select>
-                      <input
-                        type="number"
-                        min="1"
-                        max="32"
-                        className="monitor-disk-input"
-                        value={diskData.scheduler?.quantum_ms || 6}
-                        disabled={(diskData.scheduler?.policy || 'FCFS') !== 'RR'}
-                        onChange={(event) => updateDiskScheduler(diskData.scheduler?.policy || 'FCFS', Number(event.target.value) || 6)}
-                      />
-                      <span className="monitor-disk-help">Quantum (ms)</span>
+                      <select
+                        className="monitor-disk-select"
+                        value={diskData.scheduler?.direction || 'right'}
+                        onChange={(event) => updateDiskScheduler(diskData.scheduler?.policy || 'FCFS', event.target.value)}
+                      >
+                        <option value="right">Direction: Right</option>
+                        <option value="left">Direction: Left</option>
+                      </select>
                     </div>
+                    <div className="monitor-disk-help">
+                      Head track: {diskData.scheduler?.head_track ?? 0}
+                    </div>
+                    {diskData.schedule && (
+                      <div className="monitor-disk-help">
+                        Requests: {diskData.schedule.request_count} | Total seek: {diskData.schedule.total_seek_tracks} tracks | Avg seek: {diskData.schedule.average_seek_tracks}
+                      </div>
+                    )}
                   </div>
 
                   <div className="monitor-disk-partitions">
@@ -610,11 +693,39 @@ export default function SystemMonitor() {
                         <div key={partition.drive} className="monitor-disk-item">
                           <div className="monitor-disk-item-info">
                             <span className="monitor-disk-item-path">{partition.drive} ({partition.label})</span>
-                            <span className="monitor-disk-item-type">{partition.file_system} · {partition.type}</span>
+                            <span className="monitor-disk-item-type">
+                              {partition.file_system} · {partition.type} · {partition.health}
+                            </span>
                           </div>
                           <div className="monitor-disk-item-size">
                             <span>{formatBytes(partition.used_bytes)} / {formatBytes(partition.total_bytes)}</span>
                             <span className="monitor-disk-usage-percent">{partition.usage_percent}%</span>
+                          </div>
+                          <div className="monitor-disk-actions">
+                            <button
+                              type="button"
+                              className="monitor-disk-action-btn"
+                              onClick={() => resizeDiskPartition(partition.drive, partition.total_bytes)}
+                              disabled={partition.is_protected}
+                            >
+                              Resize
+                            </button>
+                            <button
+                              type="button"
+                              className="monitor-disk-action-btn"
+                              onClick={() => formatDiskPartition(partition.drive)}
+                              disabled={partition.is_protected}
+                            >
+                              Format
+                            </button>
+                            <button
+                              type="button"
+                              className="monitor-disk-action-btn danger"
+                              onClick={() => deleteDiskPartition(partition.drive)}
+                              disabled={partition.is_protected}
+                            >
+                              Delete
+                            </button>
                           </div>
                         </div>
                       ))}
