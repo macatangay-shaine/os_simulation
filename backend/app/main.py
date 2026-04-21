@@ -17,6 +17,9 @@ from security import init_security_logs
 from event_logger import init_event_logs, log_event, LEVEL_INFORMATION, CATEGORY_SYSTEM, EVENT_BOOT_START
 from datetime import datetime
 from pathlib import PurePosixPath
+from urllib.parse import urlparse
+
+import psycopg
 import config
 
 # Import routers
@@ -58,6 +61,27 @@ app.include_router(updates.router)
 app.include_router(security.router)
 app.include_router(events.router)
 app.include_router(system_health.router)
+
+
+def validate_database_configuration() -> None:
+    """Fail fast when the Postgres deployment configuration is missing or invalid."""
+    database_url = config.DATABASE_URL
+    if not database_url:
+        raise RuntimeError("DATABASE_URL must be set for deployment.")
+
+    parsed = urlparse(database_url)
+    if parsed.scheme not in {"postgresql", "postgres"}:
+        raise RuntimeError("DATABASE_URL must use a PostgreSQL scheme.")
+    if not parsed.hostname or not parsed.path or parsed.path == "/":
+        raise RuntimeError("DATABASE_URL must include a database name and host.")
+
+    try:
+        with psycopg.connect(database_url) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+    except Exception as exc:
+        raise RuntimeError(f"Database validation failed: {exc}") from exc
 
 
 
@@ -106,6 +130,7 @@ def root():
 @app.on_event("startup")
 def on_startup():
     """Initialize database tables on startup."""
+    validate_database_configuration()
     init_database()
     migrate_apps_storage()
     init_security_logs()
