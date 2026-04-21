@@ -59,7 +59,7 @@ export default function BootScreen({ onComplete }) {
 
     const runBoot = async () => {
       try {
-        const BLACK_DELAY = 4000
+        const BLACK_DELAY = 6500
         const BRAND_DELAY = 2000
         const LOADING_DELAY = 3500
 
@@ -108,6 +108,13 @@ export default function BootScreen({ onComplete }) {
 
   return (
     <div className={`boot-screen boot-stage-${stage}`}>
+      {stage === 'black' ? (
+        <div className="boot-black-prompt">
+          <div className="boot-black-title">Press P to power on</div>
+          <div className="boot-black-hint">Hold on a moment while the system starts.</div>
+        </div>
+      ) : null}
+
       {stage === 'brand' ? (
         <div className="boot-brand">EtchPi</div>
       ) : null}
