@@ -2538,6 +2538,60 @@
   color: var(--win-text);
 }
 
+.monitor-disk-controls,
+.monitor-disk-partitions {
+  padding: 12px;
+  background: var(--win-surface-strong);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.monitor-disk-controls-row,
+.monitor-disk-partition-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.monitor-disk-select,
+.monitor-disk-input {
+  border: 1px solid var(--win-border);
+  background: var(--win-surface);
+  color: var(--win-text);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  min-width: 110px;
+}
+
+.monitor-disk-input {
+  max-width: 160px;
+}
+
+.monitor-disk-button {
+  border: 1px solid var(--win-accent);
+  background: var(--win-accent-soft);
+  color: var(--win-text);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.monitor-disk-help {
+  font-size: 11px;
+  color: var(--win-muted);
+}
+
+.monitor-disk-message {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--win-text);
+}
+
 /* ============================================================================
    High Contrast Mode Adjustments
    ============================================================================ */
