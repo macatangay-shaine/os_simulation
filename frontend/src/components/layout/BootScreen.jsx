@@ -11,7 +11,11 @@ export default function BootScreen({ onComplete }) {
 
     // Use the same API base URL computation as main.jsx
     const DEFAULT_LOCAL_API_BASE = 'http://localhost:8000'
-    const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_LOCAL_API_BASE).replace(/\/$/, '')
+    const DEFAULT_PROD_API_BASE = 'https://os-simulation.onrender.com'
+    const API_BASE = (
+      import.meta.env.VITE_API_BASE_URL ||
+      (import.meta.env.DEV ? DEFAULT_LOCAL_API_BASE : DEFAULT_PROD_API_BASE)
+    ).replace(/\/$/, '')
     const bootEndpoints = [
       `${API_BASE}/boot`
     ]
@@ -82,7 +86,7 @@ export default function BootScreen({ onComplete }) {
           message.includes('aborted') ||
           message.includes('unavailable')
         ) {
-          setError('Kernel API offline. Start backend and verify VITE_API_BASE_URL points to a reachable API.')
+          setError('Kernel API offline. Verify the backend is deployed and VITE_API_BASE_URL points to a reachable API.')
         } else {
           setError('Kernel initialization failed')
         }
