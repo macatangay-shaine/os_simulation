@@ -231,7 +231,7 @@ Comprehensive documentation for the project structure and recent changes:
 The backend is configured for Render via [render.yaml](render.yaml). Render builds the backend from `backend/` and starts Gunicorn on the platform port.
 
 **Required environment variable:**
-- `DATABASE_URL` must point to a reachable PostgreSQL database. The backend refuses to start if the URL is missing, malformed, or unreachable.
+- `DATABASE_URL` is provisioned by the Render blueprint from the managed PostgreSQL database. The backend refuses to start if the URL is missing, malformed, or unreachable.
 
 **Render note:**
 - The service must bind to Render’s assigned `$PORT`. If the process listens on a fixed port, the deploy can start but the service will not become healthy.
