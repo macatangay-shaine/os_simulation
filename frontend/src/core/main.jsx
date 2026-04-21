@@ -4,7 +4,11 @@ import App from './App.jsx'
 import '../styles/index.css'
 
 const DEFAULT_LOCAL_API_BASE = 'http://localhost:8000'
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_LOCAL_API_BASE).replace(/\/$/, '')
+const DEFAULT_PROD_API_BASE = 'https://os-simulation.onrender.com'
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? DEFAULT_LOCAL_API_BASE : DEFAULT_PROD_API_BASE)
+).replace(/\/$/, '')
 const LEGACY_LOCAL_HOSTS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 
 function rewriteLegacyApiUrl(inputUrl) {
