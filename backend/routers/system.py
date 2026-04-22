@@ -417,14 +417,13 @@ def update_performance_history():
 @router.get("/resources")
 def get_system_resources():
     """Get current system resource usage."""
-    # Update CPU usage for running processes (simulate fluctuation)
+    # Update CPU usage for running processes with smoothing to avoid visual flicker.
     for index, record in enumerate(config.process_table):
         if record.state == "running":
-            # Add random variation plus a tiny memory-weighted drift.
-            # This keeps values moving while still correlating with process load.
-            variation = random.uniform(-5, 5)
-            memory_drift = (record.memory / config.MAX_MEMORY) * random.uniform(0, 2)
-            new_cpu = max(0.1, min(99.0, record.cpu_usage + variation + memory_drift))
+            memory_weight = (record.memory / config.MAX_MEMORY) * 32
+            target_cpu = max(0.2, min(95.0, memory_weight + random.uniform(0.5, 4.5)))
+            smooth_cpu = (record.cpu_usage * 0.82) + (target_cpu * 0.18)
+            new_cpu = max(0.1, min(99.0, smooth_cpu + random.uniform(-0.5, 0.5)))
             config.process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
 
     # Recompute totals after updating process CPU values.

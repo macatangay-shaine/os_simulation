@@ -761,6 +761,13 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         minimized: Boolean(win.minimized)
       }))
 
+      window.__jezOsDesktopWindows = mapped
+      try {
+        localStorage.setItem('jez_os_active_windows', JSON.stringify(mapped))
+      } catch (error) {
+        console.warn('Failed to persist active windows snapshot:', error)
+      }
+
       window.dispatchEvent(new CustomEvent('desktop-windows-changed', { detail: { windows: mapped } }))
     }
 
