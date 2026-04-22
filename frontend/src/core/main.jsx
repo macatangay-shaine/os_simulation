@@ -39,6 +39,22 @@ function getOrCreateDeviceId() {
   return generated
 }
 
+function appendDeviceIdToUrl(inputUrl, deviceId) {
+  if (!inputUrl || !deviceId) {
+    return inputUrl
+  }
+
+  try {
+    const url = new URL(inputUrl, window.location.origin)
+    if (!url.searchParams.has('device_id')) {
+      url.searchParams.set('device_id', deviceId)
+    }
+    return url.toString()
+  } catch {
+    return inputUrl
+  }
+}
+
 function patchGlobalFetch() {
   if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
     return
@@ -64,12 +80,17 @@ function patchGlobalFetch() {
 
   const originalFetch = window.fetch.bind(window)
   window.fetch = (input, init) => {
+    const deviceId = getOrCreateDeviceId()
+
     if (typeof input === 'string') {
-      return originalFetch(rewriteLegacyApiUrl(input), withSessionToken(init))
+      return originalFetch(
+        appendDeviceIdToUrl(rewriteLegacyApiUrl(input), deviceId),
+        withSessionToken(init)
+      )
     }
 
     if (input instanceof Request) {
-      const rewrittenUrl = rewriteLegacyApiUrl(input.url)
+      const rewrittenUrl = appendDeviceIdToUrl(rewriteLegacyApiUrl(input.url), deviceId)
       const request = rewrittenUrl !== input.url ? new Request(rewrittenUrl, input) : input
       return originalFetch(request, withSessionToken(init))
     }

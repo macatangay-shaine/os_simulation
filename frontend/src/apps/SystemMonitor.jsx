@@ -14,6 +14,14 @@ function getActiveWindowsStorageKey() {
 }
 
 export default function SystemMonitor() {
+  const deviceId = (() => {
+    try {
+      return localStorage.getItem('jez_os_device_id') || 'unassigned'
+    } catch {
+      return 'unavailable'
+    }
+  })()
+
   const readDesktopWindowSnapshot = () => {
     if (Array.isArray(window.__jezOsDesktopWindows)) {
       return window.__jezOsDesktopWindows
@@ -717,6 +725,10 @@ export default function SystemMonitor() {
                   <div className="monitor-stat-card">
                     <div className="monitor-stat-label">Active Processes</div>
                     <div className="monitor-stat-value-large">{runningProcessCount}</div>
+                  </div>
+                  <div className="monitor-stat-card monitor-stat-card-device">
+                    <div className="monitor-stat-label">Device ID</div>
+                    <div className="monitor-stat-value-device" title={deviceId}>{deviceId}</div>
                   </div>
                 </div>
               </div>

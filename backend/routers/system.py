@@ -340,6 +340,10 @@ GPU_VISIBLE_APP_WEIGHTS = {
 GPU_HIDDEN_APPS = {"System", "Kernel Services", "Terminal"}
 
 
+def resolve_device_id(device_id: Optional[str], x_jezos_device_id: Optional[str]) -> Optional[str]:
+    return device_id or x_jezos_device_id
+
+
 def build_gpu_candidate_processes(session_token: Optional[str] = None, device_id: Optional[str] = None):
     """Build a simulated list of applications that can engage the dGPU."""
     if ARMOURY_CRATE_GPU_STATE["mode"] == "eco":
@@ -425,10 +429,12 @@ def update_performance_history(session_token: Optional[str] = None, device_id: O
 @router.get("/resources")
 def get_system_resources(
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get current system resource usage."""
-    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    state = config.get_runtime_state(session_token=session_token, device_id=runtime_device_id)
     process_table = list(state["process_table"])
 
     # Update CPU usage for running processes with smoothing to avoid visual flicker.
@@ -447,8 +453,8 @@ def get_system_resources(
     total_cpu = sum(p.cpu_usage for p in running_procs)
 
     # Keep history fresh on each resource poll so performance charts evolve over time.
-    update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
-    config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
+    update_performance_history(session_token=session_token, device_id=runtime_device_id)
+    config.commit_runtime_state(state, session_token=session_token, device_id=runtime_device_id)
     
     return {
         "maxMemory": config.MAX_MEMORY,
@@ -464,10 +470,12 @@ def get_system_resources(
 @router.get("/performance-history")
 def get_performance_history(
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get historical performance data for graphing."""
-    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    state = config.get_runtime_state(session_token=session_token, device_id=runtime_device_id)
     return {
         "history": state["performance_history"],
         "max_memory": config.MAX_MEMORY
@@ -513,45 +521,53 @@ def remove_startup_process_endpoint(app_name: str = Query(..., min_length=1)):
 @router.get("/gpu-performance")
 def get_gpu_performance(
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get the simulated Armoury Crate GPU performance state."""
-    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    return build_gpu_performance_state(session_token=session_token, device_id=runtime_device_id)
 
 
 @router.post("/gpu-performance/mode")
 def set_gpu_performance_mode(
     payload: GpuPerformanceModeRequest,
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Update the active simulated GPU performance mode."""
     ARMOURY_CRATE_GPU_STATE["mode"] = payload.mode
-    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    return build_gpu_performance_state(session_token=session_token, device_id=runtime_device_id)
 
 
 @router.post("/gpu-performance/reminder")
 def set_gpu_performance_reminder(
     payload: GpuPerformanceNotificationRequest,
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Update Armoury Crate GPU reminder notifications."""
     ARMOURY_CRATE_GPU_STATE["notifications_enabled"] = payload.enabled
-    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    return build_gpu_performance_state(session_token=session_token, device_id=runtime_device_id)
 
 
 @router.post("/gpu-performance/stop-all")
 def stop_all_gpu_processes(
     session_token: Optional[str] = Header(None),
-    x_jezos_device_id: Optional[str] = Header(None)
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Terminate all simulated processes currently eligible for dGPU use."""
-    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    state = config.get_runtime_state(session_token=session_token, device_id=runtime_device_id)
     process_table = list(state["process_table"])
     gpu_process_ids = {
         process["pid"]
-        for process in build_gpu_candidate_processes(session_token=session_token, device_id=x_jezos_device_id)
+        for process in build_gpu_candidate_processes(session_token=session_token, device_id=runtime_device_id)
     }
     stopped_pids = []
 
@@ -562,12 +578,12 @@ def stop_all_gpu_processes(
                 stopped_pids.append(record.pid)
 
         state["process_table"] = process_table
-        update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
-        config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
+        update_performance_history(session_token=session_token, device_id=runtime_device_id)
+        config.commit_runtime_state(state, session_token=session_token, device_id=runtime_device_id)
 
     return {
         "stoppedPids": stopped_pids,
-        "state": build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
+        "state": build_gpu_performance_state(session_token=session_token, device_id=runtime_device_id)
     }
 
 
