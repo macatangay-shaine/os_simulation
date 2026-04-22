@@ -62,6 +62,7 @@ export default function SystemMonitor() {
   const [activePrintJobs, setActivePrintJobs] = useState([])
   
   const canvasRef = useRef(null)
+  const suppressedPidTimeoutsRef = useRef(new Map())
   const {
     processes,
     systemStats,
@@ -138,10 +139,26 @@ export default function SystemMonitor() {
       if (!Number.isFinite(pid)) return
 
       setSuppressedProcessPids((previous) => (previous.includes(pid) ? previous : [...previous, pid]))
+
+      const existingTimeout = suppressedPidTimeoutsRef.current.get(pid)
+      if (existingTimeout) {
+        clearTimeout(existingTimeout)
+      }
+
+      const timeoutId = setTimeout(() => {
+        setSuppressedProcessPids((previous) => previous.filter((value) => value !== pid))
+        suppressedPidTimeoutsRef.current.delete(pid)
+      }, 4000)
+
+      suppressedPidTimeoutsRef.current.set(pid, timeoutId)
     }
 
     window.addEventListener('process-terminated', handleProcessTerminated)
-    return () => window.removeEventListener('process-terminated', handleProcessTerminated)
+    return () => {
+      window.removeEventListener('process-terminated', handleProcessTerminated)
+      suppressedPidTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId))
+      suppressedPidTimeoutsRef.current.clear()
+    }
   }, [])
 
   const mergedProcesses = useMemo(() => {

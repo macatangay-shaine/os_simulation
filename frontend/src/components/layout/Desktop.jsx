@@ -1225,38 +1225,49 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   }
 
-  const toggleMinimize = (pid) => {
+  const minimizeWindow = (pid) => {
     let nextActiveWindowId = null
 
     setWindows((prev) => {
-      const updated = prev.map((win) => {
-        if (win.id === pid) {
-          const newMinimized = !win.minimized
-          return {
-            ...win,
-            minimized: newMinimized,
-            zIndex: newMinimized ? win.zIndex : zCounter
-          }
-        }
-        return win
-      })
+      const updated = prev.map((win) => (
+        win.id === pid
+          ? { ...win, minimized: true }
+          : win
+      ))
 
-      const toggledWindow = updated.find((win) => win.id === pid)
-      if (toggledWindow?.minimized) {
-        const nextWindow = updated
-          .filter((win) => win.id !== pid && !win.minimized)
-          .sort((a, b) => b.zIndex - a.zIndex)[0]
-        nextActiveWindowId = nextWindow?.id ?? null
-      } else {
-        nextActiveWindowId = pid
-      }
+      const nextWindow = updated
+        .filter((win) => win.id !== pid && !win.minimized)
+        .sort((a, b) => b.zIndex - a.zIndex)[0]
+      nextActiveWindowId = nextWindow?.id ?? null
 
       return updated
     })
 
     setActiveWindowId(nextActiveWindowId)
-    // Increment zCounter so restored window gets highest z-index
+  }
+
+  const restoreWindow = (pid) => {
+    setWindows((prev) =>
+      prev.map((win) => (
+        win.id === pid
+          ? { ...win, minimized: false, zIndex: zCounter }
+          : win
+      ))
+    )
+    setActiveWindowId(pid)
     setZCounter((prev) => prev + 1)
+  }
+
+  const toggleMinimize = (pid) => {
+    const targetWindow = windows.find((win) => win.id === pid)
+    if (!targetWindow) return
+
+    if (targetWindow.minimized) {
+      restoreWindow(pid)
+      return
+    }
+
+    minimizeWindow(pid)
   }
 
   const focusWindow = (pid) => {
@@ -1708,7 +1719,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               key={win.id}
               windowData={{ ...win, isActive: win.id === activeWindowId }}
               onClose={closeWindow}
-              onMinimize={toggleMinimize}
+              onMinimize={minimizeWindow}
               onMaximize={maximizeWindow}
               onFocus={focusWindow}
               onMove={moveWindow}
@@ -1723,7 +1734,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
                 windowControls={{
                   isMaximized: win.isMaximized,
                   canMaximize: !win.noMaximize,
-                  onMinimize: () => toggleMinimize(win.id),
+                  onMinimize: () => minimizeWindow(win.id),
                   onMaximize: () => maximizeWindow(win.id),
                   onClose: () => closeWindow(win.id)
                 }}
