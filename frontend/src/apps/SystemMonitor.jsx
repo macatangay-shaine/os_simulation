@@ -39,6 +39,7 @@ export default function SystemMonitor() {
   const [services, setServices] = useState([])
   const [appHistory, setAppHistory] = useState([])
   const [desktopWindows, setDesktopWindows] = useState(() => readDesktopWindowSnapshot())
+  const [suppressedProcessPids, setSuppressedProcessPids] = useState([])
   
   const [currentPrintJob, setCurrentPrintJob] = useState(null)
   const [activePrintJobs, setActivePrintJobs] = useState([])
@@ -86,29 +87,48 @@ export default function SystemMonitor() {
     }
   }, [])
 
+  useEffect(() => {
+    const handleProcessTerminated = (event) => {
+      const pid = Number(event?.detail?.pid)
+      if (!Number.isFinite(pid)) return
+
+      setSuppressedProcessPids((previous) => (previous.includes(pid) ? previous : [...previous, pid]))
+    }
+
+    window.addEventListener('process-terminated', handleProcessTerminated)
+    return () => window.removeEventListener('process-terminated', handleProcessTerminated)
+  }, [])
+
   const mergedProcesses = useMemo(() => {
     const desktopWindowByPid = new Map(
       desktopWindows.map((win) => [Number(win.id), win])
     )
+    const suppressedPidSet = new Set(suppressedProcessPids)
 
     const runningProcesses = (Array.isArray(processes) ? processes : []).filter(
       (proc) => proc?.state === 'running' && Number.isFinite(Number(proc?.pid))
     )
 
-    return runningProcesses.map((proc) => {
+    const processesByPid = new Map()
+
+    runningProcesses.forEach((proc) => {
       const pid = Number(proc.pid)
+      if (suppressedPidSet.has(pid)) return
+
       const desktopWindow = desktopWindowByPid.get(pid)
 
-      return {
+      processesByPid.set(pid, {
         ...proc,
         pid,
         app: desktopWindow?.title || proc.app,
         memory: Number(proc.memory) || 0,
         cpu_usage: Number(proc.cpu_usage) || 0,
         state: 'running'
-      }
+      })
     })
-  }, [desktopWindows, processes])
+
+    return [...processesByPid.values()]
+  }, [desktopWindows, processes, suppressedProcessPids])
 
   useEffect(() => {
     loadAllData()
