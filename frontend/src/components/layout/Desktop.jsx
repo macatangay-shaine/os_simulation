@@ -263,6 +263,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const refreshAnimationTimeoutRef = useRef(null)
   const syncedShortcutPayloadsRef = useRef(new Map())
   const pendingWindowPidsRef = useRef(new Map())
+  const confirmedRunningPidsRef = useRef(new Set())
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -287,15 +288,18 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
       syncedShortcutPayloadsRef.current.clear()
       pendingWindowPidsRef.current.clear()
+      confirmedRunningPidsRef.current.clear()
     }
   }, [])
 
   const reconcileWindowsWithRunningProcesses = (runningPidSet) => {
     const now = Date.now()
     const pending = pendingWindowPidsRef.current
+    const confirmed = confirmedRunningPidsRef.current
 
     runningPidSet.forEach((pid) => {
       pending.delete(pid)
+      confirmed.add(pid)
     })
 
     setWindows((prev) =>
@@ -309,7 +313,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           return true
         }
 
+        if (!confirmed.has(pid)) {
+          return true
+        }
+
         pending.delete(pid)
+        confirmed.delete(pid)
         return false
       })
     )
@@ -1237,6 +1246,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const windowEntry = {
         id: pid,
         appId: app.id,
+        component: app.component,
         title: options.windowTitle || app.title,
         appProps: options.appProps || {},
         icon: app.icon,
@@ -1277,7 +1287,9 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }
 
   const closeWindow = async (pid) => {
-    pendingWindowPidsRef.current.delete(Number(pid))
+    const numericPid = Number(pid)
+    pendingWindowPidsRef.current.delete(numericPid)
+    confirmedRunningPidsRef.current.delete(numericPid)
     setWindows((prev) => prev.filter((win) => win.id !== pid))
     window.dispatchEvent(new CustomEvent('window-closed', { detail: { pid } }))
     try {
@@ -1782,7 +1794,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         </div>
 
         {windows.map((win) => {
-          const AppComponent = appRegistry.find((app) => app.id === win.appId)?.component
+          const AppComponent = win.component || appRegistry.find((app) => app.id === win.appId)?.component
           return (
             <Window
               key={win.id}
