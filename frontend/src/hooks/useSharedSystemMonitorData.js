@@ -46,9 +46,12 @@ function normalizeResources(resources = {}) {
 function deriveResourcesFromProcesses(processes = []) {
   const runningProcesses = (Array.isArray(processes) ? processes : []).filter((process) => process?.state === 'running')
   const usedMemory = runningProcesses.reduce((sum, process) => sum + (Number(process.memory) || 0), 0)
-  const totalCpu = runningProcesses.reduce((sum, process) => sum + (Number(process.cpu_usage) || 0), 0)
-  const processPressure = Math.min(24, runningProcesses.length * 2.8)
-  const cpuUsage = Math.min(99, totalCpu * 0.8 + processPressure)
+  const avgCpu = runningProcesses.length > 0
+    ? runningProcesses.reduce((sum, process) => sum + (Number(process.cpu_usage) || 0), 0) / runningProcesses.length
+    : 0
+  const processPressure = Math.min(15, runningProcesses.length * 1.9)
+  const memoryPressure = Math.min(20, (usedMemory / DEFAULT_SYSTEM_STATS.totalMemory) * 22)
+  const cpuUsage = Math.min(99, Math.max(0.5, avgCpu * 0.75 + processPressure + memoryPressure))
   const totalMemory = DEFAULT_SYSTEM_STATS.totalMemory
 
   return {

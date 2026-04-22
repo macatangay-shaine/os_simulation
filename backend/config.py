@@ -128,6 +128,19 @@ def _persist_runtime_state(runtime_key: str, state: Dict) -> None:
         return
 
 
+def _delete_persisted_runtime_state(runtime_key: str) -> None:
+    try:
+        from database import get_db_connection
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM runtime_state WHERE runtime_key = ?", (runtime_key,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        return
+
+
 def _resolve_runtime_key(session_token: Optional[str] = None, device_id: Optional[str] = None) -> Optional[str]:
     """Resolve the preferred runtime isolation key."""
     if device_id:
@@ -171,3 +184,26 @@ def commit_runtime_state(state: Dict, session_token: Optional[str] = None, devic
     process_table = list(state.get("process_table", []))
     next_pid = int(state.get("next_pid", 1))
     performance_history = list(state.get("performance_history", []))
+
+
+def reset_runtime_state(session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
+    """Reset runtime state for the current device/session and clear persisted state."""
+    global process_table, next_pid, performance_history
+
+    runtime_key = _resolve_runtime_key(session_token=session_token, device_id=device_id)
+    fresh_state = _create_runtime_state(next_pid_seed=1)
+
+    if runtime_key:
+        runtime_store = device_runtime_states if runtime_key.startswith("device:") else session_runtime_states
+        runtime_store[runtime_key] = fresh_state
+        _delete_persisted_runtime_state(runtime_key)
+        return runtime_store[runtime_key]
+
+    process_table = []
+    next_pid = 1
+    performance_history = []
+    return {
+        "process_table": process_table,
+        "next_pid": next_pid,
+        "performance_history": performance_history
+    }

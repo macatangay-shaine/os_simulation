@@ -12,7 +12,7 @@ A modular FastAPI application providing OS-like functionality including:
 
 import re
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from database import init_database, load_startup_processes, migrate_apps_storage
@@ -137,11 +137,18 @@ async def maintenance_middleware(request, call_next):
 
 
 @app.get("/boot")
-def boot():
+def boot(
+    session_token: str | None = Header(None),
+    x_jezos_device_id: str | None = Header(None),
+    device_id: str | None = Query(None)
+):
     """Boot the system - initializes kernel services."""
+    runtime_device_id = device_id or x_jezos_device_id
+    config.reset_runtime_state(session_token=session_token, device_id=runtime_device_id)
+
     # Run initial system health check
     from system_health import health_monitor
-    health_monitor.periodic_maintenance()
+    health_monitor.periodic_maintenance(session_token=session_token, device_id=runtime_device_id)
     
     return {
         "kernel": "loaded",
