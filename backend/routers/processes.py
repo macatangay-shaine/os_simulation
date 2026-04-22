@@ -1,6 +1,8 @@
 """Process management endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+
+from fastapi import APIRouter, Header, HTTPException, Query
 from datetime import datetime
 import random
 from models import ProcessStartRequest, ProcessRecord
@@ -14,31 +16,42 @@ router = APIRouter(prefix="/process", tags=["processes"])
 
 
 @router.get("/list", response_model=list[ProcessRecord])
-def list_processes():
+def list_processes(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Get list of all processes."""
-    return config.process_table
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    return state["process_table"]
 
 
 @router.post("/start")
-def start_process(payload: ProcessStartRequest):
+def start_process(
+    payload: ProcessStartRequest,
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Start a new process."""
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    process_table = list(state["process_table"])
+
     # Calculate current memory usage
-    used_memory = sum(p.memory for p in config.process_table if p.state == "running")
+    used_memory = sum(p.memory for p in process_table if p.state == "running")
     killed_pids = []
     
     # Check if adding this process would exceed limit
     if used_memory + payload.memory > config.MAX_MEMORY:
         # Try to kill oldest background processes to make room
-        background_procs = [p for p in config.process_table if p.state == "running" and p.app not in ["System Monitor", "Terminal"]]
+        background_procs = [p for p in process_table if p.state == "running" and p.app not in ["System Monitor", "Terminal"]]
         background_procs.sort(key=lambda x: x.pid)  # Sort by age (oldest first)
         
         for proc in background_procs:
             if used_memory + payload.memory <= config.MAX_MEMORY:
                 break
             # Kill this process
-            for index, record in enumerate(config.process_table):
+            for index, record in enumerate(process_table):
                 if record.pid == proc.pid:
-                    config.process_table[index] = record.model_copy(update={"state": "terminated"})
+                    process_table[index] = record.model_copy(update={"state": "terminated"})
                     used_memory -= proc.memory
                     killed_pids.append(proc.pid)
                     break
@@ -58,7 +71,7 @@ def start_process(payload: ProcessStartRequest):
     is_startup = payload.app in config.startup_processes
     
     record = ProcessRecord(
-        pid=config.next_pid,
+        pid=state["next_pid"],
         app=payload.app,
         memory=payload.memory,
         state="running",
@@ -66,8 +79,9 @@ def start_process(payload: ProcessStartRequest):
         start_time=datetime.utcnow().isoformat(),
         is_startup=is_startup
     )
-    config.next_pid += 1
-    config.process_table.append(record)
+    state["next_pid"] += 1
+    process_table.append(record)
+    state["process_table"] = process_table
     
     # Log process start event
     log_event(
@@ -102,7 +116,9 @@ def start_process(payload: ProcessStartRequest):
     
     # Capture performance snapshot
     from routers.system import update_performance_history
-    update_performance_history()
+    update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
+
+    config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
     
     response_data = record.model_dump()
     if killed_pids:
@@ -112,12 +128,20 @@ def start_process(payload: ProcessStartRequest):
 
 
 @router.post("/kill", response_model=ProcessRecord)
-def kill_process(pid: int = Query(..., ge=1)):
+def kill_process(
+    pid: int = Query(..., ge=1),
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Kill a process by PID."""
-    for index, record in enumerate(config.process_table):
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    process_table = list(state["process_table"])
+
+    for index, record in enumerate(process_table):
         if record.pid == pid:
             updated = record.model_copy(update={"state": "terminated"})
-            config.process_table[index] = updated
+            process_table[index] = updated
+            state["process_table"] = process_table
             
             # Log process kill event
             log_event(
@@ -135,23 +159,33 @@ def kill_process(pid: int = Query(..., ge=1)):
             
             # Update performance history
             from routers.system import update_performance_history
-            update_performance_history()
+            update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
+            config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
             
             return updated
     raise HTTPException(status_code=404, detail="Process not found")
 
 
 @router.post("/force-kill")
-def force_kill_process(pid: int = Query(..., ge=1)):
+def force_kill_process(
+    pid: int = Query(..., ge=1),
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Force kill a process, even if it's protected (startup process)."""
-    for index, record in enumerate(config.process_table):
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    process_table = list(state["process_table"])
+
+    for index, record in enumerate(process_table):
         if record.pid == pid:
             updated = record.model_copy(update={"state": "terminated"})
-            config.process_table[index] = updated
+            process_table[index] = updated
+            state["process_table"] = process_table
             
             # Update performance history
             from routers.system import update_performance_history
-            update_performance_history()
+            update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
+            config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
             
             return {"status": "terminated", "pid": pid, "forced": True}
     raise HTTPException(status_code=404, detail="Process not found")

@@ -1,6 +1,8 @@
 """System resources and performance monitoring endpoints."""
 
-from fastapi import APIRouter, Query, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Header, Query, HTTPException
 from datetime import datetime, timedelta
 import random
 from pydantic import BaseModel, Field
@@ -338,13 +340,14 @@ GPU_VISIBLE_APP_WEIGHTS = {
 GPU_HIDDEN_APPS = {"System", "Kernel Services", "Terminal"}
 
 
-def build_gpu_candidate_processes():
+def build_gpu_candidate_processes(session_token: Optional[str] = None, device_id: Optional[str] = None):
     """Build a simulated list of applications that can engage the dGPU."""
     if ARMOURY_CRATE_GPU_STATE["mode"] == "eco":
         return []
 
+    state = config.get_runtime_state(session_token=session_token, device_id=device_id)
     candidates = []
-    for record in config.process_table:
+    for record in state["process_table"]:
         if record.state != "running" or record.app in GPU_HIDDEN_APPS or record.is_startup:
             continue
 
@@ -371,9 +374,9 @@ def build_gpu_candidate_processes():
     return sorted(candidates, key=lambda item: (item["memory"], item["cpu_usage"]), reverse=True)
 
 
-def build_gpu_performance_state():
+def build_gpu_performance_state(session_token: Optional[str] = None, device_id: Optional[str] = None):
     """Return the current Armoury Crate GPU performance simulation state."""
-    processes = build_gpu_candidate_processes()
+    processes = build_gpu_candidate_processes(session_token=session_token, device_id=device_id)
     mode = ARMOURY_CRATE_GPU_STATE["mode"]
 
     if mode == "eco":
@@ -393,9 +396,10 @@ def build_gpu_performance_state():
     }
 
 
-def update_performance_history():
+def update_performance_history(session_token: Optional[str] = None, device_id: Optional[str] = None):
     """Internal helper to capture current system performance snapshot."""
-    running_procs = [p for p in config.process_table if p.state == "running"]
+    state = config.get_runtime_state(session_token=session_token, device_id=device_id)
+    running_procs = [p for p in state["process_table"] if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
     total_cpu = sum(p.cpu_usage for p in running_procs)
     
@@ -407,32 +411,44 @@ def update_performance_history():
         "process_count": len(running_procs)
     }
     
-    config.performance_history.append(snapshot)
+    history = list(state["performance_history"])
+    history.append(snapshot)
     
     # Keep only recent history
-    if len(config.performance_history) > config.MAX_HISTORY_SIZE:
-        config.performance_history.pop(0)
+    if len(history) > config.MAX_HISTORY_SIZE:
+        history.pop(0)
+
+    state["performance_history"] = history
+    config.commit_runtime_state(state, session_token=session_token, device_id=device_id)
 
 
 @router.get("/resources")
-def get_system_resources():
+def get_system_resources(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Get current system resource usage."""
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    process_table = list(state["process_table"])
+
     # Update CPU usage for running processes with smoothing to avoid visual flicker.
-    for index, record in enumerate(config.process_table):
+    for index, record in enumerate(process_table):
         if record.state == "running":
             memory_weight = (record.memory / config.MAX_MEMORY) * 32
             target_cpu = max(0.2, min(95.0, memory_weight + random.uniform(0.5, 4.5)))
             smooth_cpu = (record.cpu_usage * 0.82) + (target_cpu * 0.18)
             new_cpu = max(0.1, min(99.0, smooth_cpu + random.uniform(-0.5, 0.5)))
-            config.process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
+            process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
 
     # Recompute totals after updating process CPU values.
-    running_procs = [p for p in config.process_table if p.state == "running"]
+    state["process_table"] = process_table
+    running_procs = [p for p in process_table if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
     total_cpu = sum(p.cpu_usage for p in running_procs)
 
     # Keep history fresh on each resource poll so performance charts evolve over time.
-    update_performance_history()
+    update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
+    config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
     
     return {
         "maxMemory": config.MAX_MEMORY,
@@ -446,10 +462,14 @@ def get_system_resources():
 
 
 @router.get("/performance-history")
-def get_performance_history():
+def get_performance_history(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Get historical performance data for graphing."""
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
     return {
-        "history": config.performance_history,
+        "history": state["performance_history"],
         "max_memory": config.MAX_MEMORY
     }
 
@@ -491,42 +511,63 @@ def remove_startup_process_endpoint(app_name: str = Query(..., min_length=1)):
 
 
 @router.get("/gpu-performance")
-def get_gpu_performance():
+def get_gpu_performance(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Get the simulated Armoury Crate GPU performance state."""
-    return build_gpu_performance_state()
+    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
 
 
 @router.post("/gpu-performance/mode")
-def set_gpu_performance_mode(payload: GpuPerformanceModeRequest):
+def set_gpu_performance_mode(
+    payload: GpuPerformanceModeRequest,
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Update the active simulated GPU performance mode."""
     ARMOURY_CRATE_GPU_STATE["mode"] = payload.mode
-    return build_gpu_performance_state()
+    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
 
 
 @router.post("/gpu-performance/reminder")
-def set_gpu_performance_reminder(payload: GpuPerformanceNotificationRequest):
+def set_gpu_performance_reminder(
+    payload: GpuPerformanceNotificationRequest,
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Update Armoury Crate GPU reminder notifications."""
     ARMOURY_CRATE_GPU_STATE["notifications_enabled"] = payload.enabled
-    return build_gpu_performance_state()
+    return build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
 
 
 @router.post("/gpu-performance/stop-all")
-def stop_all_gpu_processes():
+def stop_all_gpu_processes(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None)
+):
     """Terminate all simulated processes currently eligible for dGPU use."""
-    gpu_process_ids = {process["pid"] for process in build_gpu_candidate_processes()}
+    state = config.get_runtime_state(session_token=session_token, device_id=x_jezos_device_id)
+    process_table = list(state["process_table"])
+    gpu_process_ids = {
+        process["pid"]
+        for process in build_gpu_candidate_processes(session_token=session_token, device_id=x_jezos_device_id)
+    }
     stopped_pids = []
 
     if gpu_process_ids:
-        for index, record in enumerate(config.process_table):
+        for index, record in enumerate(process_table):
             if record.pid in gpu_process_ids and record.state == "running":
-                config.process_table[index] = record.model_copy(update={"state": "terminated"})
+                process_table[index] = record.model_copy(update={"state": "terminated"})
                 stopped_pids.append(record.pid)
 
-        update_performance_history()
+        state["process_table"] = process_table
+        update_performance_history(session_token=session_token, device_id=x_jezos_device_id)
+        config.commit_runtime_state(state, session_token=session_token, device_id=x_jezos_device_id)
 
     return {
         "stoppedPids": stopped_pids,
-        "state": build_gpu_performance_state()
+        "state": build_gpu_performance_state(session_token=session_token, device_id=x_jezos_device_id)
     }
 
 
