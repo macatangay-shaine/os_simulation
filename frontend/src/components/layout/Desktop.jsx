@@ -735,19 +735,22 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         const response = await fetch('http://localhost:8000/process/list')
         if (!response.ok) return
         const processList = await response.json()
-        const processStatesByPid = new Map(
-          (processList || []).map((proc) => [Number(proc.pid), proc.state])
+        const runningPidSet = new Set(
+          (processList || [])
+            .filter((proc) => proc?.state === 'running')
+            .map((proc) => Number(proc.pid))
+            .filter((pid) => Number.isFinite(pid))
         )
 
-        // Only close windows when backend explicitly marks the PID terminated.
-        setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
+        // Keep desktop windows strictly aligned with backend running processes.
+        setWindows((prev) => prev.filter((win) => runningPidSet.has(Number(win.id))))
       } catch {
         // Ignore transient backend failures.
       }
     }
 
     syncWindowsWithProcesses()
-    const interval = setInterval(syncWindowsWithProcesses, 3000)
+    const interval = setInterval(syncWindowsWithProcesses, 1000)
     return () => clearInterval(interval)
   }, [])
 
@@ -1171,7 +1174,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         return
       }
     } catch (error) {
-      pid = Date.now()
+      alert('Failed to launch app')
+      return
     }
 
     setWindows((prev) => {
@@ -1236,6 +1240,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     })
     setActiveWindowId(pid)
     setZCounter((prev) => prev + 1)
+    window.dispatchEvent(new CustomEvent('window-opened', { detail: { pid, appId: app.id } }))
 
     // Track recent apps (keep last 5)
     setRecentApps((prev) => {
@@ -1246,6 +1251,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
   const closeWindow = async (pid) => {
     setWindows((prev) => prev.filter((win) => win.id !== pid))
+    window.dispatchEvent(new CustomEvent('window-closed', { detail: { pid } }))
     try {
       const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
       if (!response.ok && response.status !== 404) {
@@ -1482,11 +1488,14 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
 
       const processList = await response.json()
-      const processStatesByPid = new Map(
-        (processList || []).map((proc) => [Number(proc.pid), proc.state])
+      const runningPidSet = new Set(
+        (processList || [])
+          .filter((proc) => proc?.state === 'running')
+          .map((proc) => Number(proc.pid))
+          .filter((pid) => Number.isFinite(pid))
       )
 
-      setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
+      setWindows((prev) => prev.filter((win) => runningPidSet.has(Number(win.id))))
     })())
 
     try {
