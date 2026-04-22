@@ -831,12 +831,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const syncDesktopToFilesystem = async () => {
       try {
-        const desktopShortcutPaths = new Set(
-          desktopFiles
-            .filter((file) => file?.path?.endsWith('.lnk'))
-            .map((file) => file.path)
-        )
-
         // Get apps that should be on desktop (those with icon positions)
         const desktopApps = appRegistry.filter(app => iconPositions[app.id])
         
@@ -850,7 +844,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           })
           const previousPayload = syncedShortcutPayloadsRef.current.get(shortcutPath)
 
-          if (desktopShortcutPaths.has(shortcutPath) && previousPayload === shortcutContent) {
+          if (previousPayload === shortcutContent) {
             continue
           }
 
@@ -866,12 +860,29 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             })
             
             if (response.ok) {
-              // Mark as synced whether the file was created, existed, or updated in place
               syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
               continue
             }
 
-            console.error('Failed to sync shortcut:', shortcutPath, response.status)
+            if (response.status === 409) {
+              const writeResponse = await fetch('http://localhost:8000/fs/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  path: shortcutPath,
+                  content: shortcutContent
+                })
+              })
+
+              if (writeResponse.ok) {
+                syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
+                continue
+              }
+            }
+
+            if (!response.ok) {
+              console.error('Failed to sync shortcut:', shortcutPath)
+            }
           } catch (err) {
             console.error('Failed to sync shortcut:', shortcutPath, err)
           }
@@ -881,7 +892,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
     }
     
-    if (appRegistry.length > 0 && desktopFiles.length >= 0) {
+    if (appRegistry.length > 0) {
       syncDesktopToFilesystem()
     }
   }, [appRegistry, iconPositions])
