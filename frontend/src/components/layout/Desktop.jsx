@@ -751,6 +751,26 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     return () => window.removeEventListener('process-terminated', handleProcessTerminated)
   }, [])
 
+  useEffect(() => {
+    const emitWindowSnapshot = () => {
+      const mapped = windows.map((win) => ({
+        id: Number(win.id),
+        title: win.title,
+        appId: win.appId,
+        memory: Number(win.memory) || 12,
+        minimized: Boolean(win.minimized)
+      }))
+
+      window.dispatchEvent(new CustomEvent('desktop-windows-changed', { detail: { windows: mapped } }))
+    }
+
+    const handleWindowsRequest = () => emitWindowSnapshot()
+
+    emitWindowSnapshot()
+    window.addEventListener('desktop-windows-request', handleWindowsRequest)
+    return () => window.removeEventListener('desktop-windows-request', handleWindowsRequest)
+  }, [windows])
+
   // Handle opening desktop files
   useEffect(() => {
     const handleOpenFile = (event) => {

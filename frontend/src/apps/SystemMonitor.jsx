@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import PrintingSimulation from '../components/PrintingSimulation'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
@@ -23,6 +23,7 @@ export default function SystemMonitor() {
   const [users, setUsers] = useState([])
   const [services, setServices] = useState([])
   const [appHistory, setAppHistory] = useState([])
+  const [desktopWindows, setDesktopWindows] = useState([])
   
   const [currentPrintJob, setCurrentPrintJob] = useState(null)
   const [activePrintJobs, setActivePrintJobs] = useState([])
@@ -34,6 +35,39 @@ export default function SystemMonitor() {
     performanceHistory,
     refresh: refreshSystemMonitorData
   } = useSharedSystemMonitorData({ enabled: true, intervalMs: 2000 })
+
+  useEffect(() => {
+    const handleWindowsChanged = (event) => {
+      const payload = event?.detail?.windows
+      setDesktopWindows(Array.isArray(payload) ? payload : [])
+    }
+
+    window.addEventListener('desktop-windows-changed', handleWindowsChanged)
+    window.dispatchEvent(new CustomEvent('desktop-windows-request'))
+
+    return () => {
+      window.removeEventListener('desktop-windows-changed', handleWindowsChanged)
+    }
+  }, [])
+
+  const mergedProcesses = useMemo(() => {
+    const backendProcessMap = new Map(
+      (Array.isArray(processes) ? processes : []).map((proc) => [Number(proc.pid), proc])
+    )
+
+    const syntheticProcesses = desktopWindows
+      .filter((win) => !backendProcessMap.has(Number(win.id)))
+      .map((win) => ({
+        pid: Number(win.id),
+        app: win.title || win.appId || 'Unknown App',
+        cpu_usage: 0.5,
+        memory: Number(win.memory) || 12,
+        state: 'running',
+        isSynthetic: true
+      }))
+
+    return [...(Array.isArray(processes) ? processes : []), ...syntheticProcesses]
+  }, [desktopWindows, processes])
 
   useEffect(() => {
     loadAllData()
@@ -56,12 +90,12 @@ export default function SystemMonitor() {
           cpu_usage: Number(systemStats.cpuUsage) || 0,
           memory_percent: Number(memoryPercent) || 0,
           disk_percent: Number(diskPercent) || 0,
-          process_count: processes.filter((proc) => proc.state === 'running').length
+          process_count: mergedProcesses.filter((proc) => proc.state === 'running').length
         }
       ]
       return next.slice(-60)
     })
-  }, [systemStats, diskData, processes])
+  }, [systemStats, diskData, mergedProcesses])
 
   useEffect(() => {
     if (activeTab === 'performance' && canvasRef.current) {
@@ -293,7 +327,12 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleKillProcess = async (pid) => {
+  const handleKillProcess = async (pid, isSynthetic = false) => {
+    if (isSynthetic) {
+      window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+      return
+    }
+
     try {
       const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
       if (response.ok) {
@@ -305,7 +344,12 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleForceKillProcess = async (pid) => {
+  const handleForceKillProcess = async (pid, isSynthetic = false) => {
+    if (isSynthetic) {
+      window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+      return
+    }
+
     if (confirm('Force kill this process? This may cause system instability.')) {
       try {
         const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
@@ -458,8 +502,8 @@ export default function SystemMonitor() {
     }
   }
 
-  const sortedProcesses = sortProcesses(processes)
-  const runningProcessCount = processes.filter((proc) => proc.state === 'running').length
+  const sortedProcesses = sortProcesses(mergedProcesses)
+  const runningProcessCount = mergedProcesses.filter((proc) => proc.state === 'running').length
   const memoryUsagePercent = systemStats.totalMemory
     ? (systemStats.usedMemory / systemStats.totalMemory) * 100
     : 0
@@ -595,14 +639,14 @@ export default function SystemMonitor() {
                                 <button
                                   type="button"
                                   className="monitor-kill-btn"
-                                  onClick={() => handleKillProcess(proc.pid)}
+                                  onClick={() => handleKillProcess(proc.pid, proc.isSynthetic)}
                                 >
                                   End
                                 </button>
                                 <button
                                   type="button"
                                   className="monitor-force-kill-btn"
-                                  onClick={() => handleForceKillProcess(proc.pid)}
+                                  onClick={() => handleForceKillProcess(proc.pid, proc.isSynthetic)}
                                 >
                                   Force
                                 </button>
@@ -814,7 +858,7 @@ export default function SystemMonitor() {
             <div className="monitor-section">
               <div className="monitor-title">Startup Programs</div>
               <div className="monitor-startup-list">
-                {processes.filter((p) => p.state === 'running').map((proc) => (
+                {mergedProcesses.filter((p) => p.state === 'running').map((proc) => (
                   <div key={proc.pid} className="monitor-startup-item">
                     <div className="monitor-startup-details">
                       <div className="monitor-startup-name">{proc.app}</div>
