@@ -75,24 +75,38 @@ export async function fetchSharedSystemMonitorData() {
 
   activeRequest = (async () => {
     try {
-      const [processResponse, resourcesResponse, historyResponse] = await Promise.all([
+      const [processResult, resourcesResult, historyResult] = await Promise.allSettled([
         fetch('http://localhost:8000/process/list'),
         fetch('http://localhost:8000/system/resources'),
         fetch('http://localhost:8000/system/performance-history')
       ])
 
-      if (!processResponse.ok || !resourcesResponse.ok || !historyResponse.ok) {
+      const nextProcesses =
+        processResult.status === 'fulfilled' && processResult.value.ok
+          ? await processResult.value.json()
+          : sharedState.processes
+      const nextResources =
+        resourcesResult.status === 'fulfilled' && resourcesResult.value.ok
+          ? await resourcesResult.value.json()
+          : sharedState.systemStats
+      const nextHistory =
+        historyResult.status === 'fulfilled' && historyResult.value.ok
+          ? await historyResult.value.json()
+          : { history: sharedState.performanceHistory }
+
+      const hasAnySuccess =
+        (processResult.status === 'fulfilled' && processResult.value.ok) ||
+        (resourcesResult.status === 'fulfilled' && resourcesResult.value.ok) ||
+        (historyResult.status === 'fulfilled' && historyResult.value.ok)
+
+      if (!hasAnySuccess) {
         throw new Error('Failed to load shared system monitor data.')
       }
 
-      const processData = await processResponse.json()
-      const resourcesData = await resourcesResponse.json()
-      const historyData = await historyResponse.json()
-
       sharedState = {
-        processes: Array.isArray(processData) ? processData : [],
-        systemStats: normalizeResources(resourcesData),
-        performanceHistory: Array.isArray(historyData.history) ? historyData.history : [],
+        processes: Array.isArray(nextProcesses) ? nextProcesses : sharedState.processes,
+        systemStats: normalizeResources(nextResources),
+        performanceHistory: Array.isArray(nextHistory.history) ? nextHistory.history : sharedState.performanceHistory,
         isLoading: false,
         isRefreshing: false,
         hasLoaded: true,
