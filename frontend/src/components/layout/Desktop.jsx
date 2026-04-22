@@ -263,7 +263,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const refreshAnimationTimeoutRef = useRef(null)
   const syncedShortcutPayloadsRef = useRef(new Map())
   const pendingWindowPidsRef = useRef(new Map())
-  const confirmedRunningPidsRef = useRef(new Set())
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -288,41 +287,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
       syncedShortcutPayloadsRef.current.clear()
       pendingWindowPidsRef.current.clear()
-      confirmedRunningPidsRef.current.clear()
     }
   }, [])
-
-  const reconcileWindowsWithRunningProcesses = (runningPidSet) => {
-    const now = Date.now()
-    const pending = pendingWindowPidsRef.current
-    const confirmed = confirmedRunningPidsRef.current
-
-    runningPidSet.forEach((pid) => {
-      pending.delete(pid)
-      confirmed.add(pid)
-    })
-
-    setWindows((prev) =>
-      prev.filter((win) => {
-        const pid = Number(win.id)
-        if (!Number.isFinite(pid)) return false
-        if (runningPidSet.has(pid)) return true
-
-        const pendingSince = pending.get(pid)
-        if (typeof pendingSince === 'number' && now - pendingSince < 4000) {
-          return true
-        }
-
-        if (!confirmed.has(pid)) {
-          return true
-        }
-
-        pending.delete(pid)
-        confirmed.delete(pid)
-        return false
-      })
-    )
-  }
 
   const pulseDesktopRefreshAnimation = () => {
     if (refreshAnimationTimeoutRef.current) {
@@ -764,35 +730,11 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     return () => clearInterval(interval)
   }, [])
 
-  // Keep window list aligned with backend process state.
-  useEffect(() => {
-    const syncWindowsWithProcesses = async () => {
-      try {
-        const response = await fetch('http://localhost:8000/process/list')
-        if (!response.ok) return
-        const processList = await response.json()
-        const runningPidSet = new Set(
-          (processList || [])
-            .filter((proc) => proc?.state === 'running')
-            .map((proc) => Number(proc.pid))
-            .filter((pid) => Number.isFinite(pid))
-        )
-
-        reconcileWindowsWithRunningProcesses(runningPidSet)
-      } catch {
-        // Ignore transient backend failures.
-      }
-    }
-
-    syncWindowsWithProcesses()
-    const interval = setInterval(syncWindowsWithProcesses, 1000)
-    return () => clearInterval(interval)
-  }, [])
-
   useEffect(() => {
     const handleProcessTerminated = (event) => {
       const pid = Number(event?.detail?.pid)
       if (!Number.isFinite(pid)) return
+      pendingWindowPidsRef.current.delete(pid)
       setWindows((prev) => prev.filter((win) => win.id !== pid))
     }
 
@@ -1289,7 +1231,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   const closeWindow = async (pid) => {
     const numericPid = Number(pid)
     pendingWindowPidsRef.current.delete(numericPid)
-    confirmedRunningPidsRef.current.delete(numericPid)
     setWindows((prev) => prev.filter((win) => win.id !== pid))
     window.dispatchEvent(new CustomEvent('window-closed', { detail: { pid } }))
     try {
@@ -1519,23 +1460,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const nodes = Array.isArray(data.nodes) ? data.nodes : []
       const hasRecycleBin = nodes.some((node) => node.path === RECYCLE_BIN_PATH)
       setDesktopFiles(hasRecycleBin ? nodes : [RECYCLE_BIN_DESKTOP_ITEM, ...nodes])
-    })())
-
-    refreshTasks.push((async () => {
-      const response = await fetch('http://localhost:8000/process/list')
-      if (!response.ok) {
-        throw new Error('Failed to refresh process state')
-      }
-
-      const processList = await response.json()
-      const runningPidSet = new Set(
-        (processList || [])
-          .filter((proc) => proc?.state === 'running')
-          .map((proc) => Number(proc.pid))
-          .filter((pid) => Number.isFinite(pid))
-      )
-
-      reconcileWindowsWithRunningProcesses(runningPidSet)
     })())
 
     try {
@@ -1794,7 +1718,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         </div>
 
         {windows.map((win) => {
-          const AppComponent = win.component || appRegistry.find((app) => app.id === win.appId)?.component
+          const AppComponent = APP_COMPONENTS[win.appId] || win.component || appRegistry.find((app) => app.id === win.appId)?.component
           return (
             <Window
               key={win.id}
