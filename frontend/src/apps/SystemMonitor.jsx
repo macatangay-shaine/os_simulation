@@ -5,6 +5,21 @@ import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import { readPrintJobs, updatePrintJobStatus, enqueuePrintJob } from '../utils/printJobs'
 
 export default function SystemMonitor() {
+  const readDesktopWindowSnapshot = () => {
+    if (Array.isArray(window.__jezOsDesktopWindows)) {
+      return window.__jezOsDesktopWindows
+    }
+
+    try {
+      const raw = localStorage.getItem('jez_os_active_windows')
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
   const [activeTab, setActiveTab] = useState('processes')
   const [startupProcesses, setStartupProcesses] = useState([])
   const [sortBy, setSortBy] = useState('pid')
@@ -23,7 +38,7 @@ export default function SystemMonitor() {
   const [users, setUsers] = useState([])
   const [services, setServices] = useState([])
   const [appHistory, setAppHistory] = useState([])
-  const [desktopWindows, setDesktopWindows] = useState([])
+  const [desktopWindows, setDesktopWindows] = useState(() => readDesktopWindowSnapshot())
   
   const [currentPrintJob, setCurrentPrintJob] = useState(null)
   const [activePrintJobs, setActivePrintJobs] = useState([])
@@ -48,6 +63,22 @@ export default function SystemMonitor() {
     return () => {
       window.removeEventListener('desktop-windows-changed', handleWindowsChanged)
     }
+  }, [])
+
+  useEffect(() => {
+    const syncDesktopWindows = () => {
+      const snapshot = readDesktopWindowSnapshot()
+      setDesktopWindows((previous) => {
+        if (previous.length === snapshot.length && previous.every((item, index) => item.id === snapshot[index]?.id)) {
+          return previous
+        }
+        return snapshot
+      })
+    }
+
+    syncDesktopWindows()
+    const intervalId = window.setInterval(syncDesktopWindows, 1000)
+    return () => window.clearInterval(intervalId)
   }, [])
 
   const mergedProcesses = useMemo(() => {
