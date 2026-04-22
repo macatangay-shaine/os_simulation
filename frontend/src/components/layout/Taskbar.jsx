@@ -320,6 +320,7 @@ export default function Taskbar({
               const appWindows = windows.filter((entry) => entry.appId === app.id)
               const hasWindows = appWindows.length > 0
               const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+              const hasActiveWindow = appWindows.some((entry) => entry.id === activeWindowId && !entry.minimized)
               const hasMinimized = appWindows.some((entry) => entry.minimized)
               const activeWindow = getActiveWindowForGroup(appWindows)
 
@@ -327,7 +328,7 @@ export default function Taskbar({
                 <div key={app.id} className="taskbar-app-group">
                   <button
                     type="button"
-                    className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                    className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasActiveWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
                     data-app={app.id}
                     title={!hasWindows ? `Open ${app.title}` : undefined}
                     onClick={(event) => {
@@ -394,7 +395,7 @@ export default function Taskbar({
               })
 
               return Object.entries(windowsByApp).map(([appId, appWindows]) => {
-                const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+                const hasActiveWindow = appWindows.some((entry) => entry.id === activeWindowId && !entry.minimized)
                 const hasMinimized = appWindows.some((entry) => entry.minimized)
                 const activeWindow = getActiveWindowForGroup(appWindows)
 
@@ -402,7 +403,7 @@ export default function Taskbar({
                   <div key={appId} className="taskbar-app-group">
                     <button
                       type="button"
-                      className={`taskbar-app running ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                      className={`taskbar-app running ${hasActiveWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
                       data-app={appId}
                       onClick={(event) => {
                         event.stopPropagation()
