@@ -405,9 +405,10 @@ def update_performance_history(session_token: Optional[str] = None, device_id: O
     state = config.get_runtime_state(session_token=session_token, device_id=device_id)
     running_procs = [p for p in state["process_table"] if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
-    total_cpu = sum(p.cpu_usage for p in running_procs)
-    process_pressure = min(24.0, len(running_procs) * 2.8)
-    aggregate_cpu = min(99.0, total_cpu * 0.8 + process_pressure)
+    avg_cpu = (sum(p.cpu_usage for p in running_procs) / len(running_procs)) if running_procs else 0.0
+    process_pressure = min(15.0, len(running_procs) * 1.9)
+    memory_pressure = min(20.0, (used_memory / config.MAX_MEMORY) * 22.0)
+    aggregate_cpu = min(99.0, max(0.5, avg_cpu * 0.75 + process_pressure + memory_pressure))
     
     snapshot = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -428,6 +429,22 @@ def update_performance_history(session_token: Optional[str] = None, device_id: O
     config.commit_runtime_state(state, session_token=session_token, device_id=device_id)
 
 
+@router.post("/runtime/reset")
+def reset_runtime_state(
+    session_token: Optional[str] = Header(None),
+    x_jezos_device_id: Optional[str] = Header(None),
+    device_id: Optional[str] = Query(None)
+):
+    """Reset process/performance runtime state for the current device or session."""
+    runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
+    state = config.reset_runtime_state(session_token=session_token, device_id=runtime_device_id)
+    return {
+        "status": "reset",
+        "process_count": len(state["process_table"]),
+        "next_pid": state["next_pid"]
+    }
+
+
 @router.get("/resources")
 def get_system_resources(
     session_token: Optional[str] = Header(None),
@@ -442,20 +459,21 @@ def get_system_resources(
     # Update CPU usage for running processes with smoothing to avoid visual flicker.
     for index, record in enumerate(process_table):
         if record.state == "running":
-            process_load_factor = min(1.0, len(process_table) / 10)
-            memory_weight = (record.memory / config.MAX_MEMORY) * 58
-            target_cpu = max(1.5, min(95.0, memory_weight + process_load_factor * 18 + random.uniform(3.0, 12.0)))
-            smooth_cpu = (record.cpu_usage * 0.68) + (target_cpu * 0.32)
-            new_cpu = max(0.8, min(99.0, smooth_cpu + random.uniform(-1.5, 2.5)))
+            process_load_factor = min(1.0, len(process_table) / 12)
+            memory_weight = (record.memory / config.MAX_MEMORY) * 24
+            target_cpu = max(1.0, min(72.0, memory_weight + process_load_factor * 10 + random.uniform(1.0, 7.0)))
+            smooth_cpu = (record.cpu_usage * 0.72) + (target_cpu * 0.28)
+            new_cpu = max(0.5, min(86.0, smooth_cpu + random.uniform(-1.2, 2.0)))
             process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
 
     # Recompute totals after updating process CPU values.
     state["process_table"] = process_table
     running_procs = [p for p in process_table if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
-    total_cpu = sum(p.cpu_usage for p in running_procs)
-    process_pressure = min(24.0, len(running_procs) * 2.8)
-    aggregate_cpu = min(99.0, total_cpu * 0.8 + process_pressure)
+    avg_cpu = (sum(p.cpu_usage for p in running_procs) / len(running_procs)) if running_procs else 0.0
+    process_pressure = min(15.0, len(running_procs) * 1.9)
+    memory_pressure = min(20.0, (used_memory / config.MAX_MEMORY) * 22.0)
+    aggregate_cpu = min(99.0, max(0.5, avg_cpu * 0.75 + process_pressure + memory_pressure))
 
     # Keep history fresh on each resource poll so performance charts evolve over time.
     update_performance_history(session_token=session_token, device_id=runtime_device_id)

@@ -504,35 +504,59 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleKillProcess = async (pidOrPids) => {
-    const pids = Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]
+  const handleKillProcess = async ({ appName, pidOrPids }) => {
+    const pids = (Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]).filter((pid) => Number.isFinite(Number(pid)))
     try {
-      await Promise.all(
-        pids.map(async (pid) => {
-          const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
-          if (response.ok || response.status === 404) {
-            window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-          }
-        })
-      )
+      let appEndpointUsed = false
+      if (appName) {
+        const response = await fetch(`http://localhost:8000/process/kill-by-app?app_name=${encodeURIComponent(appName)}`, { method: 'POST' })
+        appEndpointUsed = response.ok
+      }
+
+      if (!appEndpointUsed && pids.length > 0) {
+        await Promise.all(
+          pids.map(async (pid) => {
+            const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
+            if (response.ok || response.status === 404) {
+              window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+            }
+          })
+        )
+      }
+
+      pids.forEach((pid) => {
+        window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+      })
       refreshSystemMonitorData()
     } catch (error) {
       console.error('Failed to kill process:', error)
     }
   }
 
-  const handleForceKillProcess = async (pidOrPids) => {
-    const pids = Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]
+  const handleForceKillProcess = async ({ appName, pidOrPids }) => {
+    const pids = (Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]).filter((pid) => Number.isFinite(Number(pid)))
     if (confirm('Force kill this process? This may cause system instability.')) {
       try {
-        await Promise.all(
-          pids.map(async (pid) => {
-            const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
-            if (response.ok || response.status === 404) {
-              window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-            }
-          })
-        )
+        let appEndpointUsed = false
+        if (appName) {
+          const response = await fetch(`http://localhost:8000/process/force-kill-by-app?app_name=${encodeURIComponent(appName)}`, { method: 'POST' })
+          appEndpointUsed = response.ok
+        }
+
+        if (!appEndpointUsed && pids.length > 0) {
+          await Promise.all(
+            pids.map(async (pid) => {
+              const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
+              if (response.ok || response.status === 404) {
+                window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+              }
+            })
+          )
+        }
+
+        pids.forEach((pid) => {
+          window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+        })
         refreshSystemMonitorData()
       } catch (error) {
         console.error('Failed to force kill process:', error)
@@ -885,14 +909,14 @@ export default function SystemMonitor() {
                                 <button
                                   type="button"
                                   className="monitor-kill-btn"
-                                  onClick={() => handleKillProcess(proc.pids.length > 0 ? proc.pids : proc.pid)}
+                                  onClick={() => handleKillProcess({ appName: proc.app, pidOrPids: proc.pids.length > 0 ? proc.pids : proc.pid })}
                                 >
                                   End
                                 </button>
                                 <button
                                   type="button"
                                   className="monitor-force-kill-btn"
-                                  onClick={() => handleForceKillProcess(proc.pids.length > 0 ? proc.pids : proc.pid)}
+                                  onClick={() => handleForceKillProcess({ appName: proc.app, pidOrPids: proc.pids.length > 0 ? proc.pids : proc.pid })}
                                 >
                                   Force
                                 </button>
