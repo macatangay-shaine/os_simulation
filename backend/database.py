@@ -251,6 +251,25 @@ def init_startup_processes() -> None:
     conn.close()
 
 
+def init_runtime_state_store() -> None:
+    """Initialize persisted runtime state table."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_state (
+            runtime_key TEXT PRIMARY KEY,
+            process_table JSONB NOT NULL DEFAULT '[]'::jsonb,
+            next_pid INTEGER NOT NULL DEFAULT 1,
+            performance_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
 def init_updates() -> None:
     """Initialize update state and history tables."""
     conn = get_db_connection()
@@ -455,6 +474,7 @@ def init_database():
     init_filesystem()
     init_notifications()
     init_startup_processes()
+    init_runtime_state_store()
     init_updates()
     init_apps()
     

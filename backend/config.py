@@ -1,6 +1,8 @@
 """Configuration and global state for JezOS kernel."""
 
 import os
+import json
+from datetime import datetime
 from typing import List, Dict, Optional
 
 from models import ProcessRecord
@@ -45,6 +47,87 @@ def _create_runtime_state(next_pid_seed: int = 1) -> Dict:
     }
 
 
+def _serialize_runtime_state(state: Dict) -> Dict:
+    return {
+        "process_table": [
+            record.model_dump() if isinstance(record, ProcessRecord) else dict(record)
+            for record in state.get("process_table", [])
+        ],
+        "next_pid": int(state.get("next_pid", 1)),
+        "performance_history": list(state.get("performance_history", []))
+    }
+
+
+def _deserialize_runtime_state(payload: Dict, next_pid_seed: int = 1) -> Dict:
+    return {
+        "process_table": [
+            record if isinstance(record, ProcessRecord) else ProcessRecord.model_validate(record)
+            for record in payload.get("process_table", [])
+        ],
+        "next_pid": int(payload.get("next_pid", next_pid_seed)),
+        "performance_history": list(payload.get("performance_history", []))
+    }
+
+
+def _load_persisted_runtime_state(runtime_key: str) -> Optional[Dict]:
+    try:
+        from database import get_db_connection
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT process_table, next_pid, performance_history FROM runtime_state WHERE runtime_key = ?",
+            (runtime_key,)
+        )
+        row = cursor.fetchone()
+        conn.close()
+        if row is None:
+            return None
+
+        return _deserialize_runtime_state(
+            {
+                "process_table": json.loads(row["process_table"]) if isinstance(row.get("process_table"), str) else (row.get("process_table") or []),
+                "next_pid": row.get("next_pid", next_pid),
+                "performance_history": json.loads(row["performance_history"]) if isinstance(row.get("performance_history"), str) else (row.get("performance_history") or [])
+            },
+            next_pid_seed=next_pid
+        )
+    except Exception:
+        return None
+
+
+def _persist_runtime_state(runtime_key: str, state: Dict) -> None:
+    try:
+        from database import get_db_connection
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        serialized = _serialize_runtime_state(state)
+        cursor.execute(
+            """
+            INSERT INTO runtime_state (runtime_key, process_table, next_pid, performance_history, updated_at)
+            VALUES (?, ?::jsonb, ?, ?::jsonb, ?)
+            ON CONFLICT (runtime_key)
+            DO UPDATE SET
+                process_table = EXCLUDED.process_table,
+                next_pid = EXCLUDED.next_pid,
+                performance_history = EXCLUDED.performance_history,
+                updated_at = EXCLUDED.updated_at
+            """,
+            (
+                runtime_key,
+                json.dumps(serialized["process_table"]),
+                serialized["next_pid"],
+                json.dumps(serialized["performance_history"]),
+                datetime.utcnow().isoformat()
+            )
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        return
+
+
 def _resolve_runtime_key(session_token: Optional[str] = None, device_id: Optional[str] = None) -> Optional[str]:
     """Resolve the preferred runtime isolation key."""
     if device_id:
@@ -61,7 +144,8 @@ def get_runtime_state(session_token: Optional[str] = None, device_id: Optional[s
     if runtime_key:
         runtime_store = device_runtime_states if runtime_key.startswith("device:") else session_runtime_states
         if runtime_key not in runtime_store:
-            runtime_store[runtime_key] = _create_runtime_state(next_pid)
+            persisted = _load_persisted_runtime_state(runtime_key)
+            runtime_store[runtime_key] = persisted if persisted is not None else _create_runtime_state(next_pid)
         return runtime_store[runtime_key]
 
     # Fallback to shared runtime only when no device/session identity exists.
@@ -80,11 +164,8 @@ def commit_runtime_state(state: Dict, session_token: Optional[str] = None, devic
 
     if runtime_key:
         runtime_store = device_runtime_states if runtime_key.startswith("device:") else session_runtime_states
-        runtime_store[runtime_key] = {
-            "process_table": list(state.get("process_table", [])),
-            "next_pid": int(state.get("next_pid", 1)),
-            "performance_history": list(state.get("performance_history", []))
-        }
+        runtime_store[runtime_key] = _deserialize_runtime_state(_serialize_runtime_state(state))
+        _persist_runtime_state(runtime_key, runtime_store[runtime_key])
         return
 
     process_table = list(state.get("process_table", []))
