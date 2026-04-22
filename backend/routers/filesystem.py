@@ -75,7 +75,7 @@ def move_tree(cursor, old_root: str, new_root: str) -> None:
 
 @router.post("/create")
 def create_node(payload: FsCreateRequest):
-    """Create a new file or directory, or upsert file content in place."""
+    """Create a new file or directory."""
     path = normalize_path(payload.path)
     parent = str(PurePosixPath(path).parent)
 
@@ -94,20 +94,9 @@ def create_node(payload: FsCreateRequest):
             cursor.execute("SELECT content FROM fs_nodes WHERE path = ?", (path,))
             existing_file = cursor.fetchone()
             existing_content = (existing_file["content"] or "") if existing_file is not None else ""
-            next_content = payload.content or ""
-            if existing_content == next_content:
-                conn.close()
-                return {"path": path, "type": payload.node_type, "existed": True}
-
-            now = datetime.utcnow().isoformat()
-            size = len(next_content.encode())
-            cursor.execute(
-                "UPDATE fs_nodes SET content = ?, modified_at = ?, size = ? WHERE path = ?",
-                (next_content, now, size, path),
-            )
-            conn.commit()
             conn.close()
-            return {"path": path, "type": payload.node_type, "updated": True}
+            if existing_content == (payload.content or ""):
+                return {"path": path, "type": payload.node_type, "existed": True}
 
         conn.close()
         raise HTTPException(status_code=409, detail="Path already exists")

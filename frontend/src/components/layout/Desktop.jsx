@@ -828,6 +828,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const syncDesktopToFilesystem = async () => {
       try {
+        const desktopShortcutPaths = new Set(
+          desktopFiles
+            .filter((file) => file?.path?.endsWith('.lnk'))
+            .map((file) => file.path)
+        )
+
         // Get apps that should be on desktop (those with icon positions)
         const desktopApps = appRegistry.filter(app => iconPositions[app.id])
         
@@ -841,7 +847,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           })
           const previousPayload = syncedShortcutPayloadsRef.current.get(shortcutPath)
 
-          if (previousPayload === shortcutContent) {
+          if (desktopShortcutPaths.has(shortcutPath) && previousPayload === shortcutContent) {
             continue
           }
 
@@ -889,10 +895,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
     }
     
-    if (appRegistry.length > 0) {
+    if (appRegistry.length > 0 && desktopFiles.length >= 0) {
       syncDesktopToFilesystem()
     }
-  }, [appRegistry, iconPositions])
+  }, [appRegistry, iconPositions, desktopFiles])
 
   useEffect(() => {
     try {
