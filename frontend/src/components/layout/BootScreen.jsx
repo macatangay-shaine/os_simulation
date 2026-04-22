@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 export default function BootScreen({ onComplete }) {
-  const [stage, setStage] = useState('black')
+  const hasSeenPowerTutorial = localStorage.getItem('jezos_power_tutorial_seen') === 'true'
+  const [stage, setStage] = useState(hasSeenPowerTutorial ? 'black' : 'tutorial')
   const [error, setError] = useState('')
   const completedRef = useRef(false)
 
@@ -59,9 +60,17 @@ export default function BootScreen({ onComplete }) {
 
     const runBoot = async () => {
       try {
-        const BLACK_DELAY = 6500
+        const TUTORIAL_DELAY = 6500
+        const BLACK_DELAY = 2200
         const BRAND_DELAY = 2000
         const LOADING_DELAY = 3500
+
+        if (!hasSeenPowerTutorial) {
+          setStage('tutorial')
+          await wait(TUTORIAL_DELAY)
+          if (cancelled) return
+          localStorage.setItem('jezos_power_tutorial_seen', 'true')
+        }
 
         setStage('black')
         await wait(BLACK_DELAY)
@@ -97,21 +106,21 @@ export default function BootScreen({ onComplete }) {
     return () => {
       cancelled = true
     }
-  }, [onComplete])
+  }, [hasSeenPowerTutorial, onComplete])
 
   const handleRetry = () => {
     setError('')
-    setStage('black')
+    setStage(hasSeenPowerTutorial ? 'black' : 'tutorial')
     completedRef.current = false
     window.location.reload()
   }
 
   return (
     <div className={`boot-screen boot-stage-${stage}`}>
-      {stage === 'black' ? (
-        <div className="boot-black-prompt">
-          <div className="boot-black-title">Press P to power on</div>
-          <div className="boot-black-hint">Hold on a moment while the system starts.</div>
+      {stage === 'tutorial' ? (
+        <div className="boot-tutorial-prompt">
+          <div className="boot-tutorial-title">Press P to power on</div>
+          <div className="boot-tutorial-hint">Tutorial tip: this appears once before boot starts.</div>
         </div>
       ) : null}
 
