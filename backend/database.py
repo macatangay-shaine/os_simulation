@@ -114,30 +114,41 @@ def init_users() -> None:
         """
     )
     conn.commit()
+    default_pin_hash = hashlib.sha256("1234".encode()).hexdigest()
     
     # Create default user if not exists
     cursor.execute("SELECT 1 FROM users WHERE username = ?", ("user",))
     if cursor.fetchone() is None:
-        password_hash = hashlib.sha256("password".encode()).hexdigest()
         cursor.execute(
             """
             INSERT INTO users (username, password_hash, role, home_dir, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            ("user", password_hash, "user", "/home/user", datetime.utcnow().isoformat())
+            ("user", default_pin_hash, "user", "/home/user", datetime.utcnow().isoformat())
+        )
+        conn.commit()
+    else:
+        cursor.execute(
+            "UPDATE users SET password_hash = ? WHERE username = ?",
+            (default_pin_hash, "user")
         )
         conn.commit()
     
     # Create admin user if not exists
     cursor.execute("SELECT 1 FROM users WHERE username = ?", ("admin",))
     if cursor.fetchone() is None:
-        password_hash = hashlib.sha256("admin".encode()).hexdigest()
         cursor.execute(
             """
             INSERT INTO users (username, password_hash, role, home_dir, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            ("admin", password_hash, "admin", "/home/admin", datetime.utcnow().isoformat())
+            ("admin", default_pin_hash, "admin", "/home/admin", datetime.utcnow().isoformat())
+        )
+        conn.commit()
+    else:
+        cursor.execute(
+            "UPDATE users SET password_hash = ? WHERE username = ?",
+            (default_pin_hash, "admin")
         )
         conn.commit()
     

@@ -77,36 +77,37 @@ export default function SystemMonitor() {
     }
 
     syncDesktopWindows()
-    const intervalId = window.setInterval(syncDesktopWindows, 1000)
-    return () => window.clearInterval(intervalId)
+    window.addEventListener('storage', syncDesktopWindows)
+    window.addEventListener('focus', syncDesktopWindows)
+
+    return () => {
+      window.removeEventListener('storage', syncDesktopWindows)
+      window.removeEventListener('focus', syncDesktopWindows)
+    }
   }, [])
 
   const mergedProcesses = useMemo(() => {
-    const backendProcessMap = new Map(
-      (Array.isArray(processes) ? processes : []).map((proc) => [Number(proc.pid), proc])
+    const desktopWindowByPid = new Map(
+      desktopWindows.map((win) => [Number(win.id), win])
     )
 
-    const merged = new Map()
+    const runningProcesses = (Array.isArray(processes) ? processes : []).filter(
+      (proc) => proc?.state === 'running' && Number.isFinite(Number(proc?.pid))
+    )
 
-    ;(Array.isArray(processes) ? processes : []).forEach((proc) => {
-      merged.set(Number(proc.pid), proc)
-    })
+    return runningProcesses.map((proc) => {
+      const pid = Number(proc.pid)
+      const desktopWindow = desktopWindowByPid.get(pid)
 
-    desktopWindows.forEach((win) => {
-      const pid = Number(win.id)
-      if (!merged.has(pid) && !backendProcessMap.has(pid)) {
-        merged.set(pid, {
-          pid,
-          app: win.title || win.appId || 'Unknown App',
-          cpu_usage: 0.5,
-          memory: Number(win.memory) || 12,
-          state: 'running',
-          isSynthetic: true
-        })
+      return {
+        ...proc,
+        pid,
+        app: desktopWindow?.title || proc.app,
+        memory: Number(proc.memory) || 0,
+        cpu_usage: Number(proc.cpu_usage) || 0,
+        state: 'running'
       }
     })
-
-    return Array.from(merged.values())
   }, [desktopWindows, processes])
 
   useEffect(() => {
@@ -367,12 +368,7 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleKillProcess = async (pid, isSynthetic = false) => {
-    if (isSynthetic) {
-      window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-      return
-    }
-
+  const handleKillProcess = async (pid) => {
     try {
       const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
       if (response.ok) {
@@ -384,12 +380,7 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleForceKillProcess = async (pid, isSynthetic = false) => {
-    if (isSynthetic) {
-      window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-      return
-    }
-
+  const handleForceKillProcess = async (pid) => {
     if (confirm('Force kill this process? This may cause system instability.')) {
       try {
         const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
@@ -679,14 +670,14 @@ export default function SystemMonitor() {
                                 <button
                                   type="button"
                                   className="monitor-kill-btn"
-                                  onClick={() => handleKillProcess(proc.pid, proc.isSynthetic)}
+                                  onClick={() => handleKillProcess(proc.pid)}
                                 >
                                   End
                                 </button>
                                 <button
                                   type="button"
                                   className="monitor-force-kill-btn"
-                                  onClick={() => handleForceKillProcess(proc.pid, proc.isSynthetic)}
+                                  onClick={() => handleForceKillProcess(proc.pid)}
                                 >
                                   Force
                                 </button>

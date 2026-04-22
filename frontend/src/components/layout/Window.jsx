@@ -199,7 +199,11 @@ export default function Window({
                 className="os-window-btn"
                 aria-label="Minimize"
                 title="Minimize"
-                onClick={() => onMinimize(id)}
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onMinimize(id)
+                }}
               >
                 <span className="os-window-glyph os-window-glyph-minimize" aria-hidden="true" />
               </button>
@@ -209,7 +213,11 @@ export default function Window({
                   className="os-window-btn"
                   aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
                   title={isMaximized ? 'Restore Down' : 'Maximize'}
-                  onClick={() => onMaximize(id)}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onMaximize(id)
+                  }}
                 >
                   <span
                     className={`os-window-glyph ${isMaximized ? 'os-window-glyph-restore' : 'os-window-glyph-maximize'}`}
@@ -222,7 +230,9 @@ export default function Window({
                 className="os-window-btn close"
                 aria-label="Close"
                 title="Close"
-                onClick={() => {
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
                   setIsClosing(true)
                   setTimeout(() => onClose(id), 200)
                 }}
