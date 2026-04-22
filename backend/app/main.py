@@ -10,8 +10,11 @@ A modular FastAPI application providing OS-like functionality including:
 - System resource monitoring
 """
 
+import re
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from database import init_database, load_startup_processes, migrate_apps_storage
 from security import init_security_logs
 from event_logger import init_event_logs, log_event, LEVEL_INFORMATION, CATEGORY_SYSTEM, EVENT_BOOT_START
@@ -63,6 +66,28 @@ app.include_router(security.router)
 app.include_router(events.router)
 app.include_router(system_health.router)
 
+ALLOWED_ORIGIN_PATTERN = re.compile(r"^https://.*\.vercel\.app$|^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
+
+
+def is_allowed_origin(origin: str | None) -> bool:
+    if not origin:
+        return False
+    if origin == "https://jezos.vercel.app":
+        return True
+    return bool(ALLOWED_ORIGIN_PATTERN.match(origin))
+
+
+def apply_cors_headers(response, origin: str | None):
+    if not is_allowed_origin(origin):
+        return response
+
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Vary"] = "Origin"
+    return response
+
 
 def validate_database_configuration() -> None:
     """Fail fast when the Postgres deployment configuration is missing or invalid."""
@@ -91,13 +116,24 @@ async def maintenance_middleware(request, call_next):
     """Run periodic maintenance on each request."""
     from system_health import health_monitor
     import random
-    
+    origin = request.headers.get("origin")
+    runtime_device_id = request.headers.get("x-jezos-device-id") or request.query_params.get("device_id")
+    session_token = request.headers.get("session-token")
+
     # Run maintenance on ~10% of requests to avoid overhead
     if random.random() < 0.1:
-        health_monitor.periodic_maintenance()
-    
-    response = await call_next(request)
-    return response
+        health_monitor.periodic_maintenance(session_token=session_token, device_id=runtime_device_id)
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        error_response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "error": str(exc)}
+        )
+        return apply_cors_headers(error_response, origin)
+
+    return apply_cors_headers(response, origin)
 
 
 @app.get("/boot")
