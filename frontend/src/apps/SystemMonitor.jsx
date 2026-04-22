@@ -55,14 +55,32 @@ export default function SystemMonitor() {
   useEffect(() => {
     const handleWindowsChanged = (event) => {
       const payload = event?.detail?.windows
-      setDesktopWindows(Array.isArray(payload) ? payload : [])
+      if (Array.isArray(payload)) {
+        setDesktopWindows(payload)
+      }
+    }
+
+    const handleWindowOpenedOrClosed = () => {
+      // Re-request the full list whenever a window opens or closes
+      window.dispatchEvent(new CustomEvent('desktop-windows-request'))
+      // Also immediately sync from the global/localStorage snapshot
+      const snapshot = readDesktopWindowSnapshot()
+      if (snapshot.length > 0) setDesktopWindows(snapshot)
     }
 
     window.addEventListener('desktop-windows-changed', handleWindowsChanged)
-    window.dispatchEvent(new CustomEvent('desktop-windows-request'))
+    window.addEventListener('window-opened', handleWindowOpenedOrClosed)
+    window.addEventListener('window-closed', handleWindowOpenedOrClosed)
+
+    // Dispatch request after listener is attached so we don't miss the response
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('desktop-windows-request'))
+    }, 0)
 
     return () => {
       window.removeEventListener('desktop-windows-changed', handleWindowsChanged)
+      window.removeEventListener('window-opened', handleWindowOpenedOrClosed)
+      window.removeEventListener('window-closed', handleWindowOpenedOrClosed)
     }
   }, [])
 
@@ -70,7 +88,14 @@ export default function SystemMonitor() {
     const syncDesktopWindows = () => {
       const snapshot = readDesktopWindowSnapshot()
       setDesktopWindows((previous) => {
-        if (previous.length === snapshot.length && previous.every((item, index) => item.id === snapshot[index]?.id)) {
+        // Deep-compare: re-render if length, IDs, or titles changed
+        if (
+          previous.length === snapshot.length &&
+          previous.every((item, index) => {
+            const next = snapshot[index]
+            return item.id === next?.id && item.title === next?.title && item.minimized === next?.minimized
+          })
+        ) {
           return previous
         }
         return snapshot
@@ -78,10 +103,13 @@ export default function SystemMonitor() {
     }
 
     syncDesktopWindows()
+    // Poll every 1s to catch newly opened/closed windows reliably
+    const pollInterval = setInterval(syncDesktopWindows, 1000)
     window.addEventListener('storage', syncDesktopWindows)
     window.addEventListener('focus', syncDesktopWindows)
 
     return () => {
+      clearInterval(pollInterval)
       window.removeEventListener('storage', syncDesktopWindows)
       window.removeEventListener('focus', syncDesktopWindows)
     }
@@ -100,24 +128,24 @@ export default function SystemMonitor() {
   }, [])
 
   const mergedProcesses = useMemo(() => {
+    // Build a lookup of backend processes by PID
+    const backendProcessByPid = new Map(
+      (Array.isArray(processes) ? processes : [])
+        .filter((proc) => proc?.state === 'running' && Number.isFinite(Number(proc?.pid)))
+        .map((proc) => [Number(proc.pid), proc])
+    )
+
+    const suppressedPidSet = new Set(suppressedProcessPids)
+    const result = new Map()
+
+    // 1. Add all running backend processes (enriched with window title if available)
     const desktopWindowByPid = new Map(
       desktopWindows.map((win) => [Number(win.id), win])
     )
-    const suppressedPidSet = new Set(suppressedProcessPids)
-
-    const runningProcesses = (Array.isArray(processes) ? processes : []).filter(
-      (proc) => proc?.state === 'running' && Number.isFinite(Number(proc?.pid))
-    )
-
-    const processesByPid = new Map()
-
-    runningProcesses.forEach((proc) => {
-      const pid = Number(proc.pid)
+    backendProcessByPid.forEach((proc, pid) => {
       if (suppressedPidSet.has(pid)) return
-
       const desktopWindow = desktopWindowByPid.get(pid)
-
-      processesByPid.set(pid, {
+      result.set(pid, {
         ...proc,
         pid,
         app: desktopWindow?.title || proc.app,
@@ -127,7 +155,29 @@ export default function SystemMonitor() {
       })
     })
 
-    return [...processesByPid.values()]
+    // 2. Add all open desktop windows that have no matching backend process.
+    //    These are apps (Web Browser, Tips, etc.) that are running in the UI
+    //    but weren't registered as backend processes.
+    desktopWindows.forEach((win) => {
+      const winId = Number(win.id)
+      // Skip if a backend process already covers this window
+      if (backendProcessByPid.has(winId)) return
+      // Skip suppressed
+      if (suppressedPidSet.has(winId)) return
+      // Skip minimized-only placeholder windows with no title
+      if (!win.title && !win.appId) return
+
+      result.set(winId, {
+        pid: winId,
+        app: win.title || win.appId || 'Unknown',
+        state: 'running',
+        memory: Number(win.memory) || 32,
+        cpu_usage: Number(win.cpu_usage) || 0,
+        is_startup: win.is_startup || false
+      })
+    })
+
+    return [...result.values()]
   }, [desktopWindows, processes, suppressedProcessPids])
 
   useEffect(() => {
