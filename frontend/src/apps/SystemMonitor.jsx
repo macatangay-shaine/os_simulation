@@ -55,6 +55,7 @@ export default function SystemMonitor() {
   const [users, setUsers] = useState([])
   const [services, setServices] = useState([])
   const [appHistory, setAppHistory] = useState([])
+  const [knownStartupApps, setKnownStartupApps] = useState([])
   const [desktopWindows, setDesktopWindows] = useState(() => readDesktopWindowSnapshot())
   const [suppressedProcessPids, setSuppressedProcessPids] = useState([])
   const [mergedProcesses, setMergedProcesses] = useState([])
@@ -221,6 +222,29 @@ export default function SystemMonitor() {
       Array.from(nextCache.values()).map(({ lastSeenAt, ...proc }) => proc)
     )
   }, [desktopWindows, processes, suppressedProcessPids])
+
+  useEffect(() => {
+    const activeAppNames = (Array.isArray(mergedProcesses) ? mergedProcesses : [])
+      .map((proc) => proc?.app)
+      .filter((name) => typeof name === 'string' && name.trim().length > 0)
+
+    if (activeAppNames.length === 0) return
+
+    setKnownStartupApps((previous) => {
+      const seen = new Set(previous.map((name) => name.toLowerCase()))
+      const additions = []
+
+      activeAppNames.forEach((name) => {
+        const normalized = name.toLowerCase()
+        if (!seen.has(normalized)) {
+          seen.add(normalized)
+          additions.push(name)
+        }
+      })
+
+      return additions.length > 0 ? [...previous, ...additions] : previous
+    })
+  }, [mergedProcesses])
 
   useEffect(() => {
     loadAllData()
@@ -480,25 +504,35 @@ export default function SystemMonitor() {
     }
   }
 
-  const handleKillProcess = async (pid) => {
+  const handleKillProcess = async (pidOrPids) => {
+    const pids = Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]
     try {
-      const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
-      if (response.ok || response.status === 404) {
-        window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-      }
+      await Promise.all(
+        pids.map(async (pid) => {
+          const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
+          if (response.ok || response.status === 404) {
+            window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+          }
+        })
+      )
       refreshSystemMonitorData()
     } catch (error) {
       console.error('Failed to kill process:', error)
     }
   }
 
-  const handleForceKillProcess = async (pid) => {
+  const handleForceKillProcess = async (pidOrPids) => {
+    const pids = Array.isArray(pidOrPids) ? pidOrPids : [pidOrPids]
     if (confirm('Force kill this process? This may cause system instability.')) {
       try {
-        const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
-        if (response.ok || response.status === 404) {
-          window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
-        }
+        await Promise.all(
+          pids.map(async (pid) => {
+            const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
+            if (response.ok || response.status === 404) {
+              window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
+            }
+          })
+        )
         refreshSystemMonitorData()
       } catch (error) {
         console.error('Failed to force kill process:', error)
@@ -645,7 +679,69 @@ export default function SystemMonitor() {
     }
   }
 
-  const sortedProcesses = sortProcesses(mergedProcesses)
+  const groupedProcessRows = useMemo(() => {
+    const runningProcesses = (Array.isArray(mergedProcesses) ? mergedProcesses : [])
+      .filter((proc) => proc?.state === 'running')
+
+    const grouped = new Map()
+    runningProcesses.forEach((proc) => {
+      const appName = String(proc?.app || 'Unknown').trim() || 'Unknown'
+      const normalized = appName.toLowerCase()
+      const current = grouped.get(normalized)
+      const pid = Number(proc?.pid)
+      const cpu = Number(proc?.cpu_usage) || 0
+      const memory = Number(proc?.memory) || 0
+
+      if (!current) {
+        grouped.set(normalized, {
+          pid: Number.isFinite(pid) ? pid : 0,
+          app: appName,
+          cpu_usage: cpu,
+          memory,
+          state: 'running',
+          is_startup: Boolean(proc?.is_startup),
+          pids: Number.isFinite(pid) ? [pid] : [],
+          instanceCount: 1
+        })
+        return
+      }
+
+      current.cpu_usage += cpu
+      current.memory += memory
+      current.is_startup = current.is_startup || Boolean(proc?.is_startup)
+      current.instanceCount += 1
+      if (Number.isFinite(pid) && !current.pids.includes(pid)) {
+        current.pids.push(pid)
+        if (pid > current.pid) {
+          current.pid = pid
+        }
+      }
+    })
+
+    return Array.from(grouped.values())
+  }, [mergedProcesses])
+
+  const sortedProcesses = sortProcesses(groupedProcessRows)
+  const startupEntries = useMemo(() => {
+    const startupSet = new Set((Array.isArray(startupProcesses) ? startupProcesses : []).map((name) => String(name).toLowerCase()))
+    const catalog = [...knownStartupApps, ...startupProcesses]
+    const deduped = []
+    const seen = new Set()
+
+    catalog.forEach((name) => {
+      const appName = String(name || '').trim()
+      if (!appName) return
+      const normalized = appName.toLowerCase()
+      if (seen.has(normalized)) return
+      seen.add(normalized)
+      deduped.push({
+        appName,
+        isStartup: startupSet.has(normalized)
+      })
+    })
+
+    return deduped.sort((a, b) => a.appName.localeCompare(b.appName))
+  }, [knownStartupApps, startupProcesses])
   const runningProcessCount = mergedProcesses.filter((proc) => proc.state === 'running').length
   const memoryUsagePercent = systemStats.totalMemory
     ? (systemStats.usedMemory / systemStats.totalMemory) * 100
@@ -774,8 +870,11 @@ export default function SystemMonitor() {
                       <div className="monitor-empty">No processes running</div>
                     ) : (
                       sortedProcesses.map((proc) => (
-                        <div key={proc.pid} className="monitor-process-row">
-                          <span>{proc.pid}</span>
+                        <div key={proc.app} className="monitor-process-row">
+                          <span>
+                            {proc.pid}
+                            {proc.instanceCount > 1 ? ` (+${proc.instanceCount - 1})` : ''}
+                          </span>
                           <span>{proc.app}</span>
                           <span>{proc.cpu_usage?.toFixed(1) || '0.0'}%</span>
                           <span>{proc.memory} MB</span>
@@ -786,14 +885,14 @@ export default function SystemMonitor() {
                                 <button
                                   type="button"
                                   className="monitor-kill-btn"
-                                  onClick={() => handleKillProcess(proc.pid)}
+                                  onClick={() => handleKillProcess(proc.pids.length > 0 ? proc.pids : proc.pid)}
                                 >
                                   End
                                 </button>
                                 <button
                                   type="button"
                                   className="monitor-force-kill-btn"
-                                  onClick={() => handleForceKillProcess(proc.pid)}
+                                  onClick={() => handleForceKillProcess(proc.pids.length > 0 ? proc.pids : proc.pid)}
                                 >
                                   Force
                                 </button>
@@ -1005,12 +1104,14 @@ export default function SystemMonitor() {
             <div className="monitor-section">
               <div className="monitor-title">Startup Programs</div>
               <div className="monitor-startup-list">
-                {mergedProcesses.filter((p) => p.state === 'running').map((proc) => (
-                  <div key={proc.pid} className="monitor-startup-item">
+                {startupEntries.length === 0 ? (
+                  <div className="monitor-empty">No startup apps found yet.</div>
+                ) : startupEntries.map((entry) => (
+                  <div key={entry.appName} className="monitor-startup-item">
                     <div className="monitor-startup-details">
-                      <div className="monitor-startup-name">{proc.app}</div>
+                      <div className="monitor-startup-name">{entry.appName}</div>
                       <div className="monitor-startup-status">
-                        {proc.is_startup ? (
+                        {entry.isStartup ? (
                           <span className="monitor-startup-enabled">✓ Enabled</span>
                         ) : (
                           <span className="monitor-startup-disabled">Disabled</span>
@@ -1019,10 +1120,10 @@ export default function SystemMonitor() {
                     </div>
                     <button
                       type="button"
-                      className={`monitor-startup-toggle ${proc.is_startup ? 'enabled' : 'disabled'}`}
-                      onClick={() => handleToggleStartup(proc.app, proc.is_startup)}
+                      className={`monitor-startup-toggle ${entry.isStartup ? 'enabled' : 'disabled'}`}
+                      onClick={() => handleToggleStartup(entry.appName, entry.isStartup)}
                     >
-                      {proc.is_startup ? 'Disable' : 'Enable'}
+                      {entry.isStartup ? 'Disable' : 'Enable'}
                     </button>
                   </div>
                 ))}
