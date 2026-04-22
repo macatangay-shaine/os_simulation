@@ -4,8 +4,6 @@ import PrintingSimulation from '../components/PrintingSimulation'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import { readPrintJobs, updatePrintJobStatus, enqueuePrintJob } from '../utils/printJobs'
 
-const PROCESS_VISIBILITY_GRACE_MS = 5000
-
 function getActiveWindowsStorageKey() {
   try {
     const deviceId = localStorage.getItem('jez_os_device_id') || 'device-guest'
@@ -201,7 +199,6 @@ export default function SystemMonitor() {
         state: 'running',
         is_startup: Boolean(backendProcess?.is_startup ?? desktopWindow?.is_startup ?? previous?.is_startup),
         process_source: backendProcess ? 'backend' : 'desktop-window',
-        missingSince: null,
         lastSeenAt: now
       })
     })
@@ -216,21 +213,12 @@ export default function SystemMonitor() {
         return
       }
 
-      const missingSince = entry?.missingSince ?? now
-      if ((now - missingSince) >= PROCESS_VISIBILITY_GRACE_MS) {
-        nextCache.delete(pid)
-        return
-      }
-
-      nextCache.set(pid, {
-        ...entry,
-        missingSince
-      })
+      nextCache.delete(pid)
     })
 
     mergedProcessCacheRef.current = nextCache
     setMergedProcesses(
-      Array.from(nextCache.values()).map(({ missingSince, lastSeenAt, ...proc }) => proc)
+      Array.from(nextCache.values()).map(({ lastSeenAt, ...proc }) => proc)
     )
   }, [desktopWindows, processes, suppressedProcessPids])
 
