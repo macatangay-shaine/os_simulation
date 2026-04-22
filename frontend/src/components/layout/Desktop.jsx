@@ -731,18 +731,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }, [])
 
   useEffect(() => {
-    const handleProcessTerminated = (event) => {
-      const pid = Number(event?.detail?.pid)
-      if (!Number.isFinite(pid)) return
-      pendingWindowPidsRef.current.delete(pid)
-      setWindows((prev) => prev.filter((win) => win.id !== pid))
-    }
-
-    window.addEventListener('process-terminated', handleProcessTerminated)
-    return () => window.removeEventListener('process-terminated', handleProcessTerminated)
-  }, [])
-
-  useEffect(() => {
     const emitWindowSnapshot = () => {
       const mapped = windows.map((win) => ({
         id: Number(win.id),
@@ -1718,7 +1706,16 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         </div>
 
         {windows.map((win) => {
-          const AppComponent = APP_COMPONENTS[win.appId] || win.component || appRegistry.find((app) => app.id === win.appId)?.component
+          const matchedApp = appRegistry.find((app) => (
+            app.id === win.appId ||
+            app.title === win.title ||
+            (win.title === 'Recycle Bin' && app.id === 'files')
+          ))
+          const AppComponent =
+            APP_COMPONENTS[win.appId] ||
+            win.component ||
+            matchedApp?.component ||
+            (win.title === 'Recycle Bin' ? FileExplorer : null)
           return (
             <Window
               key={win.id}
