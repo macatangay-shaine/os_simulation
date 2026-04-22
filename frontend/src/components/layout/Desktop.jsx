@@ -262,6 +262,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   })
   const refreshAnimationTimeoutRef = useRef(null)
   const syncedShortcutPayloadsRef = useRef(new Map())
+  const pendingWindowPidsRef = useRef(new Map())
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -285,8 +286,34 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         clearTimeout(refreshAnimationTimeoutRef.current)
       }
       syncedShortcutPayloadsRef.current.clear()
+      pendingWindowPidsRef.current.clear()
     }
   }, [])
+
+  const reconcileWindowsWithRunningProcesses = (runningPidSet) => {
+    const now = Date.now()
+    const pending = pendingWindowPidsRef.current
+
+    runningPidSet.forEach((pid) => {
+      pending.delete(pid)
+    })
+
+    setWindows((prev) =>
+      prev.filter((win) => {
+        const pid = Number(win.id)
+        if (!Number.isFinite(pid)) return false
+        if (runningPidSet.has(pid)) return true
+
+        const pendingSince = pending.get(pid)
+        if (typeof pendingSince === 'number' && now - pendingSince < 4000) {
+          return true
+        }
+
+        pending.delete(pid)
+        return false
+      })
+    )
+  }
 
   const pulseDesktopRefreshAnimation = () => {
     if (refreshAnimationTimeoutRef.current) {
@@ -742,8 +769,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             .filter((pid) => Number.isFinite(pid))
         )
 
-        // Keep desktop windows strictly aligned with backend running processes.
-        setWindows((prev) => prev.filter((win) => runningPidSet.has(Number(win.id))))
+        reconcileWindowsWithRunningProcesses(runningPidSet)
       } catch {
         // Ignore transient backend failures.
       }
@@ -1161,6 +1187,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (response.ok) {
         const data = await response.json()
         pid = data.pid
+        pendingWindowPidsRef.current.set(Number(pid), Date.now())
         
         // Check if we need to kill background processes
         if (data.killed_processes && data.killed_processes.length > 0) {
@@ -1250,6 +1277,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }
 
   const closeWindow = async (pid) => {
+    pendingWindowPidsRef.current.delete(Number(pid))
     setWindows((prev) => prev.filter((win) => win.id !== pid))
     window.dispatchEvent(new CustomEvent('window-closed', { detail: { pid } }))
     try {
@@ -1495,7 +1523,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
           .filter((pid) => Number.isFinite(pid))
       )
 
-      setWindows((prev) => prev.filter((win) => runningPidSet.has(Number(win.id))))
+      reconcileWindowsWithRunningProcesses(runningPidSet)
     })())
 
     try {
