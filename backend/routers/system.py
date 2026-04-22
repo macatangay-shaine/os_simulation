@@ -406,10 +406,12 @@ def update_performance_history(session_token: Optional[str] = None, device_id: O
     running_procs = [p for p in state["process_table"] if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
     total_cpu = sum(p.cpu_usage for p in running_procs)
+    process_pressure = min(24.0, len(running_procs) * 2.8)
+    aggregate_cpu = min(99.0, total_cpu * 0.8 + process_pressure)
     
     snapshot = {
         "timestamp": datetime.utcnow().isoformat(),
-        "cpu_usage": min(99.0, round(total_cpu / 3, 1)),
+        "cpu_usage": round(aggregate_cpu, 1),
         "memory_used": used_memory,
         "memory_percent": round((used_memory / config.MAX_MEMORY) * 100, 1),
         "process_count": len(running_procs)
@@ -440,10 +442,11 @@ def get_system_resources(
     # Update CPU usage for running processes with smoothing to avoid visual flicker.
     for index, record in enumerate(process_table):
         if record.state == "running":
-            memory_weight = (record.memory / config.MAX_MEMORY) * 32
-            target_cpu = max(0.2, min(95.0, memory_weight + random.uniform(0.5, 4.5)))
-            smooth_cpu = (record.cpu_usage * 0.82) + (target_cpu * 0.18)
-            new_cpu = max(0.1, min(99.0, smooth_cpu + random.uniform(-0.5, 0.5)))
+            process_load_factor = min(1.0, len(process_table) / 10)
+            memory_weight = (record.memory / config.MAX_MEMORY) * 58
+            target_cpu = max(1.5, min(95.0, memory_weight + process_load_factor * 18 + random.uniform(3.0, 12.0)))
+            smooth_cpu = (record.cpu_usage * 0.68) + (target_cpu * 0.32)
+            new_cpu = max(0.8, min(99.0, smooth_cpu + random.uniform(-1.5, 2.5)))
             process_table[index] = record.model_copy(update={"cpu_usage": round(new_cpu, 1)})
 
     # Recompute totals after updating process CPU values.
@@ -451,6 +454,8 @@ def get_system_resources(
     running_procs = [p for p in process_table if p.state == "running"]
     used_memory = sum(p.memory for p in running_procs)
     total_cpu = sum(p.cpu_usage for p in running_procs)
+    process_pressure = min(24.0, len(running_procs) * 2.8)
+    aggregate_cpu = min(99.0, total_cpu * 0.8 + process_pressure)
 
     # Keep history fresh on each resource poll so performance charts evolve over time.
     update_performance_history(session_token=session_token, device_id=runtime_device_id)
@@ -462,7 +467,7 @@ def get_system_resources(
         "availableMemory": config.MAX_MEMORY - used_memory,
         "memoryUsagePercent": (used_memory / config.MAX_MEMORY) * 100,
         "processCount": len(running_procs),
-        "cpuUsage": min(99.0, round(total_cpu / 3, 1)),  # Normalize CPU across cores
+        "cpuUsage": round(aggregate_cpu, 1),
         "timestamp": datetime.utcnow().isoformat()
     }
 
