@@ -866,29 +866,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             })
             
             if (response.ok) {
+              // Mark as synced whether the file was created, existed, or updated in place
               syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
               continue
             }
 
-            if (response.status === 409) {
-              const writeResponse = await fetch('http://localhost:8000/fs/write', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  path: shortcutPath,
-                  content: shortcutContent
-                })
-              })
-
-              if (writeResponse.ok) {
-                syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
-                continue
-              }
-            }
-
-            if (!response.ok) {
-              console.error('Failed to sync shortcut:', shortcutPath)
-            }
+            console.error('Failed to sync shortcut:', shortcutPath, response.status)
           } catch (err) {
             console.error('Failed to sync shortcut:', shortcutPath, err)
           }
@@ -901,7 +884,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     if (appRegistry.length > 0 && desktopFiles.length >= 0) {
       syncDesktopToFilesystem()
     }
-  }, [appRegistry, iconPositions, desktopFiles])
+  }, [appRegistry, iconPositions])
 
   useEffect(() => {
     try {
