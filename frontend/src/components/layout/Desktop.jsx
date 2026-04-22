@@ -1217,11 +1217,11 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }
 
   const toggleMinimize = (pid) => {
-    setWindows((prev) =>
-      prev.map((win) => {
+    let nextActiveWindowId = null
+
+    setWindows((prev) => {
+      const updated = prev.map((win) => {
         if (win.id === pid) {
-          // If minimizing, just toggle minimized flag
-          // If restoring, toggle minimized flag AND bring to front
           const newMinimized = !win.minimized
           return {
             ...win,
@@ -1231,7 +1231,21 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         }
         return win
       })
-    )
+
+      const toggledWindow = updated.find((win) => win.id === pid)
+      if (toggledWindow?.minimized) {
+        const nextWindow = updated
+          .filter((win) => win.id !== pid && !win.minimized)
+          .sort((a, b) => b.zIndex - a.zIndex)[0]
+        nextActiveWindowId = nextWindow?.id ?? null
+      } else {
+        nextActiveWindowId = pid
+      }
+
+      return updated
+    })
+
+    setActiveWindowId(nextActiveWindowId)
     // Increment zCounter so restored window gets highest z-index
     setZCounter((prev) => prev + 1)
   }
@@ -1803,6 +1817,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
         <Taskbar 
           windows={windows} 
+          activeWindowId={activeWindowId}
           onToggleMinimize={toggleMinimize}
           onFocusWindow={focusWindow}
           user={user}

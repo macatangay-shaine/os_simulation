@@ -339,18 +339,45 @@ export default function WebBrowserApp({ onDownload, windowControls }) {
         </button>
         {windowControls ? (
           <div className="browser-window-controls" data-no-window-drag="true">
-            <button type="button" className="browser-window-control" onClick={windowControls.onMinimize} aria-label="Minimize">
+            <button
+              type="button"
+              className="browser-window-control"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                windowControls.onMinimize()
+              }}
+              aria-label="Minimize"
+            >
               <span className="os-window-glyph os-window-glyph-minimize" aria-hidden="true" />
             </button>
             {windowControls.canMaximize ? (
-              <button type="button" className="browser-window-control" onClick={windowControls.onMaximize} aria-label={windowControls.isMaximized ? "Restore" : "Maximize"}>
+              <button
+                type="button"
+                className="browser-window-control"
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  windowControls.onMaximize()
+                }}
+                aria-label={windowControls.isMaximized ? "Restore" : "Maximize"}
+              >
                 <span
                   className={`os-window-glyph ${windowControls.isMaximized ? 'os-window-glyph-restore' : 'os-window-glyph-maximize'}`}
                   aria-hidden="true"
                 />
               </button>
             ) : null}
-            <button type="button" className="browser-window-control close" onClick={windowControls.onClose} aria-label="Close">
+            <button
+              type="button"
+              className="browser-window-control close"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                windowControls.onClose()
+              }}
+              aria-label="Close"
+            >
               <span className="os-window-glyph os-window-glyph-close" aria-hidden="true" />
             </button>
           </div>
