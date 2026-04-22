@@ -45,31 +45,13 @@ def start_process(
 
     # Calculate current memory usage
     used_memory = sum(p.memory for p in process_table if p.state == "running")
-    killed_pids = []
     
-    # Check if adding this process would exceed limit
+    # Reject the launch instead of silently terminating other apps.
     if used_memory + payload.memory > config.MAX_MEMORY:
-        # Try to kill oldest background processes to make room
-        background_procs = [p for p in process_table if p.state == "running" and p.app not in ["System Monitor", "Terminal"]]
-        background_procs.sort(key=lambda x: x.pid)  # Sort by age (oldest first)
-        
-        for proc in background_procs:
-            if used_memory + payload.memory <= config.MAX_MEMORY:
-                break
-            # Kill this process
-            for index, record in enumerate(process_table):
-                if record.pid == proc.pid:
-                    process_table[index] = record.model_copy(update={"state": "terminated"})
-                    used_memory -= proc.memory
-                    killed_pids.append(proc.pid)
-                    break
-        
-        # Check again after killing background processes
-        if used_memory + payload.memory > config.MAX_MEMORY:
-            raise HTTPException(
-                status_code=507,
-                detail=f"Insufficient memory: {used_memory + payload.memory}/{config.MAX_MEMORY} MB"
-            )
+        raise HTTPException(
+            status_code=507,
+            detail=f"Insufficient memory: {used_memory + payload.memory}/{config.MAX_MEMORY} MB"
+        )
     
     # Simulate CPU usage per process (memory-based + random)
     base_cpu = (payload.memory / config.MAX_MEMORY) * 30  # 0-30% based on memory
@@ -107,21 +89,6 @@ def start_process(
     )
     
     # Log memory warning if killed processes
-    if killed_pids:
-        log_event(
-            level=LEVEL_WARNING,
-            category=CATEGORY_SYSTEM,
-            source="ProcessManager",
-            event_id=EVENT_MEMORY_WARNING,
-            message=f"Processes terminated due to memory constraints: {killed_pids}",
-            details={
-                "killed_pids": killed_pids,
-                "new_process": payload.app,
-                "memory_used": used_memory,
-                "memory_max": config.MAX_MEMORY
-            }
-        )
-    
     # Capture performance snapshot
     from routers.system import update_performance_history
     update_performance_history(session_token=session_token, device_id=runtime_device_id)
@@ -129,9 +96,6 @@ def start_process(
     config.commit_runtime_state(state, session_token=session_token, device_id=runtime_device_id)
     
     response_data = record.model_dump()
-    if killed_pids:
-        response_data["killed_processes"] = killed_pids
-    
     return response_data
 
 

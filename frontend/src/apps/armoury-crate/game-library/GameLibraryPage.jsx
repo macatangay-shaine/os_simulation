@@ -174,6 +174,28 @@ export default function GameLibraryPage({ runningProcesses = [], onRefreshProces
   }, [])
 
   useEffect(() => {
+    const syncContentState = (event) => {
+      const nextLibrary = event?.detail?.library
+      if (nextLibrary && typeof nextLibrary === 'object') {
+        setContentState({ library: nextLibrary })
+        return
+      }
+
+      setContentState(loadContentPlatformState())
+    }
+
+    window.addEventListener('storage', syncContentState)
+    window.addEventListener('focus', syncContentState)
+    window.addEventListener('jezos_armoury_content_platform_updated', syncContentState)
+
+    return () => {
+      window.removeEventListener('storage', syncContentState)
+      window.removeEventListener('focus', syncContentState)
+      window.removeEventListener('jezos_armoury_content_platform_updated', syncContentState)
+    }
+  }, [])
+
+  useEffect(() => {
     onRefreshProcesses?.()
   }, [onRefreshProcesses])
 

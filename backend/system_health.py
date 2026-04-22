@@ -1,5 +1,6 @@
 """System health monitoring and stability management for JezOS."""
 
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import config
@@ -17,10 +18,17 @@ class SystemHealthMonitor:
         self.cleanup_interval = timedelta(minutes=5)
         self.max_process_age = timedelta(hours=2)
         self.orphaned_process_threshold = timedelta(minutes=30)
+
+    def _get_runtime_state(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
+        return config.get_runtime_state(session_token=session_token, device_id=device_id)
+
+    def _set_runtime_state(self, state: Dict, session_token: Optional[str] = None, device_id: Optional[str] = None) -> None:
+        config.commit_runtime_state(state, session_token=session_token, device_id=device_id)
         
-    def check_memory_health(self) -> Dict:
+    def check_memory_health(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
         """Check memory usage and return health status."""
-        running_processes = [p for p in config.process_table if p.state == "running"]
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+        running_processes = [p for p in state["process_table"] if p.state == "running"]
         total_memory = sum(p.memory for p in running_processes)
         memory_percent = (total_memory / config.MAX_MEMORY) * 100
         
@@ -64,7 +72,7 @@ class SystemHealthMonitor:
         
         return status
     
-    def find_orphaned_processes(self) -> List[int]:
+    def find_orphaned_processes(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> List[int]:
         """
         Find processes that should be cleaned up.
         Orphaned processes are:
@@ -74,7 +82,9 @@ class SystemHealthMonitor:
         orphaned_pids = []
         now = datetime.utcnow()
         
-        for process in config.process_table:
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+
+        for process in state["process_table"]:
             # Remove terminated processes that are old
             if process.state == "terminated":
                 try:
@@ -88,17 +98,19 @@ class SystemHealthMonitor:
         
         return orphaned_pids
     
-    def cleanup_orphaned_processes(self) -> int:
+    def cleanup_orphaned_processes(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> int:
         """Remove orphaned processes from process table."""
-        orphaned_pids = self.find_orphaned_processes()
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+        orphaned_pids = self.find_orphaned_processes(session_token=session_token, device_id=device_id)
         
         if not orphaned_pids:
             return 0
         
         # Remove from process table
-        config.process_table = [
-            p for p in config.process_table if p.pid not in orphaned_pids
+        state["process_table"] = [
+            p for p in state["process_table"] if p.pid not in orphaned_pids
         ]
+        self._set_runtime_state(state, session_token=session_token, device_id=device_id)
         
         if orphaned_pids:
             log_event(
@@ -112,18 +124,19 @@ class SystemHealthMonitor:
         
         return len(orphaned_pids)
     
-    def enforce_memory_limits(self) -> Dict:
+    def enforce_memory_limits(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
         """
         Enforce strict memory limits by killing non-essential processes.
         Returns info about actions taken.
         """
-        memory_check = self.check_memory_health()
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+        memory_check = self.check_memory_health(session_token=session_token, device_id=device_id)
         
         if memory_check["memory_percent"] < 90:
             return {"action": "none", "killed_processes": []}
         
         # Get killable processes (not startup processes)
-        running_processes = [p for p in config.process_table if p.state == "running"]
+        running_processes = [p for p in state["process_table"] if p.state == "running"]
         killable = [p for p in running_processes if not p.is_startup]
         
         # Sort by memory usage (kill largest first)
@@ -138,9 +151,9 @@ class SystemHealthMonitor:
                 break
             
             # Kill this process
-            for index, record in enumerate(config.process_table):
+            for index, record in enumerate(state["process_table"]):
                 if record.pid == process.pid:
-                    config.process_table[index] = record.model_copy(update={"state": "terminated"})
+                    state["process_table"][index] = record.model_copy(update={"state": "terminated"})
                     current_memory -= process.memory
                     killed_pids.append({
                         "pid": process.pid,
@@ -163,13 +176,15 @@ class SystemHealthMonitor:
                 }
             )
         
+        self._set_runtime_state(state, session_token=session_token, device_id=device_id)
+
         return {
             "action": "kill_processes",
             "killed_processes": killed_pids,
             "memory_freed": memory_check["memory_used"] - current_memory
         }
     
-    def periodic_maintenance(self) -> Dict:
+    def periodic_maintenance(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
         """
         Perform periodic system maintenance.
         Should be called regularly (e.g., every request or on a timer).
@@ -183,13 +198,13 @@ class SystemHealthMonitor:
         self.last_cleanup = now
         
         # Run cleanup tasks
-        orphaned_count = self.cleanup_orphaned_processes()
-        memory_status = self.check_memory_health()
+        orphaned_count = self.cleanup_orphaned_processes(session_token=session_token, device_id=device_id)
+        memory_status = self.check_memory_health(session_token=session_token, device_id=device_id)
         enforcement = {"action": "none", "killed_processes": []}
         
         # Enforce memory if needed
         if memory_status["memory_percent"] >= 90:
-            enforcement = self.enforce_memory_limits()
+            enforcement = self.enforce_memory_limits(session_token=session_token, device_id=device_id)
         
         return {
             "maintenance": "completed",
@@ -199,10 +214,11 @@ class SystemHealthMonitor:
             "enforcement": enforcement
         }
     
-    def get_system_stats(self) -> Dict:
+    def get_system_stats(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
         """Get comprehensive system statistics."""
-        running_processes = [p for p in config.process_table if p.state == "running"]
-        terminated_processes = [p for p in config.process_table if p.state == "terminated"]
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+        running_processes = [p for p in state["process_table"] if p.state == "running"]
+        terminated_processes = [p for p in state["process_table"] if p.state == "terminated"]
         
         total_memory = sum(p.memory for p in running_processes)
         avg_cpu = sum(p.cpu_usage for p in running_processes) / len(running_processes) if running_processes else 0
@@ -211,7 +227,7 @@ class SystemHealthMonitor:
             "process_count": {
                 "running": len(running_processes),
                 "terminated": len(terminated_processes),
-                "total": len(config.process_table)
+                "total": len(state["process_table"])
             },
             "memory": {
                 "used": total_memory,
@@ -223,15 +239,16 @@ class SystemHealthMonitor:
                 "average": round(avg_cpu, 2)
             },
             "startup_processes": len([p for p in running_processes if p.is_startup]),
-            "next_pid": config.next_pid
+            "next_pid": state["next_pid"]
         }
     
-    def validate_system_integrity(self) -> Dict:
+    def validate_system_integrity(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
         """Validate system state and return any issues found."""
         issues = []
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
         
         # Check for duplicate PIDs
-        pids = [p.pid for p in config.process_table]
+        pids = [p.pid for p in state["process_table"]]
         if len(pids) != len(set(pids)):
             issues.append({
                 "severity": "critical",
@@ -240,7 +257,7 @@ class SystemHealthMonitor:
             })
         
         # Check for negative memory
-        negative_memory = [p for p in config.process_table if p.memory < 0]
+        negative_memory = [p for p in state["process_table"] if p.memory < 0]
         if negative_memory:
             issues.append({
                 "severity": "critical",
@@ -249,7 +266,7 @@ class SystemHealthMonitor:
             })
         
         # Check for memory overflow
-        running_memory = sum(p.memory for p in config.process_table if p.state == "running")
+        running_memory = sum(p.memory for p in state["process_table"] if p.state == "running")
         if running_memory > config.MAX_MEMORY * 1.1:  # Allow 10% overflow buffer
             issues.append({
                 "severity": "high",
@@ -259,7 +276,7 @@ class SystemHealthMonitor:
             })
         
         # Check for orphaned terminated processes
-        orphaned = self.find_orphaned_processes()
+        orphaned = self.find_orphaned_processes(session_token=session_token, device_id=device_id)
         if len(orphaned) > 10:
             issues.append({
                 "severity": "medium",
@@ -271,6 +288,38 @@ class SystemHealthMonitor:
             "healthy": len(issues) == 0,
             "issues": issues,
             "timestamp": datetime.utcnow().isoformat()
+        }
+
+    def run_stress_test(self, session_token: Optional[str] = None, device_id: Optional[str] = None) -> Dict:
+        """Run a scoped stress test without mutating another device's runtime."""
+        from models import ProcessRecord
+
+        state = self._get_runtime_state(session_token=session_token, device_id=device_id)
+        original_state = deepcopy(state)
+        test_processes = []
+
+        for index in range(5):
+            record = ProcessRecord(
+                pid=state["next_pid"],
+                app=f"StressTest_{index}",
+                memory=20,
+                state="running",
+                cpu_usage=15.0,
+                start_time=datetime.utcnow().isoformat(),
+                is_startup=False
+            )
+            state["next_pid"] += 1
+            state["process_table"].append(record)
+            test_processes.append(record.pid)
+
+        memory_health = self.check_memory_health(session_token=session_token, device_id=device_id)
+        self._set_runtime_state(original_state, session_token=session_token, device_id=device_id)
+
+        return {
+            "test": "completed",
+            "test_processes_created": len(test_processes),
+            "memory_impact": memory_health,
+            "cleanup": "automatic"
         }
 
 

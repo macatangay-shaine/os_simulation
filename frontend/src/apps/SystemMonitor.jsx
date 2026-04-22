@@ -4,6 +4,8 @@ import PrintingSimulation from '../components/PrintingSimulation'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import { readPrintJobs, updatePrintJobStatus, enqueuePrintJob } from '../utils/printJobs'
 
+const PROCESS_VISIBILITY_GRACE_MS = 5000
+
 function getActiveWindowsStorageKey() {
   try {
     const deviceId = localStorage.getItem('jez_os_device_id') || 'device-guest'
@@ -57,12 +59,14 @@ export default function SystemMonitor() {
   const [appHistory, setAppHistory] = useState([])
   const [desktopWindows, setDesktopWindows] = useState(() => readDesktopWindowSnapshot())
   const [suppressedProcessPids, setSuppressedProcessPids] = useState([])
+  const [mergedProcesses, setMergedProcesses] = useState([])
   
   const [currentPrintJob, setCurrentPrintJob] = useState(null)
   const [activePrintJobs, setActivePrintJobs] = useState([])
   
   const canvasRef = useRef(null)
   const suppressedPidTimeoutsRef = useRef(new Map())
+  const mergedProcessCacheRef = useRef(new Map())
   const {
     processes,
     systemStats,
@@ -83,7 +87,7 @@ export default function SystemMonitor() {
       window.dispatchEvent(new CustomEvent('desktop-windows-request'))
       // Also immediately sync from the global/localStorage snapshot
       const snapshot = readDesktopWindowSnapshot()
-      if (snapshot.length > 0) setDesktopWindows(snapshot)
+      setDesktopWindows(snapshot)
     }
 
     window.addEventListener('desktop-windows-changed', handleWindowsChanged)
@@ -161,57 +165,72 @@ export default function SystemMonitor() {
     }
   }, [])
 
-  const mergedProcesses = useMemo(() => {
-    // Build a lookup of backend processes by PID
+  useEffect(() => {
+    const now = Date.now()
+    const suppressedPidSet = new Set(suppressedProcessPids)
     const backendProcessByPid = new Map(
       (Array.isArray(processes) ? processes : [])
         .filter((proc) => proc?.state === 'running' && Number.isFinite(Number(proc?.pid)))
         .map((proc) => [Number(proc.pid), proc])
     )
-
-    const suppressedPidSet = new Set(suppressedProcessPids)
-    const result = new Map()
-
-    // 1. Add all running backend processes (enriched with window title if available)
     const desktopWindowByPid = new Map(
-      desktopWindows.map((win) => [Number(win.id), win])
+      (Array.isArray(desktopWindows) ? desktopWindows : [])
+        .filter((win) => Number.isFinite(Number(win?.id)))
+        .map((win) => [Number(win.id), win])
     )
-    backendProcessByPid.forEach((proc, pid) => {
+    const nextCache = new Map(mergedProcessCacheRef.current)
+    const activePids = new Set([...backendProcessByPid.keys(), ...desktopWindowByPid.keys()])
+
+    suppressedPidSet.forEach((pid) => nextCache.delete(pid))
+
+    activePids.forEach((pid) => {
       if (suppressedPidSet.has(pid)) return
+
+      const backendProcess = backendProcessByPid.get(pid)
       const desktopWindow = desktopWindowByPid.get(pid)
-      result.set(pid, {
-        ...proc,
+      const previous = nextCache.get(pid)
+
+      if (!backendProcess && !desktopWindow) return
+
+      nextCache.set(pid, {
+        ...(backendProcess || previous || {}),
         pid,
-        app: desktopWindow?.title || proc.app,
-        memory: Number(proc.memory) || 0,
-        cpu_usage: Number(proc.cpu_usage) || 0,
-        state: 'running'
-      })
-    })
-
-    // 2. Add all open desktop windows that have no matching backend process.
-    //    These are apps (Web Browser, Tips, etc.) that are running in the UI
-    //    but weren't registered as backend processes.
-    desktopWindows.forEach((win) => {
-      const winId = Number(win.id)
-      // Skip if a backend process already covers this window
-      if (backendProcessByPid.has(winId)) return
-      // Skip suppressed
-      if (suppressedPidSet.has(winId)) return
-      // Skip minimized-only placeholder windows with no title
-      if (!win.title && !win.appId) return
-
-      result.set(winId, {
-        pid: winId,
-        app: win.title || win.appId || 'Unknown',
+        app: desktopWindow?.title || backendProcess?.app || previous?.app || desktopWindow?.appId || 'Unknown',
+        memory: Number(backendProcess?.memory ?? desktopWindow?.memory ?? previous?.memory ?? 32) || 32,
+        cpu_usage: Number(backendProcess?.cpu_usage ?? desktopWindow?.cpu_usage ?? previous?.cpu_usage ?? 0) || 0,
         state: 'running',
-        memory: Number(win.memory) || 32,
-        cpu_usage: Number(win.cpu_usage) || 0,
-        is_startup: win.is_startup || false
+        is_startup: Boolean(backendProcess?.is_startup ?? desktopWindow?.is_startup ?? previous?.is_startup),
+        missingSince: null,
+        lastSeenAt: now
       })
     })
 
-    return [...result.values()]
+    Array.from(nextCache.entries()).forEach(([pid, entry]) => {
+      if (suppressedPidSet.has(pid)) {
+        nextCache.delete(pid)
+        return
+      }
+
+      if (activePids.has(pid)) {
+        return
+      }
+
+      const missingSince = entry?.missingSince ?? now
+      if ((now - missingSince) >= PROCESS_VISIBILITY_GRACE_MS) {
+        nextCache.delete(pid)
+        return
+      }
+
+      nextCache.set(pid, {
+        ...entry,
+        missingSince
+      })
+    })
+
+    mergedProcessCacheRef.current = nextCache
+    setMergedProcesses(
+      Array.from(nextCache.values()).map(({ missingSince, lastSeenAt, ...proc }) => proc)
+    )
   }, [desktopWindows, processes, suppressedProcessPids])
 
   useEffect(() => {
