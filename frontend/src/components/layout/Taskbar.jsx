@@ -334,7 +334,17 @@ export default function Taskbar({
                       event.stopPropagation()
                       if (hasWindows) {
                         if (activeWindow) {
-                          onToggleMinimize(activeWindow.id)
+                          const isActiveAndVisible = activeWindow.id === activeWindowId && !activeWindow.minimized
+                          if (isActiveAndVisible) {
+                            // Window is on top and focused — minimize it
+                            onToggleMinimize(activeWindow.id)
+                          } else if (activeWindow.minimized) {
+                            // Window is minimized — restore it
+                            onToggleMinimize(activeWindow.id)
+                          } else {
+                            // Window exists but another window has focus — bring it to front
+                            onFocusWindow(activeWindow.id)
+                          }
                         }
                       } else {
                         onLaunchPinned(app.id)
@@ -397,7 +407,14 @@ export default function Taskbar({
                       onClick={(event) => {
                         event.stopPropagation()
                         if (activeWindow) {
-                          onToggleMinimize(activeWindow.id)
+                          const isActiveAndVisible = activeWindow.id === activeWindowId && !activeWindow.minimized
+                          if (isActiveAndVisible) {
+                            onToggleMinimize(activeWindow.id)
+                          } else if (activeWindow.minimized) {
+                            onToggleMinimize(activeWindow.id)
+                          } else {
+                            onFocusWindow(activeWindow.id)
+                          }
                         }
                       }}
                       onContextMenu={(event) => {
