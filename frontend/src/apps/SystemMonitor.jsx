@@ -200,6 +200,7 @@ export default function SystemMonitor() {
         cpu_usage: Number(backendProcess?.cpu_usage ?? desktopWindow?.cpu_usage ?? previous?.cpu_usage ?? 0) || 0,
         state: 'running',
         is_startup: Boolean(backendProcess?.is_startup ?? desktopWindow?.is_startup ?? previous?.is_startup),
+        process_source: backendProcess ? 'backend' : 'desktop-window',
         missingSince: null,
         lastSeenAt: now
       })
@@ -494,7 +495,7 @@ export default function SystemMonitor() {
   const handleKillProcess = async (pid) => {
     try {
       const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
-      if (response.ok) {
+      if (response.ok || response.status === 404) {
         window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
       }
       refreshSystemMonitorData()
@@ -507,7 +508,7 @@ export default function SystemMonitor() {
     if (confirm('Force kill this process? This may cause system instability.')) {
       try {
         const response = await fetch(`http://localhost:8000/process/force-kill?pid=${pid}`, { method: 'POST' })
-        if (response.ok) {
+        if (response.ok || response.status === 404) {
           window.dispatchEvent(new CustomEvent('process-terminated', { detail: { pid } }))
         }
         refreshSystemMonitorData()
