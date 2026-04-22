@@ -86,18 +86,27 @@ export default function SystemMonitor() {
       (Array.isArray(processes) ? processes : []).map((proc) => [Number(proc.pid), proc])
     )
 
-    const syntheticProcesses = desktopWindows
-      .filter((win) => !backendProcessMap.has(Number(win.id)))
-      .map((win) => ({
-        pid: Number(win.id),
-        app: win.title || win.appId || 'Unknown App',
-        cpu_usage: 0.5,
-        memory: Number(win.memory) || 12,
-        state: 'running',
-        isSynthetic: true
-      }))
+    const merged = new Map()
 
-    return [...(Array.isArray(processes) ? processes : []), ...syntheticProcesses]
+    ;(Array.isArray(processes) ? processes : []).forEach((proc) => {
+      merged.set(Number(proc.pid), proc)
+    })
+
+    desktopWindows.forEach((win) => {
+      const pid = Number(win.id)
+      if (!merged.has(pid) && !backendProcessMap.has(pid)) {
+        merged.set(pid, {
+          pid,
+          app: win.title || win.appId || 'Unknown App',
+          cpu_usage: 0.5,
+          memory: Number(win.memory) || 12,
+          state: 'running',
+          isSynthetic: true
+        })
+      }
+    })
+
+    return Array.from(merged.values())
   }, [desktopWindows, processes])
 
   useEffect(() => {
