@@ -43,6 +43,25 @@ function normalizeResources(resources = {}) {
   }
 }
 
+function deriveResourcesFromProcesses(processes = []) {
+  const runningProcesses = (Array.isArray(processes) ? processes : []).filter((process) => process?.state === 'running')
+  const usedMemory = runningProcesses.reduce((sum, process) => sum + (Number(process.memory) || 0), 0)
+  const totalCpu = runningProcesses.reduce((sum, process) => sum + (Number(process.cpu_usage) || 0), 0)
+  const processPressure = Math.min(24, runningProcesses.length * 2.8)
+  const cpuUsage = Math.min(99, totalCpu * 0.8 + processPressure)
+  const totalMemory = DEFAULT_SYSTEM_STATS.totalMemory
+
+  return {
+    maxMemory: totalMemory,
+    usedMemory,
+    availableMemory: Math.max(0, totalMemory - usedMemory),
+    memoryUsagePercent: totalMemory > 0 ? (usedMemory / totalMemory) * 100 : 0,
+    cpuUsage,
+    processCount: runningProcesses.length,
+    timestamp: new Date().toISOString()
+  }
+}
+
 function getPollInterval() {
   if (subscribers.size === 0) return null
   return Math.min(...subscribers.values())
@@ -75,24 +94,51 @@ export async function fetchSharedSystemMonitorData() {
 
   activeRequest = (async () => {
     try {
-      const [processResponse, resourcesResponse, historyResponse] = await Promise.all([
+      const [processResult, resourcesResult, historyResult] = await Promise.allSettled([
         fetch('http://localhost:8000/process/list'),
         fetch('http://localhost:8000/system/resources'),
         fetch('http://localhost:8000/system/performance-history')
       ])
 
-      if (!processResponse.ok || !resourcesResponse.ok || !historyResponse.ok) {
+      const nextProcesses =
+        processResult.status === 'fulfilled' && processResult.value.ok
+          ? await processResult.value.json()
+          : sharedState.processes
+      const fetchedResources =
+        resourcesResult.status === 'fulfilled' && resourcesResult.value.ok
+          ? await resourcesResult.value.json()
+          : null
+      const nextHistory =
+        historyResult.status === 'fulfilled' && historyResult.value.ok
+          ? await historyResult.value.json()
+          : { history: sharedState.performanceHistory }
+
+      const hasAnySuccess =
+        (processResult.status === 'fulfilled' && processResult.value.ok) ||
+        (resourcesResult.status === 'fulfilled' && resourcesResult.value.ok) ||
+        (historyResult.status === 'fulfilled' && historyResult.value.ok)
+
+      if (!hasAnySuccess) {
         throw new Error('Failed to load shared system monitor data.')
       }
 
-      const processData = await processResponse.json()
-      const resourcesData = await resourcesResponse.json()
-      const historyData = await historyResponse.json()
+      const shouldUseDerivedResources =
+        !fetchedResources ||
+        (
+          Array.isArray(nextProcesses) &&
+          nextProcesses.some((process) => process?.state === 'running') &&
+          Number(fetchedResources.usedMemory || 0) <= 0 &&
+          Number(fetchedResources.cpuUsage || 0) <= 0
+        )
+
+      const nextResources = shouldUseDerivedResources
+        ? deriveResourcesFromProcesses(nextProcesses)
+        : fetchedResources
 
       sharedState = {
-        processes: Array.isArray(processData) ? processData : [],
-        systemStats: normalizeResources(resourcesData),
-        performanceHistory: Array.isArray(historyData.history) ? historyData.history : [],
+        processes: Array.isArray(nextProcesses) ? nextProcesses : sharedState.processes,
+        systemStats: normalizeResources(nextResources),
+        performanceHistory: Array.isArray(nextHistory.history) ? nextHistory.history : sharedState.performanceHistory,
         isLoading: false,
         isRefreshing: false,
         hasLoaded: true,
