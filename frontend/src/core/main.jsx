@@ -60,7 +60,7 @@ function patchGlobalFetch() {
     return
   }
 
-  const withIdentityHeaders = (init = {}) => {
+  const withSessionToken = (init = {}) => {
     const headers = new Headers(init?.headers || {})
     const sessionToken = window.localStorage?.getItem('session_token')
     const deviceId = getOrCreateDeviceId()
@@ -68,7 +68,6 @@ function patchGlobalFetch() {
     if (sessionToken && !headers.has('session-token')) {
       headers.set('session-token', sessionToken)
     }
-
     if (deviceId && !headers.has('x-jezos-device-id')) {
       headers.set('x-jezos-device-id', deviceId)
     }
@@ -86,18 +85,17 @@ function patchGlobalFetch() {
     if (typeof input === 'string') {
       return originalFetch(
         appendDeviceIdToUrl(rewriteLegacyApiUrl(input), deviceId),
-        withIdentityHeaders(init)
+        withSessionToken(init)
       )
     }
 
     if (input instanceof Request) {
       const rewrittenUrl = appendDeviceIdToUrl(rewriteLegacyApiUrl(input.url), deviceId)
-      if (rewrittenUrl !== input.url) {
-        return originalFetch(new Request(rewrittenUrl, input), withIdentityHeaders(init))
-      }
+      const request = rewrittenUrl !== input.url ? new Request(rewrittenUrl, input) : input
+      return originalFetch(request, withSessionToken(init))
     }
 
-    return originalFetch(input, withIdentityHeaders(init))
+    return originalFetch(input, withSessionToken(init))
   }
 }
 

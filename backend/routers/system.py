@@ -430,7 +430,7 @@ def update_performance_history(session_token: Optional[str] = None, device_id: O
 def get_system_resources(
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get current system resource usage."""
     runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
@@ -471,7 +471,7 @@ def get_system_resources(
 def get_performance_history(
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get historical performance data for graphing."""
     runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
@@ -522,7 +522,7 @@ def remove_startup_process_endpoint(app_name: str = Query(..., min_length=1)):
 def get_gpu_performance(
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Get the simulated Armoury Crate GPU performance state."""
     runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
@@ -534,7 +534,7 @@ def set_gpu_performance_mode(
     payload: GpuPerformanceModeRequest,
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Update the active simulated GPU performance mode."""
     ARMOURY_CRATE_GPU_STATE["mode"] = payload.mode
@@ -547,7 +547,7 @@ def set_gpu_performance_reminder(
     payload: GpuPerformanceNotificationRequest,
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Update Armoury Crate GPU reminder notifications."""
     ARMOURY_CRATE_GPU_STATE["notifications_enabled"] = payload.enabled
@@ -559,14 +559,15 @@ def set_gpu_performance_reminder(
 def stop_all_gpu_processes(
     session_token: Optional[str] = Header(None),
     x_jezos_device_id: Optional[str] = Header(None),
-    device_id: Optional[str] = Query(None),
+    device_id: Optional[str] = Query(None)
 ):
     """Terminate all simulated processes currently eligible for dGPU use."""
     runtime_device_id = resolve_device_id(device_id, x_jezos_device_id)
     state = config.get_runtime_state(session_token=session_token, device_id=runtime_device_id)
     process_table = list(state["process_table"])
     gpu_process_ids = {
-        process["pid"] for process in build_gpu_candidate_processes(session_token=session_token, device_id=runtime_device_id)
+        process["pid"]
+        for process in build_gpu_candidate_processes(session_token=session_token, device_id=runtime_device_id)
     }
     stopped_pids = []
 
