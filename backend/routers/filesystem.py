@@ -75,7 +75,7 @@ def move_tree(cursor, old_root: str, new_root: str) -> None:
 
 @router.post("/create")
 def create_node(payload: FsCreateRequest):
-    """Create a new file or directory, or update a file's content if it already exists (upsert)."""
+    """Create a new file or directory, or upsert file content in place."""
     path = normalize_path(payload.path)
     parent = str(PurePosixPath(path).parent)
 
@@ -91,31 +91,26 @@ def create_node(payload: FsCreateRequest):
                 conn.close()
                 return {"path": path, "type": payload.node_type, "existed": True}
 
-            # For files: upsert the content instead of returning 409.
-            # This prevents the frontend from hammering /fs/create + /fs/write
-            # every poll cycle for shortcuts whose positions change.
             cursor.execute("SELECT content FROM fs_nodes WHERE path = ?", (path,))
             existing_file = cursor.fetchone()
             existing_content = (existing_file["content"] or "") if existing_file is not None else ""
-            new_content = payload.content or ""
-            if existing_content == new_content:
+            next_content = payload.content or ""
+            if existing_content == next_content:
                 conn.close()
                 return {"path": path, "type": payload.node_type, "existed": True}
 
-            # Content differs — update in place
             now = datetime.utcnow().isoformat()
-            size = len(new_content.encode())
+            size = len(next_content.encode())
             cursor.execute(
                 "UPDATE fs_nodes SET content = ?, modified_at = ?, size = ? WHERE path = ?",
-                (new_content, now, size, path),
+                (next_content, now, size, path),
             )
             conn.commit()
             conn.close()
             return {"path": path, "type": payload.node_type, "updated": True}
 
-        # Type conflict (e.g. trying to create a file where a dir exists)
         conn.close()
-        raise HTTPException(status_code=409, detail="Path already exists with a different node type")
+        raise HTTPException(status_code=409, detail="Path already exists")
 
     # Check parent exists
     cursor.execute("SELECT node_type FROM fs_nodes WHERE path = ?", (parent,))
