@@ -10,6 +10,7 @@ const API_BASE = (
   (import.meta.env.DEV ? DEFAULT_LOCAL_API_BASE : DEFAULT_PROD_API_BASE)
 ).replace(/\/$/, '')
 const LEGACY_LOCAL_HOSTS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+const DEVICE_ID_STORAGE_KEY = 'jez_os_device_id'
 
 function rewriteLegacyApiUrl(inputUrl) {
   if (typeof inputUrl !== 'string') {
@@ -25,29 +26,83 @@ function rewriteLegacyApiUrl(inputUrl) {
   return inputUrl
 }
 
+function getOrCreateDeviceId() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null
+  }
+
+  const existing = window.localStorage.getItem(DEVICE_ID_STORAGE_KEY)
+  if (existing) return existing
+
+  const generated = `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, generated)
+  return generated
+}
+
+function appendDeviceIdToUrl(inputUrl, deviceId) {
+  if (!inputUrl || !deviceId) {
+    return inputUrl
+  }
+
+  try {
+    const url = new URL(inputUrl, window.location.origin)
+    if (!url.searchParams.has('device_id')) {
+      url.searchParams.set('device_id', deviceId)
+    }
+    return url.toString()
+  } catch {
+    return inputUrl
+  }
+}
+
 function patchGlobalFetch() {
   if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
     return
   }
 
+  const withIdentityHeaders = (init = {}) => {
+    const headers = new Headers(init?.headers || {})
+    const sessionToken = window.localStorage?.getItem('session_token')
+    const deviceId = getOrCreateDeviceId()
+
+    if (sessionToken && !headers.has('session-token')) {
+      headers.set('session-token', sessionToken)
+    }
+
+    if (deviceId && !headers.has('x-jezos-device-id')) {
+      headers.set('x-jezos-device-id', deviceId)
+    }
+
+    return {
+      ...init,
+      headers
+    }
+  }
+
   const originalFetch = window.fetch.bind(window)
   window.fetch = (input, init) => {
+    const deviceId = getOrCreateDeviceId()
+
     if (typeof input === 'string') {
-      return originalFetch(rewriteLegacyApiUrl(input), init)
+      return originalFetch(
+        appendDeviceIdToUrl(rewriteLegacyApiUrl(input), deviceId),
+        withIdentityHeaders(init)
+      )
     }
 
     if (input instanceof Request) {
-      const rewrittenUrl = rewriteLegacyApiUrl(input.url)
+      const rewrittenUrl = appendDeviceIdToUrl(rewriteLegacyApiUrl(input.url), deviceId)
       if (rewrittenUrl !== input.url) {
-        return originalFetch(new Request(rewrittenUrl, input), init)
+        return originalFetch(new Request(rewrittenUrl, input), withIdentityHeaders(init))
       }
     }
 
-    return originalFetch(input, init)
+    return originalFetch(input, withIdentityHeaders(init))
   }
 }
 
 patchGlobalFetch()
+getOrCreateDeviceId()
 
 ReactDOM.createRoot(document.getElementById('app')).render(
   <React.StrictMode>

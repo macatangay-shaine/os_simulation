@@ -190,6 +190,15 @@ const SESSION_PERSISTENT_APP_IDS = new Set([
   'armourycrate'
 ])
 
+function getActiveWindowsStorageKey() {
+  try {
+    const deviceId = localStorage.getItem('jez_os_device_id') || 'device-guest'
+    return `jez_os_active_windows:${deviceId}`
+  } catch {
+    return 'jez_os_active_windows:device-guest'
+  }
+}
+
 export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown, onSleep, isSleeping = false }) {
   const [appRegistry, setAppRegistry] = useState([])
   const [desktopFiles, setDesktopFiles] = useState([])
@@ -763,7 +772,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
       window.__jezOsDesktopWindows = mapped
       try {
-        localStorage.setItem('jez_os_active_windows', JSON.stringify(mapped))
+        localStorage.setItem(getActiveWindowsStorageKey(), JSON.stringify(mapped))
       } catch (error) {
         console.warn('Failed to persist active windows snapshot:', error)
       }

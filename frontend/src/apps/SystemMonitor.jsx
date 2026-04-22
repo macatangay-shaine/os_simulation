@@ -4,6 +4,15 @@ import PrintingSimulation from '../components/PrintingSimulation'
 import { useSharedSystemMonitorData } from '../hooks/useSharedSystemMonitorData'
 import { readPrintJobs, updatePrintJobStatus, enqueuePrintJob } from '../utils/printJobs'
 
+function getActiveWindowsStorageKey() {
+  try {
+    const deviceId = localStorage.getItem('jez_os_device_id') || 'device-guest'
+    return `jez_os_active_windows:${deviceId}`
+  } catch {
+    return 'jez_os_active_windows:device-guest'
+  }
+}
+
 export default function SystemMonitor() {
   const readDesktopWindowSnapshot = () => {
     if (Array.isArray(window.__jezOsDesktopWindows)) {
@@ -11,7 +20,7 @@ export default function SystemMonitor() {
     }
 
     try {
-      const raw = localStorage.getItem('jez_os_active_windows')
+      const raw = localStorage.getItem(getActiveWindowsStorageKey())
       if (!raw) return []
       const parsed = JSON.parse(raw)
       return Array.isArray(parsed) ? parsed : []
