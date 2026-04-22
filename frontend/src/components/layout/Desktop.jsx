@@ -261,6 +261,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   })
   const refreshAnimationTimeoutRef = useRef(null)
+  const syncedShortcutPayloadsRef = useRef(new Map())
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -283,6 +284,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (refreshAnimationTimeoutRef.current) {
         clearTimeout(refreshAnimationTimeoutRef.current)
       }
+      syncedShortcutPayloadsRef.current.clear()
     }
   }, [])
 
@@ -826,6 +828,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const syncDesktopToFilesystem = async () => {
       try {
+        const desktopShortcutPaths = new Set(
+          desktopFiles
+            .filter((file) => file?.path?.endsWith('.lnk'))
+            .map((file) => file.path)
+        )
+
         // Get apps that should be on desktop (those with icon positions)
         const desktopApps = appRegistry.filter(app => iconPositions[app.id])
         
@@ -837,9 +845,13 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             appTitle: app.title,
             position: iconPositions[app.id]
           })
-          
+          const previousPayload = syncedShortcutPayloadsRef.current.get(shortcutPath)
+
+          if (desktopShortcutPaths.has(shortcutPath) && previousPayload === shortcutContent) {
+            continue
+          }
+
           try {
-            // Try to create the shortcut file
             const response = await fetch('http://localhost:8000/fs/create', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -850,12 +862,32 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               })
             })
             
-            if (!response.ok && response.status !== 409) {
+            if (response.ok) {
+              syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
+              continue
+            }
+
+            if (response.status === 409) {
+              const writeResponse = await fetch('http://localhost:8000/fs/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  path: shortcutPath,
+                  content: shortcutContent
+                })
+              })
+
+              if (writeResponse.ok) {
+                syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
+                continue
+              }
+            }
+
+            if (!response.ok) {
               console.error('Failed to sync shortcut:', shortcutPath)
             }
           } catch (err) {
-            // File might already exist, that's okay
-            console.log('Shortcut already exists or error:', shortcutPath)
+            console.error('Failed to sync shortcut:', shortcutPath, err)
           }
         }
       } catch (error) {
@@ -863,10 +895,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
     }
     
-    if (appRegistry.length > 0) {
+    if (appRegistry.length > 0 && desktopFiles.length >= 0) {
       syncDesktopToFilesystem()
     }
-  }, [appRegistry, iconPositions])
+  }, [appRegistry, iconPositions, desktopFiles])
 
   useEffect(() => {
     try {
