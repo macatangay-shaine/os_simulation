@@ -215,6 +215,24 @@
   animation: pulse-opacity 2s ease-in-out infinite;
 }
 
+.shutdown-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.shutdown-hint kbd {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+}
+
 @keyframes pulse-opacity {
   0%, 100% {
     opacity: 0.85;

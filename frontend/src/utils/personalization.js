@@ -52,11 +52,13 @@ function getViewportRatio() {
 
 export function loadLocalUiSettingsBase() {
   return {
-    theme: localStorage.getItem('jezos_theme') || 'light',
+    theme: localStorage.getItem('jezos_theme') || 'dark',
     accentColor: localStorage.getItem('jezos_accent') || '#2563eb',
     fontSize: localStorage.getItem('jezos_font_size') || 'medium',
-    highContrast: localStorage.getItem('jezos_high_contrast') === 'true',
-    wallpaperId: localStorage.getItem('jezos_wallpaper') || 'default'
+    highContrast: localStorage.getItem('jezos_high_contrast') !== null
+      ? localStorage.getItem('jezos_high_contrast') === 'true'
+      : true,
+    wallpaperId: localStorage.getItem('jezos_wallpaper') || 'bloom-dark'
   }
 }
 

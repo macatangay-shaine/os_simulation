@@ -3,7 +3,8 @@ import { Monitor, Palette, HardDrive, Shield, Info, Users, RefreshCw } from 'luc
 import {
   BUILTIN_WALLPAPER_OPTIONS,
   resolveWallpaperPresentation,
-  resolveWallpaperValue
+  resolveWallpaperValue,
+  loadLocalUiSettingsBase
 } from '../utils/personalization.js'
 
 const SECTIONS = [
@@ -18,15 +19,18 @@ const SECTIONS = [
 
 export default function SettingsApp({ initialSection = 'system' }) {
   const [activeSection, setActiveSection] = useState(initialSection)
+
+  const baseSettings = loadLocalUiSettingsBase()
   const [settings, setSettings] = useState({
-    theme: localStorage.getItem('jezos_theme') || 'light',
-    accentColor: localStorage.getItem('jezos_accent') || '#2563eb',
-    fontSize: localStorage.getItem('jezos_font_size') || 'medium',
-    highContrast: localStorage.getItem('jezos_high_contrast') === 'true',
-    wallpaper: localStorage.getItem('jezos_wallpaper') || 'default',
+    theme: baseSettings.theme,
+    accentColor: baseSettings.accentColor,
+    fontSize: baseSettings.fontSize,
+    highContrast: baseSettings.highContrast,
+    wallpaper: baseSettings.wallpaperId,
     language: localStorage.getItem('jezos_language') || 'en',
     timeFormat: localStorage.getItem('jezos_time_format') || '12h'
   })
+
   const [systemInfo, setSystemInfo] = useState(null)
   const [storageInfo, setStorageInfo] = useState(null)
   const [users, setUsers] = useState([])
@@ -118,7 +122,7 @@ export default function SettingsApp({ initialSection = 'system' }) {
       if (response.ok) {
         const data = await response.json()
         setStorageInfo({
-          total: Math.round(data.total_capacity_bytes / (1024 * 1024)), // Convert to MB
+          total: Math.round(data.total_capacity_bytes / (1024 * 1024)),
           used: Math.round(data.used_bytes / (1024 * 1024)),
           available: Math.round(data.free_bytes / (1024 * 1024)),
           files: data.file_count,
@@ -162,7 +166,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
 
   const loadSecurityData = async () => {
     try {
-      // Load user role
       const roleResponse = await fetch('http://localhost:8000/security/user-role', {
         headers: {
           'session-token': localStorage.getItem('session_token') || ''
@@ -172,7 +175,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
         const roleData = await roleResponse.json()
         setUserRole(roleData.role)
         
-        // Only load logs if admin
         if (roleData.role === 'admin') {
           const logsResponse = await fetch('http://localhost:8000/security/logs?limit=50', {
             headers: {
@@ -268,22 +270,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
     return `${hours}h ${minutes}m`
   }
 
-  const calculateTotalSize = (files) => {
-    let total = 0
-    if (Array.isArray(files)) {
-      files.forEach(file => {
-        if (file.type === 'file') {
-          total += 10 // Simulated file size
-        }
-      })
-    }
-    return total
-  }
-
-  const countFiles = (files) => {
-    return Array.isArray(files) ? files.filter(f => f.type === 'file').length : 0
-  }
-
   const updateSetting = (key, value) => {
     const storageKeys = {
       theme: 'jezos_theme',
@@ -309,7 +295,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
   const formatDateTime = (value) => {
     if (!value) return 'Never'
     try {
-      // Ensure we treat the timestamp as UTC by adding 'Z' if not present
       let isoString = value
       if (!isoString.endsWith('Z') && !isoString.includes('+') && !isoString.includes('T00:00:00')) {
         isoString = isoString + 'Z'
@@ -330,20 +315,13 @@ export default function SettingsApp({ initialSection = 'system' }) {
 
   const getUpdateStatusLabel = (status) => {
     switch (status) {
-      case 'available':
-        return 'Update available'
-      case 'up_to_date':
-        return 'Up to date'
-      case 'downloading':
-        return 'Downloading update'
-      case 'applying':
-        return 'Applying update'
-      case 'installed':
-        return 'Installed - restart required'
-      case 'rollback_ready':
-        return 'Rollback ready - restart required'
-      default:
-        return 'Idle'
+      case 'available': return 'Update available'
+      case 'up_to_date': return 'Up to date'
+      case 'downloading': return 'Downloading update'
+      case 'applying': return 'Applying update'
+      case 'installed': return 'Installed - restart required'
+      case 'rollback_ready': return 'Rollback ready - restart required'
+      default: return 'Idle'
     }
   }
 
@@ -375,20 +353,14 @@ export default function SettingsApp({ initialSection = 'system' }) {
                   <div className="settings-info-label">Memory Usage</div>
                   <div className="settings-info-value">{systemInfo.memory} / {systemInfo.maxMemory} MB</div>
                   <div className="settings-progress-bar">
-                    <div 
-                      className="settings-progress-fill" 
-                      style={{ width: `${(systemInfo.memory / systemInfo.maxMemory) * 100}%` }}
-                    />
+                    <div className="settings-progress-fill" style={{ width: `${(systemInfo.memory / systemInfo.maxMemory) * 100}%` }} />
                   </div>
                 </div>
                 <div className="settings-info-card">
                   <div className="settings-info-label">CPU Usage</div>
                   <div className="settings-info-value">{systemInfo.cpu}%</div>
                   <div className="settings-progress-bar">
-                    <div 
-                      className="settings-progress-fill" 
-                      style={{ width: `${systemInfo.cpu}%` }}
-                    />
+                    <div className="settings-progress-fill" style={{ width: `${systemInfo.cpu}%` }} />
                   </div>
                 </div>
                 <div className="settings-info-card">
@@ -446,14 +418,14 @@ export default function SettingsApp({ initialSection = 'system' }) {
             <div className="settings-group">
               <h3 className="settings-group-title">Theme</h3>
               <div className="settings-theme-options">
-                <div 
+                <div
                   className={`settings-theme-card ${settings.theme === 'light' ? 'active' : ''}`}
                   onClick={() => updateSetting('theme', 'light')}
                 >
                   <div className="settings-theme-preview light-preview"></div>
                   <div className="settings-theme-name">Light</div>
                 </div>
-                <div 
+                <div
                   className={`settings-theme-card ${settings.theme === 'dark' ? 'active' : ''}`}
                   onClick={() => updateSetting('theme', 'dark')}
                 >
@@ -574,18 +546,17 @@ export default function SettingsApp({ initialSection = 'system' }) {
 
       case 'storage':
         const storagePercent = storageInfo ? (storageInfo.used / storageInfo.total) * 100 : 0
-        const storageWarning = storagePercent > 90 
-          ? 'critical' 
-          : storagePercent > 75 
-            ? 'warning' 
+        const storageWarning = storagePercent > 90
+          ? 'critical'
+          : storagePercent > 75
+            ? 'warning'
             : 'normal'
-        
+
         return (
           <div className="settings-content">
             <h2 className="settings-content-title">Storage</h2>
             {storageInfo ? (
               <>
-                {/* Storage Status Warning */}
                 {storageWarning === 'critical' && (
                   <div className="settings-alert settings-alert-critical">
                     <div className="settings-alert-icon">⚠️</div>
@@ -597,7 +568,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     </div>
                   </div>
                 )}
-                
                 {storageWarning === 'warning' && (
                   <div className="settings-alert settings-alert-warning">
                     <div className="settings-alert-icon">⚠️</div>
@@ -609,23 +579,12 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     </div>
                   </div>
                 )}
-
                 <div className="settings-storage-overview">
                   <div className="settings-storage-chart">
                     <svg viewBox="0 0 200 200" className="settings-storage-pie">
+                      <circle cx="100" cy="100" r="80" fill="none" stroke="#e5e7eb" strokeWidth="40" />
                       <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#e5e7eb"
-                        strokeWidth="40"
-                      />
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
+                        cx="100" cy="100" r="80" fill="none"
                         stroke={storageWarning === 'critical' ? '#dc2626' : storageWarning === 'warning' ? '#f59e0b' : '#2563eb'}
                         strokeWidth="40"
                         strokeDasharray={`${(storageInfo.used / storageInfo.total) * 502} 502`}
@@ -639,7 +598,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     </div>
                   </div>
                 </div>
-
                 <div className="settings-grid">
                   <div className="settings-info-card">
                     <div className="settings-info-label">Used Space</div>
@@ -658,7 +616,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     <div className="settings-info-value">{storageInfo.directories || 0}</div>
                   </div>
                 </div>
-
                 {storageWarning !== 'normal' && (
                   <div className="settings-section">
                     <h3 className="settings-section-title">Storage Cleanup Recommendations</h3>
@@ -694,7 +651,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     </div>
                   </div>
                 )}
-
                 {storageInfo.byCategory && Object.keys(storageInfo.byCategory).length > 0 && (
                   <div className="settings-section">
                     <h3 className="settings-section-title">Storage by Category</h3>
@@ -708,15 +664,13 @@ export default function SettingsApp({ initialSection = 'system' }) {
                             </span>
                           </div>
                           <div className="settings-storage-category-bar">
-                            <div 
+                            <div
                               className="settings-storage-category-fill"
-                              style={{ 
-                                width: `${((data.bytes / (storageInfo.used * 1024 * 1024)) * 100).toFixed(1)}%` 
-                              }}
+                              style={{ width: `${((data.bytes / (storageInfo.used * 1024 * 1024)) * 100).toFixed(1)}%` }}
                             />
                           </div>
                           <div className="settings-storage-category-files">
-                            {category === 'Apps' 
+                            {category === 'Apps'
                               ? `${data.files} ${data.files === 1 ? 'app' : 'apps'}`
                               : `${data.files} ${data.files === 1 ? 'file' : 'files'}`
                             }
@@ -726,11 +680,7 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     </div>
                   </div>
                 )}
-
-                <button 
-                  className="settings-button"
-                  onClick={loadStorageInfo}
-                >
+                <button className="settings-button" onClick={loadStorageInfo}>
                   Refresh Storage Info
                 </button>
               </>
@@ -744,7 +694,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
         return (
           <div className="settings-content">
             <h2 className="settings-content-title">Security & Permissions</h2>
-            
             <div className="settings-section">
               <h3 className="settings-section-title">User Access Control</h3>
               <div className="settings-info-card">
@@ -755,13 +704,12 @@ export default function SettingsApp({ initialSection = 'system' }) {
                   </span>
                 </div>
                 <div className="settings-info-text">
-                  {userRole === 'admin' 
+                  {userRole === 'admin'
                     ? 'You have full access to system files and settings.'
                     : 'Some operations require administrator privileges.'}
                 </div>
               </div>
             </div>
-
             <div className="settings-section">
               <h3 className="settings-section-title">App Permissions</h3>
               <div className="settings-permissions-list">
@@ -771,47 +719,32 @@ export default function SettingsApp({ initialSection = 'system' }) {
                     <div className="settings-permission-desc">Allow apps to read and write files</div>
                   </div>
                   <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={permissions.fileAccess}
-                      onChange={(e) => updatePermission('fileAccess', e.target.checked)}
-                    />
+                    <input type="checkbox" checked={permissions.fileAccess} onChange={(e) => updatePermission('fileAccess', e.target.checked)} />
                     <span className="settings-toggle-slider"></span>
                   </label>
                 </div>
-
                 <div className="settings-permission-item">
                   <div className="settings-permission-info">
                     <div className="settings-permission-name">Network Access</div>
                     <div className="settings-permission-desc">Allow apps to connect to the internet</div>
                   </div>
                   <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={permissions.networkAccess}
-                      onChange={(e) => updatePermission('networkAccess', e.target.checked)}
-                    />
+                    <input type="checkbox" checked={permissions.networkAccess} onChange={(e) => updatePermission('networkAccess', e.target.checked)} />
                     <span className="settings-toggle-slider"></span>
                   </label>
                 </div>
-
                 <div className="settings-permission-item">
                   <div className="settings-permission-info">
                     <div className="settings-permission-name">Notifications</div>
                     <div className="settings-permission-desc">Allow apps to show notifications</div>
                   </div>
                   <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={permissions.notifications}
-                      onChange={(e) => updatePermission('notifications', e.target.checked)}
-                    />
+                    <input type="checkbox" checked={permissions.notifications} onChange={(e) => updatePermission('notifications', e.target.checked)} />
                     <span className="settings-toggle-slider"></span>
                   </label>
                 </div>
               </div>
             </div>
-
             {userRole === 'admin' && (
               <div className="settings-section">
                 <h3 className="settings-section-title">Security Event Log</h3>
@@ -889,69 +822,31 @@ export default function SettingsApp({ initialSection = 'system' }) {
                 <div className="settings-about-card">
                   <div className="settings-about-card-title">Device specs</div>
                   <div className="settings-about-specs">
-                    <div className="settings-about-item">
-                      <strong>Device name:</strong> JEZ-Workstation
-                    </div>
-                    <div className="settings-about-item">
-                      <strong>System type:</strong> 64-bit OS, x64-based processor
-                    </div>
-                    <div className="settings-about-item">
-                      <strong>Processor:</strong> JezCore i7-1260U @ 2.10 GHz
-                    </div>
-                    <div className="settings-about-item">
-                      <strong>Installed RAM:</strong> 16.0 GB
-                    </div>
-                    <div className="settings-about-item">
-                      <strong>Graphics:</strong> JezOS Iris Xe
-                    </div>
-                    <div className="settings-about-item">
-                      <strong>Storage:</strong> 512 GB NVMe SSD
-                    </div>
+                    <div className="settings-about-item"><strong>Device name:</strong> JEZ-Workstation</div>
+                    <div className="settings-about-item"><strong>System type:</strong> 64-bit OS, x64-based processor</div>
+                    <div className="settings-about-item"><strong>Processor:</strong> JezCore i7-1260U @ 2.10 GHz</div>
+                    <div className="settings-about-item"><strong>Installed RAM:</strong> 16.0 GB</div>
+                    <div className="settings-about-item"><strong>Graphics:</strong> JezOS Iris Xe</div>
+                    <div className="settings-about-item"><strong>Storage:</strong> 512 GB NVMe SSD</div>
                   </div>
                 </div>
               </div>
               <div className="settings-about-card">
                 <div className="settings-about-card-title">System info</div>
                 <div className="settings-about-info">
-                  <div className="settings-about-item">
-                    <strong>Kernel:</strong> JezOS NT 10.0.22631
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Experience pack:</strong> JezOS Shell 8.4.1
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Device ID:</strong> JEZ-9F3A-7B2C-41D6
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>System SKU:</strong> JEZOS-SLIM-1620
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>BIOS:</strong> JEZEFI v2.3.7 (01/12/2026)
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Secure Boot:</strong> On
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Virtualization:</strong> Enabled
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Uptime:</strong> 3 days, 4 hours
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Frontend:</strong> React + Vite
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Backend:</strong> FastAPI + Python
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Database:</strong> SQLite
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Install date:</strong> 01/15/2026
-                  </div>
-                  <div className="settings-about-item">
-                    <strong>Last update:</strong> 02/04/2026
-                  </div>
+                  <div className="settings-about-item"><strong>Kernel:</strong> JezOS NT 10.0.22631</div>
+                  <div className="settings-about-item"><strong>Experience pack:</strong> JezOS Shell 8.4.1</div>
+                  <div className="settings-about-item"><strong>Device ID:</strong> JEZ-9F3A-7B2C-41D6</div>
+                  <div className="settings-about-item"><strong>System SKU:</strong> JEZOS-SLIM-1620</div>
+                  <div className="settings-about-item"><strong>BIOS:</strong> JEZEFI v2.3.7 (01/12/2026)</div>
+                  <div className="settings-about-item"><strong>Secure Boot:</strong> On</div>
+                  <div className="settings-about-item"><strong>Virtualization:</strong> Enabled</div>
+                  <div className="settings-about-item"><strong>Uptime:</strong> 3 days, 4 hours</div>
+                  <div className="settings-about-item"><strong>Frontend:</strong> React + Vite</div>
+                  <div className="settings-about-item"><strong>Backend:</strong> FastAPI + Python</div>
+                  <div className="settings-about-item"><strong>Database:</strong> SQLite</div>
+                  <div className="settings-about-item"><strong>Install date:</strong> 01/15/2026</div>
+                  <div className="settings-about-item"><strong>Last update:</strong> 02/04/2026</div>
                 </div>
               </div>
             </div>
@@ -962,7 +857,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
         return (
           <div className="settings-content">
             <h2 className="settings-content-title">System Updates</h2>
-
             <div className="settings-update-card">
               <div className="settings-update-row">
                 <div className="settings-update-label">Current version</div>
@@ -985,16 +879,12 @@ export default function SettingsApp({ initialSection = 'system' }) {
               {updateStatus?.progress > 0 && (
                 <div className="settings-update-progress">
                   <div className="settings-update-progress-bar">
-                    <div
-                      className="settings-update-progress-fill"
-                      style={{ width: `${updateStatus.progress}%` }}
-                    />
+                    <div className="settings-update-progress-fill" style={{ width: `${updateStatus.progress}%` }} />
                   </div>
                   <div className="settings-update-progress-text">{updateStatus.progress}%</div>
                 </div>
               )}
             </div>
-
             {updateStatus?.update_available && (
               <div className="settings-update-card">
                 <div className="settings-update-heading">Update available</div>
@@ -1008,41 +898,21 @@ export default function SettingsApp({ initialSection = 'system' }) {
                 )}
               </div>
             )}
-
             {updateStatus?.restart_required && (
               <div className="settings-update-card">
                 <div className="settings-update-heading">Restart required</div>
-                <div className="settings-update-desc">
-                  Finish installing the update by restarting the system.
-                </div>
-                <button
-                  type="button"
-                  className="settings-button"
-                  onClick={completeRestart}
-                  disabled={updateBusy}
-                >
+                <div className="settings-update-desc">Finish installing the update by restarting the system.</div>
+                <button type="button" className="settings-button" onClick={completeRestart} disabled={updateBusy}>
                   Complete restart
                 </button>
               </div>
             )}
-
             {updateError && <div className="settings-update-error">{updateError}</div>}
-
             <div className="settings-update-actions">
-              <button
-                type="button"
-                className="settings-button secondary"
-                onClick={checkForUpdates}
-                disabled={updateBusy}
-              >
+              <button type="button" className="settings-button secondary" onClick={checkForUpdates} disabled={updateBusy}>
                 {updateBusy ? 'Checking...' : 'Check for updates'}
               </button>
-              <button
-                type="button"
-                className="settings-button"
-                onClick={installUpdate}
-                disabled={updateBusy || !updateStatus?.update_available}
-              >
+              <button type="button" className="settings-button" onClick={installUpdate} disabled={updateBusy || !updateStatus?.update_available}>
                 {updateBusy ? 'Working...' : 'Install update'}
               </button>
               <button
@@ -1055,7 +925,6 @@ export default function SettingsApp({ initialSection = 'system' }) {
                 Uninstall update
               </button>
             </div>
-
             <div className="settings-update-history">
               <div className="settings-update-heading">Update history</div>
               {updateHistory.length === 0 ? (
