@@ -18,8 +18,8 @@ export default function ShutdownScreen({ onTurnOn }) {
 
   return (
     <div className="shutdown-screen">
-      <div className="shutdown-message">Press P to power on</div>
-      <div className="shutdown-hint">Tutorial: this screen waits for the power key.</div>
+      <p className="shutdown-hint">Press <kbd>P</kbd> to power on</p>
     </div>
   )
 }
+
