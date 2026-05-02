@@ -11,7 +11,7 @@ def init_security_logs():
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS security_logs (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
             event_type TEXT NOT NULL,
             username TEXT NOT NULL,

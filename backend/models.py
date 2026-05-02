@@ -87,7 +87,7 @@ class NotificationRecord(BaseModel):
 
 class UserLoginRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=32)
-    password: str = Field(..., min_length=4, max_length=4, pattern=r"^\d{4}$")
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class UserResponse(BaseModel):

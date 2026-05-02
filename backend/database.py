@@ -1,94 +1,17 @@
 """Database utilities and initialization functions."""
 
+import sqlite3
 import hashlib
-import os
 from datetime import datetime
 from pathlib import PurePosixPath
-from typing import Any, Iterable, Optional
-
-try:
-    import psycopg
-    from psycopg.rows import dict_row
-except ImportError as exc:
-    raise RuntimeError(
-        "psycopg is required for JezOS database access. Install the backend requirements before starting the app."
-    ) from exc
-
-from config import DATABASE_URL, OS_VERSION, UPDATE_CHANNEL
+from config import DB_PATH, OS_VERSION, UPDATE_CHANNEL
 
 
-def _get_database_url() -> str:
-    """Return the configured PostgreSQL connection string."""
-    database_url = DATABASE_URL or os.getenv("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is required for deployment.")
-    if not database_url.startswith(("postgresql://", "postgres://")):
-        raise RuntimeError("DATABASE_URL must point to PostgreSQL.")
-    return database_url
-
-
-def _translate_placeholders(query: str) -> str:
-    """Convert SQLite-style placeholders to PostgreSQL placeholders."""
-    return query.replace("?", "%s")
-
-
-class DatabaseCursor:
-    """Thin cursor adapter that preserves the existing SQLite calling pattern."""
-
-    def __init__(self, cursor: Any):
-        self._cursor = cursor
-
-    def execute(self, query: str, params: Optional[Iterable[Any]] = None):
-        if params is None:
-            self._cursor.execute(_translate_placeholders(query))
-        else:
-            self._cursor.execute(_translate_placeholders(query), params)
-        return self
-
-    def executemany(self, query: str, params_seq: Iterable[Iterable[Any]]):
-        self._cursor.executemany(_translate_placeholders(query), params_seq)
-        return self
-
-    def fetchone(self):
-        return self._cursor.fetchone()
-
-    def fetchall(self):
-        return self._cursor.fetchall()
-
-    def __getattr__(self, name: str):
-        return getattr(self._cursor, name)
-
-
-class DatabaseConnection:
-    """Connection adapter that exposes wrapped cursors."""
-
-    def __init__(self, connection: Any):
-        self._connection = connection
-
-    def cursor(self):
-        return DatabaseCursor(self._connection.cursor())
-
-    def commit(self):
-        return self._connection.commit()
-
-    def close(self):
-        return self._connection.close()
-
-    def __enter__(self):
-        self._connection.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc, traceback):
-        return self._connection.__exit__(exc_type, exc, traceback)
-
-    def __getattr__(self, name: str):
-        return getattr(self._connection, name)
-
-
-def get_db_connection() -> DatabaseConnection:
-    """Create and return a PostgreSQL connection with dict rows."""
-    conn = psycopg.connect(_get_database_url(), row_factory=dict_row)
-    return DatabaseConnection(conn)
+def get_db_connection() -> sqlite3.Connection:
+    """Create and return a database connection with Row factory."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def normalize_path(raw_path: str) -> str:
@@ -104,7 +27,7 @@ def init_users() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL,
@@ -114,41 +37,30 @@ def init_users() -> None:
         """
     )
     conn.commit()
-    default_pin_hash = hashlib.sha256("1234".encode()).hexdigest()
     
     # Create default user if not exists
     cursor.execute("SELECT 1 FROM users WHERE username = ?", ("user",))
     if cursor.fetchone() is None:
+        password_hash = hashlib.sha256("password".encode()).hexdigest()
         cursor.execute(
             """
             INSERT INTO users (username, password_hash, role, home_dir, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            ("user", default_pin_hash, "user", "/home/user", datetime.utcnow().isoformat())
-        )
-        conn.commit()
-    else:
-        cursor.execute(
-            "UPDATE users SET password_hash = ? WHERE username = ?",
-            (default_pin_hash, "user")
+            ("user", password_hash, "user", "/home/user", datetime.utcnow().isoformat())
         )
         conn.commit()
     
     # Create admin user if not exists
     cursor.execute("SELECT 1 FROM users WHERE username = ?", ("admin",))
     if cursor.fetchone() is None:
+        password_hash = hashlib.sha256("admin".encode()).hexdigest()
         cursor.execute(
             """
             INSERT INTO users (username, password_hash, role, home_dir, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            ("admin", default_pin_hash, "admin", "/home/admin", datetime.utcnow().isoformat())
-        )
-        conn.commit()
-    else:
-        cursor.execute(
-            "UPDATE users SET password_hash = ? WHERE username = ?",
-            (default_pin_hash, "admin")
+            ("admin", password_hash, "admin", "/home/admin", datetime.utcnow().isoformat())
         )
         conn.commit()
     
@@ -162,7 +74,7 @@ def init_notifications() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS notifications (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             message TEXT NOT NULL,
             type TEXT NOT NULL,
@@ -183,7 +95,7 @@ def init_filesystem() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS fs_nodes (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             path TEXT UNIQUE NOT NULL,
             parent TEXT NOT NULL,
             node_type TEXT NOT NULL,
@@ -240,29 +152,10 @@ def init_startup_processes() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS startup_processes (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             app_name TEXT UNIQUE NOT NULL,
             enabled INTEGER DEFAULT 1,
             created_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.commit()
-    conn.close()
-
-
-def init_runtime_state_store() -> None:
-    """Initialize persisted runtime state table."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS runtime_state (
-            runtime_key TEXT PRIMARY KEY,
-            process_table JSONB NOT NULL DEFAULT '[]'::jsonb,
-            next_pid INTEGER NOT NULL DEFAULT 1,
-            performance_history JSONB NOT NULL DEFAULT '[]'::jsonb,
-            updated_at TEXT NOT NULL
         )
         """
     )
@@ -293,7 +186,7 @@ def init_updates() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS update_history (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             version TEXT NOT NULL,
             status TEXT NOT NULL,
             notes TEXT,
@@ -474,7 +367,6 @@ def init_database():
     init_filesystem()
     init_notifications()
     init_startup_processes()
-    init_runtime_state_store()
     init_updates()
     init_apps()
     
@@ -495,9 +387,9 @@ def init_database():
             cursor.execute(
                 """
                 INSERT INTO update_history (version, status, notes, applied_at, requires_restart)
-                VALUES (?, ?, ?, ?, 0)
+                VALUES (?, ?, ?, datetime('2026-01-01T00:00:00'), 0)
                 """,
-                ("1.0.0", "initial", "Initial OS installation", datetime(2026, 1, 1).isoformat() + "Z")
+                ("1.0.0", "initial", "Initial OS installation")
             )
             conn.commit()
     
@@ -508,8 +400,17 @@ def migrate_apps_storage():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("ALTER TABLE apps ADD COLUMN IF NOT EXISTS storage_size_mb INTEGER DEFAULT 0")
-    conn.commit()
+    try:
+        # Check if column exists by trying to query it
+        cursor.execute("SELECT storage_size_mb FROM apps LIMIT 1")
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        try:
+            cursor.execute("ALTER TABLE apps ADD COLUMN storage_size_mb INTEGER DEFAULT 0")
+            conn.commit()
+            print("✓ Added storage_size_mb column to apps table")
+        except sqlite3.OperationalError as e:
+            print(f"Migration warning: {e}")
     
     # Update apps with correct storage sizes
     app_sizes = {

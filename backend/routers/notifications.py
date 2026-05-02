@@ -18,12 +18,11 @@ def send_notification(payload: NotificationRequest):
         """
         INSERT INTO notifications (title, message, type, app_id, created_at, read)
         VALUES (?, ?, ?, ?, ?, 0)
-        RETURNING id
         """,
         (payload.title, payload.message, payload.type, payload.app_id, now)
     )
     conn.commit()
-    notif_id = cursor.fetchone()["id"]
+    notif_id = cursor.lastrowid
     conn.close()
     
     return {"id": notif_id, "title": payload.title, "message": payload.message, "type": payload.type}

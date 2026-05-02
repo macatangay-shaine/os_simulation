@@ -28,7 +28,7 @@ def ensure_support_tables_and_recycle_bin(cursor) -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS note_versions (
-            id BIGSERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             path TEXT NOT NULL,
             content TEXT NOT NULL,
             created_at TEXT NOT NULL
@@ -86,19 +86,10 @@ def create_node(payload: FsCreateRequest):
     cursor.execute("SELECT node_type FROM fs_nodes WHERE path = ?", (path,))
     existing = cursor.fetchone()
     if existing is not None:
-        if existing["node_type"] == payload.node_type:
-            if payload.node_type == "dir":
-                conn.close()
-                return {"path": path, "type": payload.node_type, "existed": True}
-
-            cursor.execute("SELECT content FROM fs_nodes WHERE path = ?", (path,))
-            existing_file = cursor.fetchone()
-            existing_content = (existing_file["content"] or "") if existing_file is not None else ""
-            conn.close()
-            if existing_content == (payload.content or ""):
-                return {"path": path, "type": payload.node_type, "existed": True}
-
         conn.close()
+        # If it's a directory and we're trying to create a directory, just return success
+        if existing["node_type"] == "dir" and payload.node_type == "dir":
+            return {"path": path, "type": payload.node_type, "existed": True}
         raise HTTPException(status_code=409, detail="Path already exists")
 
     # Check parent exists
