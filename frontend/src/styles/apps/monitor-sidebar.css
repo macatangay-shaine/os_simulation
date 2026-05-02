@@ -104,6 +104,20 @@
   color: var(--win-text);
 }
 
+.monitor-stat-card-device {
+  min-width: 0;
+}
+
+.monitor-stat-value-device {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--win-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .monitor-process-header,
 .monitor-process-row {
   display: grid;

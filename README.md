@@ -83,7 +83,14 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install fastapi uvicorn sqlalchemy pydantic
+pip install -r requirements.txt
+
+# Set the database connection for Postgres deployment
+# Windows PowerShell example:
+$env:DATABASE_URL="postgresql://..."
+
+# macOS/Linux example:
+# export DATABASE_URL="postgresql://..."
 
 # Run the backend server
 uvicorn main:app --reload
@@ -97,6 +104,13 @@ cd frontend
 
 # Install dependencies
 npm install
+
+# Configure backend API URL (optional for local, required for hosted frontend)
+# Windows PowerShell example:
+$env:VITE_API_BASE_URL="http://localhost:8000"
+
+# macOS/Linux example:
+# export VITE_API_BASE_URL="http://localhost:8000"
 
 # Run the development server
 npm run dev
@@ -177,11 +191,12 @@ jez_OS/
 ### Backend Configuration (`backend/config.py`)
 - `MAX_MEMORY`: Maximum simulated memory
 - `MEMORY_WARNING_THRESHOLD`: Warning threshold for memory pressure
-- `DB_PATH`: Database file location
+- `DATABASE_URL`: PostgreSQL connection string used by the backend
 
 ### Frontend Configuration
 - Wallpapers: Place images in `frontend/public/wallpapers/`
 - Themes: Modify `frontend/src/styles/variables.css`
+- `VITE_API_BASE_URL`: Backend API base URL used by the frontend (example: `https://your-backend-host`) 
 
 ## 🎨 Customization
 
@@ -211,9 +226,15 @@ Comprehensive documentation for the project structure and recent changes:
 
 ## 🚢 Deployment
 
-### Vercel Deployment
+### Render Deployment
 
-The project is configured for automatic deployment to Vercel on push to the `main` branch.
+The backend is configured for Render via [render.yaml](render.yaml). Render builds the backend from `backend/` and starts Gunicorn on the platform port.
+
+**Required environment variable:**
+- `DATABASE_URL` must point to a reachable PostgreSQL database (Render Postgres, Neon, or equivalent). The backend refuses to start if the URL is missing, malformed, or unreachable.
+
+**Render note:**
+- The service must bind to Render’s assigned `$PORT`. If the process listens on a fixed port, the deploy can start but the service will not become healthy.
 
 **Recent Update (March 27, 2026):**
 - File structure refactored: 57+ files reorganized into domain-based folders
@@ -223,7 +244,7 @@ The project is configured for automatic deployment to Vercel on push to the `mai
 
 ### Build Troubleshooting
 
-**Issue: Local build passes but Vercel deployment fails**
+**Issue: Local build passes but deployment fails**
 
 **Cause:** Barrel export files (`index.jsx` and `index.css`) weren't committed to git.
 
@@ -241,7 +262,7 @@ The project is configured for automatic deployment to Vercel on push to the `mai
    git push
    ```
 
-3. Vercel will automatically rebuild. Check deployment status at: https://vercel.com/somarjez/os_simulation
+3. Trigger a new Render deploy from the dashboard or reconnect the Render service if it is not linked to the repository.
 
 **Local Build Verification:**
 ```bash

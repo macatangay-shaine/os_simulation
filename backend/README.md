@@ -3,6 +3,8 @@
 ## Overview
 The backend has been refactored into a clean modular architecture for easier debugging, testing, and maintenance.
 
+The database layer now targets PostgreSQL via `DATABASE_URL` and will fail fast during startup if the deployment connection string is missing or invalid.
+
 ## Directory Structure
 
 ```
@@ -19,7 +21,7 @@ backend/
 │   ├── users.py            # User authentication & management
 │   ├── notifications.py    # Notification system
 │   └── system.py           # System resources & performance
-├── virt_os.db             # SQLite database
+├── requirements.txt       # Python dependencies and Postgres driver
 └── main_backup.py         # Backup of monolithic main.py
 
 ```
@@ -35,7 +37,7 @@ backend/
 
 ### `config.py`
 - Global state (process table, performance history)
-- Configuration constants (MAX_MEMORY, DB_PATH, etc.)
+- Configuration constants (MAX_MEMORY, DATABASE_URL, etc.)
 - Session management
 - Startup process registry
 
@@ -46,6 +48,7 @@ backend/
   - `init_users()` - Create users table + default users
   - `init_filesystem()` - Create filesystem table + default structure
   - `init_notifications()` - Create notifications table
+  - `init_updates()` - Create update state/history tables
 
 ### `models.py`
 - All Pydantic models for type validation:
@@ -111,6 +114,16 @@ backend/
 cd backend
 python -m uvicorn main:app --reload
 ```
+
+### Deployment Validation
+
+Run the deployment check locally before merging:
+
+```bash
+python scripts/validate_postgres.py
+```
+
+The check expects `DATABASE_URL` to be set and reachable.
 
 The server will automatically:
 - Initialize database tables

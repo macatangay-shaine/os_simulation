@@ -190,6 +190,15 @@ const SESSION_PERSISTENT_APP_IDS = new Set([
   'armourycrate'
 ])
 
+function getActiveWindowsStorageKey() {
+  try {
+    const deviceId = localStorage.getItem('jez_os_device_id') || 'device-guest'
+    return `jez_os_active_windows:${deviceId}`
+  } catch {
+    return 'jez_os_active_windows:device-guest'
+  }
+}
+
 export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown, onSleep, isSleeping = false }) {
   const [appRegistry, setAppRegistry] = useState([])
   const [desktopFiles, setDesktopFiles] = useState([])
@@ -252,6 +261,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   })
   const refreshAnimationTimeoutRef = useRef(null)
+  const syncedShortcutPayloadsRef = useRef(new Map())
+  const pendingWindowPidsRef = useRef(new Map())
   
   const resetDesktopLayout = () => {
     localStorage.removeItem('jez_os_icon_positions')
@@ -274,6 +285,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (refreshAnimationTimeoutRef.current) {
         clearTimeout(refreshAnimationTimeoutRef.current)
       }
+      syncedShortcutPayloadsRef.current.clear()
+      pendingWindowPidsRef.current.clear()
     }
   }, [])
 
@@ -717,39 +730,32 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     return () => clearInterval(interval)
   }, [])
 
-  // Keep window list aligned with backend process state.
   useEffect(() => {
-    const syncWindowsWithProcesses = async () => {
+    const emitWindowSnapshot = () => {
+      const mapped = windows.map((win) => ({
+        id: Number(win.id),
+        title: win.title,
+        appId: win.appId,
+        memory: Number(win.memory) || 12,
+        minimized: Boolean(win.minimized)
+      }))
+
+      window.__jezOsDesktopWindows = mapped
       try {
-        const response = await fetch('http://localhost:8000/process/list')
-        if (!response.ok) return
-        const processList = await response.json()
-        const processStatesByPid = new Map(
-          (processList || []).map((proc) => [Number(proc.pid), proc.state])
-        )
-
-        // Only close windows when backend explicitly marks the PID terminated.
-        setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
-      } catch {
-        // Ignore transient backend failures.
+        localStorage.setItem(getActiveWindowsStorageKey(), JSON.stringify(mapped))
+      } catch (error) {
+        console.warn('Failed to persist active windows snapshot:', error)
       }
+
+      window.dispatchEvent(new CustomEvent('desktop-windows-changed', { detail: { windows: mapped } }))
     }
 
-    syncWindowsWithProcesses()
-    const interval = setInterval(syncWindowsWithProcesses, 3000)
-    return () => clearInterval(interval)
-  }, [])
+    const handleWindowsRequest = () => emitWindowSnapshot()
 
-  useEffect(() => {
-    const handleProcessTerminated = (event) => {
-      const pid = Number(event?.detail?.pid)
-      if (!Number.isFinite(pid)) return
-      setWindows((prev) => prev.filter((win) => win.id !== pid))
-    }
-
-    window.addEventListener('process-terminated', handleProcessTerminated)
-    return () => window.removeEventListener('process-terminated', handleProcessTerminated)
-  }, [])
+    emitWindowSnapshot()
+    window.addEventListener('desktop-windows-request', handleWindowsRequest)
+    return () => window.removeEventListener('desktop-windows-request', handleWindowsRequest)
+  }, [windows])
 
   // Handle opening desktop files
   useEffect(() => {
@@ -790,6 +796,12 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   useEffect(() => {
     const syncDesktopToFilesystem = async () => {
       try {
+        const desktopShortcutPaths = new Set(
+          desktopFiles
+            .filter((file) => file?.path?.endsWith('.lnk'))
+            .map((file) => file.path)
+        )
+
         // Get apps that should be on desktop (those with icon positions)
         const desktopApps = appRegistry.filter(app => iconPositions[app.id])
         
@@ -801,9 +813,13 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
             appTitle: app.title,
             position: iconPositions[app.id]
           })
-          
+          const previousPayload = syncedShortcutPayloadsRef.current.get(shortcutPath)
+
+          if (desktopShortcutPaths.has(shortcutPath) && previousPayload === shortcutContent) {
+            continue
+          }
+
           try {
-            // Try to create the shortcut file
             const response = await fetch('http://localhost:8000/fs/create', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -814,12 +830,32 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
               })
             })
             
-            if (!response.ok && response.status !== 409) {
+            if (response.ok) {
+              syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
+              continue
+            }
+
+            if (response.status === 409) {
+              const writeResponse = await fetch('http://localhost:8000/fs/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  path: shortcutPath,
+                  content: shortcutContent
+                })
+              })
+
+              if (writeResponse.ok) {
+                syncedShortcutPayloadsRef.current.set(shortcutPath, shortcutContent)
+                continue
+              }
+            }
+
+            if (!response.ok) {
               console.error('Failed to sync shortcut:', shortcutPath)
             }
           } catch (err) {
-            // File might already exist, that's okay
-            console.log('Shortcut already exists or error:', shortcutPath)
+            console.error('Failed to sync shortcut:', shortcutPath, err)
           }
         }
       } catch (error) {
@@ -827,10 +863,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       }
     }
     
-    if (appRegistry.length > 0) {
+    if (appRegistry.length > 0 && desktopFiles.length >= 0) {
       syncDesktopToFilesystem()
     }
-  }, [appRegistry, iconPositions])
+  }, [appRegistry, iconPositions, desktopFiles])
 
   useEffect(() => {
     try {
@@ -1090,6 +1126,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       if (response.ok) {
         const data = await response.json()
         pid = data.pid
+        pendingWindowPidsRef.current.set(Number(pid), Date.now())
         
         // Check if we need to kill background processes
         if (data.killed_processes && data.killed_processes.length > 0) {
@@ -1103,7 +1140,8 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         return
       }
     } catch (error) {
-      pid = Date.now()
+      alert('Failed to launch app')
+      return
     }
 
     setWindows((prev) => {
@@ -1138,6 +1176,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const windowEntry = {
         id: pid,
         appId: app.id,
+        component: app.component,
         title: options.windowTitle || app.title,
         appProps: options.appProps || {},
         icon: app.icon,
@@ -1168,6 +1207,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     })
     setActiveWindowId(pid)
     setZCounter((prev) => prev + 1)
+    window.dispatchEvent(new CustomEvent('window-opened', { detail: { pid, appId: app.id } }))
 
     // Track recent apps (keep last 5)
     setRecentApps((prev) => {
@@ -1177,7 +1217,10 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
   }
 
   const closeWindow = async (pid) => {
+    const numericPid = Number(pid)
+    pendingWindowPidsRef.current.delete(numericPid)
     setWindows((prev) => prev.filter((win) => win.id !== pid))
+    window.dispatchEvent(new CustomEvent('window-closed', { detail: { pid } }))
     try {
       const response = await fetch(`http://localhost:8000/process/kill?pid=${pid}`, { method: 'POST' })
       if (!response.ok && response.status !== 404) {
@@ -1189,24 +1232,49 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
     }
   }
 
-  const toggleMinimize = (pid) => {
+  const minimizeWindow = (pid) => {
+    let nextActiveWindowId = null
+
+    setWindows((prev) => {
+      const updated = prev.map((win) => (
+        win.id === pid
+          ? { ...win, minimized: true }
+          : win
+      ))
+
+      const nextWindow = updated
+        .filter((win) => win.id !== pid && !win.minimized)
+        .sort((a, b) => b.zIndex - a.zIndex)[0]
+      nextActiveWindowId = nextWindow?.id ?? null
+
+      return updated
+    })
+
+    setActiveWindowId(nextActiveWindowId)
+  }
+
+  const restoreWindow = (pid) => {
     setWindows((prev) =>
-      prev.map((win) => {
-        if (win.id === pid) {
-          // If minimizing, just toggle minimized flag
-          // If restoring, toggle minimized flag AND bring to front
-          const newMinimized = !win.minimized
-          return {
-            ...win,
-            minimized: newMinimized,
-            zIndex: newMinimized ? win.zIndex : zCounter
-          }
-        }
-        return win
-      })
+      prev.map((win) => (
+        win.id === pid
+          ? { ...win, minimized: false, zIndex: zCounter }
+          : win
+      ))
     )
-    // Increment zCounter so restored window gets highest z-index
+    setActiveWindowId(pid)
     setZCounter((prev) => prev + 1)
+  }
+
+  const toggleMinimize = (pid) => {
+    const targetWindow = windows.find((win) => win.id === pid)
+    if (!targetWindow) return
+
+    if (targetWindow.minimized) {
+      restoreWindow(pid)
+      return
+    }
+
+    minimizeWindow(pid)
   }
 
   const focusWindow = (pid) => {
@@ -1380,20 +1448,6 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
       const nodes = Array.isArray(data.nodes) ? data.nodes : []
       const hasRecycleBin = nodes.some((node) => node.path === RECYCLE_BIN_PATH)
       setDesktopFiles(hasRecycleBin ? nodes : [RECYCLE_BIN_DESKTOP_ITEM, ...nodes])
-    })())
-
-    refreshTasks.push((async () => {
-      const response = await fetch('http://localhost:8000/process/list')
-      if (!response.ok) {
-        throw new Error('Failed to refresh process state')
-      }
-
-      const processList = await response.json()
-      const processStatesByPid = new Map(
-        (processList || []).map((proc) => [Number(proc.pid), proc.state])
-      )
-
-      setWindows((prev) => prev.filter((win) => processStatesByPid.get(Number(win.id)) !== 'terminated'))
     })())
 
     try {
@@ -1652,13 +1706,22 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
         </div>
 
         {windows.map((win) => {
-          const AppComponent = appRegistry.find((app) => app.id === win.appId)?.component
+          const matchedApp = appRegistry.find((app) => (
+            app.id === win.appId ||
+            app.title === win.title ||
+            (win.title === 'Recycle Bin' && app.id === 'files')
+          ))
+          const AppComponent =
+            APP_COMPONENTS[win.appId] ||
+            win.component ||
+            matchedApp?.component ||
+            (win.title === 'Recycle Bin' ? FileExplorer : null)
           return (
             <Window
               key={win.id}
               windowData={{ ...win, isActive: win.id === activeWindowId }}
               onClose={closeWindow}
-              onMinimize={toggleMinimize}
+              onMinimize={minimizeWindow}
               onMaximize={maximizeWindow}
               onFocus={focusWindow}
               onMove={moveWindow}
@@ -1673,7 +1736,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
                 windowControls={{
                   isMaximized: win.isMaximized,
                   canMaximize: !win.noMaximize,
-                  onMinimize: () => toggleMinimize(win.id),
+                  onMinimize: () => minimizeWindow(win.id),
                   onMaximize: () => maximizeWindow(win.id),
                   onClose: () => closeWindow(win.id)
                 }}
@@ -1776,6 +1839,7 @@ export default function Desktop({ user, onLogout, onLock, onRestart, onShutdown,
 
         <Taskbar 
           windows={windows} 
+          activeWindowId={activeWindowId}
           onToggleMinimize={toggleMinimize}
           onFocusWindow={focusWindow}
           user={user}

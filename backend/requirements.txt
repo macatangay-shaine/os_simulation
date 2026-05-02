@@ -1,0 +1,6 @@
+fastapi
+gunicorn
+httpx
+pydantic
+psycopg[binary]>=3.2,<4
+uvicorn

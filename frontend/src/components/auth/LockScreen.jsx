@@ -7,6 +7,9 @@ export default function LockScreen({ user, onUnlock }) {
   const [loading, setLoading] = useState(false)
   const [time, setTime] = useState(new Date())
   const [timeFormat, setTimeFormat] = useState(localStorage.getItem('jezos_time_format') || '12h')
+  const [showLogin, setShowLogin] = useState(false)
+
+  const sanitizePinInput = (value) => value.replace(/\D/g, '').slice(0, 4)
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000)
@@ -49,8 +52,12 @@ export default function LockScreen({ user, onUnlock }) {
     }
   }
 
+  const revealLogin = () => {
+    setShowLogin(true)
+  }
+
   return (
-    <div className="lock-screen">
+    <div className={`lock-screen${showLogin ? ' lock-screen-revealed' : ''}`} onPointerDown={revealLogin}>
       <div className="lock-center">
         <div className="lock-clock">
           <div className="lock-time">
@@ -59,39 +66,47 @@ export default function LockScreen({ user, onUnlock }) {
               : time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
             }
           </div>
-          <div className="lock-date">
-            {time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-          </div>
+          {showLogin ? (
+            <div className="lock-date">
+              {time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+          ) : null}
         </div>
 
-        <div className="lock-panel">
-          <div className="lock-avatar">
-            <UserCircle className="lock-avatar-icon" />
-          </div>
-          <div className="lock-username">{user.username}</div>
-          
-          <form className="lock-form" onSubmit={handleSubmit}>
-            <input
-              type="password"
-              className="lock-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              autoFocus
-              required
-            />
+        {showLogin ? (
+          <div className="lock-panel lock-panel-enter">
+            <div className="lock-avatar">
+              <UserCircle className="lock-avatar-icon" />
+            </div>
+            <div className="lock-username">{user.username}</div>
+            
+            <form className="lock-form" onSubmit={handleSubmit}>
+              <input
+                type="password"
+                className="lock-input"
+                value={password}
+                onChange={(e) => setPassword(sanitizePinInput(e.target.value))}
+                placeholder="Enter 4-digit PIN"
+                autoFocus
+                inputMode="numeric"
+                pattern="[0-9]{4}"
+                maxLength={4}
+                autoComplete="one-time-code"
+                required
+              />
 
-            {error ? <div className="lock-error">{error}</div> : null}
+              {error ? <div className="lock-error">{error}</div> : null}
 
-            <button type="submit" className="lock-button" disabled={loading}>
-              {loading ? 'Unlocking...' : 'Unlock'}
+              <button type="submit" className="lock-button" disabled={loading}>
+                {loading ? 'Unlocking...' : 'Unlock'}
+              </button>
+            </form>
+
+            <button type="button" className="lock-switch" onClick={() => window.location.reload()}>
+              Switch User
             </button>
-          </form>
-
-          <button type="button" className="lock-switch" onClick={() => window.location.reload()}>
-            Switch User
-          </button>
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Accessibility, Power, UserCircle, Wifi, WifiOff, RefreshCcw, Moon } from 'lucide-react'
+import { Accessibility, KeyRound, Power, UserCircle, Wifi, WifiOff, RefreshCcw, Moon } from 'lucide-react'
 
 export default function LoginScreen({ onLogin, onRestart, onShutdown, onSleep }) {
   const [username, setUsername] = useState('admin')
@@ -12,6 +12,8 @@ export default function LoginScreen({ onLogin, onRestart, onShutdown, onSleep })
   const [selectedNetwork, setSelectedNetwork] = useState('JezOS WiFi')
   const [accessibility, setAccessibility] = useState({ highContrast: false, largeText: false })
   const systemMenuRef = useRef(null)
+
+  const sanitizePinInput = (value) => value.replace(/\D/g, '').slice(0, 4)
 
   const accounts = useMemo(
     () => [
@@ -91,15 +93,25 @@ export default function LoginScreen({ onLogin, onRestart, onShutdown, onSleep })
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="login-field">
               <label className="login-label">PIN</label>
-              <input
-                type="password"
-                className="login-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter PIN"
-                autoFocus
-                required
-              />
+              <div className="login-pin-row">
+                <span className="login-pin-icon" aria-hidden="true">
+                  <KeyRound className="login-pin-icon-svg" />
+                </span>
+                <input
+                  type="password"
+                  className="login-input login-pin-input"
+                  value={password}
+                  onChange={(e) => setPassword(sanitizePinInput(e.target.value))}
+                  placeholder="Enter 4-digit PIN"
+                  autoFocus
+                  inputMode="numeric"
+                  pattern="[0-9]{4}"
+                  maxLength={4}
+                  autoComplete="one-time-code"
+                  required
+                />
+              </div>
+              <div className="login-pin-help">Use a four-digit number only.</div>
             </div>
 
             {error ? <div className="login-error">{error}</div> : null}

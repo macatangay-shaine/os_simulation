@@ -105,6 +105,7 @@ export default function ContentPlatformPage() {
     if (typeof window === 'undefined') return
 
     window.localStorage.setItem(CONTENT_PLATFORM_STORAGE_KEY, JSON.stringify(uiState))
+    window.dispatchEvent(new CustomEvent('jezos_armoury_content_platform_updated', { detail: uiState }))
   }, [uiState])
 
   useEffect(() => {

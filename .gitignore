@@ -53,6 +53,19 @@ Desktop.ini
 .env
 .env.local
 .env.*.local
+.envrc
+.python-version
+
+# Backend local environment
+backend/.env
+backend/.env.local
+backend/.env.*.local
+backend/.venv/
+backend/venv/
+
+# Frontend build cache
+frontend/dist/
+frontend/.vite/
 
 # Logs
 logs/
@@ -70,3 +83,4 @@ main_backup.py
 # Database
 virt_os.db
 *.db-journal
+backend/virt_os.sql

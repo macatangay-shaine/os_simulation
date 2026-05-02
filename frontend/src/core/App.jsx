@@ -102,6 +102,7 @@ export default function App() {
   }
 
   const handleLogout = () => {
+    fetch('http://localhost:8000/system/runtime/reset', { method: 'POST' }).catch(() => {})
     localStorage.removeItem('user')
     localStorage.removeItem('session_token')
     setUser(null)
@@ -175,6 +176,11 @@ export default function App() {
           }
 
           if (powerMode.action === 'restart') {
+            try {
+              await fetch('http://localhost:8000/system/runtime/reset', { method: 'POST' })
+            } catch {
+              // ignore
+            }
             localStorage.removeItem('user')
             localStorage.removeItem('session_token')
             setUser(null)
@@ -183,6 +189,11 @@ export default function App() {
             setPowerMode(null)
           } else {
             // Shutdown: show black screen with "press any key to turn on"
+            try {
+              await fetch('http://localhost:8000/system/runtime/reset', { method: 'POST' })
+            } catch {
+              // ignore
+            }
             localStorage.removeItem('user')
             localStorage.removeItem('session_token')
             setUser(null)

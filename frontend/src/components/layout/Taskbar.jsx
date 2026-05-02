@@ -3,6 +3,7 @@ import { Battery, ChevronUp, Lock, LogOut, Moon, Search, SunMedium, Volume2, Wif
 
 export default function Taskbar({
   windows,
+  activeWindowId,
   onToggleMinimize,
   onFocusWindow,
   user,
@@ -226,6 +227,16 @@ export default function Taskbar({
     }
   }
 
+  const getActiveWindowForGroup = (appWindows) => {
+    const activeWindow = appWindows.find((entry) => entry.id === activeWindowId)
+    if (activeWindow) return activeWindow
+
+    const visibleWindow = appWindows.find((entry) => !entry.minimized)
+    if (visibleWindow) return visibleWindow
+
+    return appWindows[0] || null
+  }
+
   const renderTaskbarIcon = (entry, imageClassName = 'taskbar-app-image') => {
     const iconSrc = entry.iconSrc || entry.desktopIconSrc
 
@@ -309,22 +320,32 @@ export default function Taskbar({
               const appWindows = windows.filter((entry) => entry.appId === app.id)
               const hasWindows = appWindows.length > 0
               const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+              const hasActiveWindow = appWindows.some((entry) => entry.id === activeWindowId && !entry.minimized)
               const hasMinimized = appWindows.some((entry) => entry.minimized)
+              const activeWindow = getActiveWindowForGroup(appWindows)
 
               return (
                 <div key={app.id} className="taskbar-app-group">
                   <button
                     type="button"
-                    className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                    className={`taskbar-app pinned ${hasWindows ? 'running' : ''} ${hasActiveWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
                     data-app={app.id}
                     title={!hasWindows ? `Open ${app.title}` : undefined}
                     onClick={(event) => {
                       event.stopPropagation()
                       if (hasWindows) {
-                        if (appWindows.length === 1) {
-                          onToggleMinimize(appWindows[0].id)
-                        } else {
-                          handleWindowPreviewClick(appWindows[0].id)
+                        if (activeWindow) {
+                          const isActiveAndVisible = activeWindow.id === activeWindowId && !activeWindow.minimized
+                          if (isActiveAndVisible) {
+                            // Window is on top and focused — minimize it
+                            onToggleMinimize(activeWindow.id)
+                          } else if (activeWindow.minimized) {
+                            // Window is minimized — restore it
+                            onToggleMinimize(activeWindow.id)
+                          } else {
+                            // Window exists but another window has focus — bring it to front
+                            onFocusWindow(activeWindow.id)
+                          }
                         }
                       } else {
                         onLaunchPinned(app.id)
@@ -374,22 +395,27 @@ export default function Taskbar({
               })
 
               return Object.entries(windowsByApp).map(([appId, appWindows]) => {
-                const firstWindow = appWindows[0]
-                const hasVisibleWindow = appWindows.some((entry) => !entry.minimized)
+                const hasActiveWindow = appWindows.some((entry) => entry.id === activeWindowId && !entry.minimized)
                 const hasMinimized = appWindows.some((entry) => entry.minimized)
+                const activeWindow = getActiveWindowForGroup(appWindows)
 
                 return (
                   <div key={appId} className="taskbar-app-group">
                     <button
                       type="button"
-                      className={`taskbar-app running ${hasVisibleWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
+                      className={`taskbar-app running ${hasActiveWindow ? 'active' : ''} ${hasMinimized ? 'has-minimized' : ''}`}
                       data-app={appId}
                       onClick={(event) => {
                         event.stopPropagation()
-                        if (appWindows.length === 1) {
-                          onToggleMinimize(firstWindow.id)
-                        } else {
-                          handleWindowPreviewClick(firstWindow.id)
+                        if (activeWindow) {
+                          const isActiveAndVisible = activeWindow.id === activeWindowId && !activeWindow.minimized
+                          if (isActiveAndVisible) {
+                            onToggleMinimize(activeWindow.id)
+                          } else if (activeWindow.minimized) {
+                            onToggleMinimize(activeWindow.id)
+                          } else {
+                            onFocusWindow(activeWindow.id)
+                          }
                         }
                       }}
                       onContextMenu={(event) => {
@@ -397,7 +423,7 @@ export default function Taskbar({
                         onTogglePin(appId)
                       }}
                     >
-                      {renderTaskbarIcon(firstWindow)}
+                      {renderTaskbarIcon(activeWindow || appWindows[0])}
                       {appWindows.length > 1 ? (
                         <span className="taskbar-app-badge">{appWindows.length}</span>
                       ) : null}
