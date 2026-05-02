@@ -93,7 +93,8 @@ def validate_database_configuration() -> None:
     """Fail fast when the Postgres deployment configuration is missing or invalid."""
     database_url = config.DATABASE_URL
     if not database_url:
-        raise RuntimeError("DATABASE_URL must be set for deployment.")
+        # No DATABASE_URL — running locally without a database, skip validation.
+        return
 
     parsed = urlparse(database_url)
     if parsed.scheme not in {"postgresql", "postgres"}:
@@ -175,6 +176,8 @@ def root():
 def on_startup():
     """Initialize database tables on startup."""
     validate_database_configuration()
+    if not config.DATABASE_URL:
+        return
     init_database()
     migrate_apps_storage()
     init_security_logs()
