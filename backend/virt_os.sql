@@ -707,6 +707,6 @@ INSERT INTO "update_history" VALUES (2,'1.1.1','installed','- Minor bug fixes
 - Stability improvements','2026-02-05T13:42:17.568784Z',1);
 INSERT INTO "update_state" VALUES (1,'1.1.1','1.1.1',0,'2026-02-05T13:42:12.484734Z','stable','idle',0,0,'- Minor bug fixes
 - Stability improvements');
-INSERT INTO "users" VALUES (1,'user','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','user','/home/user','2026-02-05T11:32:48.509961');
-INSERT INTO "users" VALUES (2,'admin','8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918','admin','/home/admin','2026-02-05T11:32:48.514209');
+INSERT INTO "users" VALUES (1,'user','03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4','user','/home/user','2026-02-05T11:32:48.509961');
+INSERT INTO "users" VALUES (2,'admin','03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4','admin','/home/admin','2026-02-05T11:32:48.514209');
 COMMIT;
